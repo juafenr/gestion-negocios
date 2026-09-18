@@ -530,3 +530,23 @@ $config['rewrite_short_tags'] = FALSE;
 | Array:		array('10.0.1.200', '192.168.5.0/24')
 */
 $config['proxy_ips'] = '';
+
+// Configuración del login multiempresa.
+$local_file = APPPATH.'config/local.php';
+$local = is_file($local_file) ? require $local_file : array();
+$config['base_url'] = $local['base_url'] ?? 'http://localhost/gestion-negocios/';
+$config['csrf_protection'] = TRUE;
+$config['csrf_token_name'] = 'gestion_csrf';
+$config['csrf_cookie_name'] = 'gestion_csrf_cookie';
+$config['csrf_regenerate'] = TRUE;
+$config['cookie_httponly'] = TRUE;
+$config['cookie_secure'] = $local['cookie_secure'] ?? FALSE;
+$config['cookie_samesite'] = 'Lax';
+$config['cookie_path'] = parse_url($config['base_url'], PHP_URL_PATH) ?: '/';
+$config['sess_cookie_name'] = 'gestion_session';
+$config['sess_expiration'] = 1800;
+$config['sess_regenerate_destroy'] = TRUE;
+$config['sess_save_path'] = sys_get_temp_dir().DIRECTORY_SEPARATOR.'gestion_'.substr(hash('sha256', APPPATH), 0, 16);
+if (!is_dir($config['sess_save_path']) && !@mkdir($config['sess_save_path'], 0700, TRUE) && !is_dir($config['sess_save_path'])) {
+    exit('No se pudo crear el directorio privado de sesiones. Revisa permisos del directorio temporal de PHP.');
+}

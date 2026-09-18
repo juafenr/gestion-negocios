@@ -25,3 +25,6 @@ application/logs/*
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
+# Configuración privada de cada integrante
+/application/config/local.php
+/test-results/
