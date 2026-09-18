@@ -1,0 +1,194 @@
+/* Estilos básicos. Paleta compartida para las siguientes entregas. */
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #2b2d42;
+    background: #f5f5f5;
+}
+.cabecera {
+    background: #8ecae6;
+    border-bottom: 4px solid #219ebc;
+    padding: 18px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+.cabecera strong {
+    font-size: 22px;
+}
+.cabecera p {
+    margin: 2px 0 0;
+    font-size: 14px;
+}
+h1 {
+    font-size: 26px;
+    margin-top: 0;
+}
+h2 {
+    font-size: 20px;
+    margin-top: 0;
+}
+a {
+    color: #155b70;
+}
+button, input {
+    font: inherit;
+}
+button {
+    background: #ffb703;
+    color: #2b2d42;
+    border: 1px solid #a77b0b;
+    padding: 9px 15px;
+    cursor: pointer;
+}
+button:hover {
+    background: #f2ab00;
+}
+a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 3px solid #219ebc;
+    outline-offset: 3px;
+}
+/* Login */
+.caja-login {
+    max-width: 420px;
+    margin: 55px auto;
+    padding: 25px;
+    border: 1px solid #b8b8b8;
+    background: white;
+}
+.formulario label {
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 5px;
+}
+.formulario input {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid #888;
+}
+.formulario button {
+    margin-top: 22px;
+    width: 100%;
+}
+.nota {
+    font-size: 14px;
+    color: #555;
+    margin-top: 22px;
+}
+.error {
+    background: #ffe9e5;
+    color: #852719;
+    border: 1px solid #c97060;
+    padding: 10px;
+}
+/* Inicio: cabecera, menú a la izquierda y contenido. */
+.estructura {
+    display: flex;
+    min-height: 65vh;
+}
+.menu {
+    width: 185px;
+    flex-shrink: 0;
+    padding: 20px 15px;
+    background: #e4e6eb;
+    border-right: 1px solid #bbb;
+}
+.menu a {
+    display: block;
+    padding: 10px;
+    text-decoration: none;
+    color: #2b2d42;
+    border: 1px solid #aaa;
+}
+.menu .seleccionado {
+    background: #ffb703;
+    font-weight: bold;
+}
+.boton-salir {
+    margin-top: 20px;
+    background: white;
+    border-color: #777;
+}
+.boton-salir:hover {
+    background: #fbf8cc;
+}
+.contenido {
+    flex: 1;
+    min-width: 0;
+    padding: 25px;
+}
+.recuadro {
+    background: white;
+    border: 1px solid #bbb;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.aviso {
+    background: #fbf8cc;
+}
+footer {
+    padding: 15px;
+    border-top: 1px solid #bbb;
+    text-align: center;
+    font-size: 14px;
+}
+/* Páginas auxiliares para probar el aislamiento. */
+.pagina-prueba {
+    max-width: 950px;
+    margin: 25px auto;
+    padding: 20px;
+}
+.pagina-prueba h1 {
+    margin-top: 20px;
+}
+.tabla {
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+th, td {
+    border: 1px solid #bbb;
+    padding: 12px;
+    text-align: left;
+}
+th {
+    background: #8ecae6;
+}
+@media (max-width: 600px) {
+    .cabecera {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .estructura {
+        flex-direction: column;
+    }
+    .menu {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #bbb;
+    }
+    .contenido {
+        padding: 18px;
+    }
+    .caja-login {
+        margin: 25px 15px;
+    }
+}
+
+.formulario #ver-password {
+    width: auto;
+    margin-top: 8px;
+    padding: 5px 10px;
+    background: #8ecae6;
+    border: 1px solid #777;
+    font-size: 14px;
+}
