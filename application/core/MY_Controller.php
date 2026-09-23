@@ -38,4 +38,12 @@ class Protected_Controller extends MY_Controller
             redirect('login');
         }
     }
+
+    /** Detiene la acción si el rol actual no posee la capacidad solicitada. */
+    protected function requerir_permiso($permiso)
+    {
+        if (!$this->usuario->puede($permiso)) {
+            show_error('No tienes permiso para realizar esta acción.', 403, 'Acceso denegado');
+        }
+    }
 }

@@ -12,12 +12,18 @@
             <strong><?= html_escape($usuario->empresaNombre()) ?></strong>
             <p>Gestión de negocios</p>
         </div>
-        <span>Usuario: <?= html_escape($usuario->nombre()) ?></span>
+        <span>
+            Usuario: <?= html_escape($usuario->nombre()) ?>
+            (<?= html_escape($usuario->rolNombre()) ?>)
+        </span>
     </header>
 
     <div class="estructura">
         <nav class="menu" aria-label="Menú principal">
             <a class="seleccionado" href="<?= html_escape(site_url('inicio')) ?>" aria-current="page">Inicio</a>
+            <?php if ($usuario->puede('productos.ver')): ?>
+                <a href="<?= html_escape(site_url('productos')) ?>">Productos de prueba</a>
+            <?php endif; ?>
             <?= form_open('salir') ?>
                 <button type="submit" class="boton-salir">Cerrar sesión</button>
             <?= form_close() ?>

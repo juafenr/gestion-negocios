@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prueba de separación de datos</title><link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css')) ?>"></head>
-<body><header class="cabecera"><strong><?= html_escape($usuario->empresaNombre()) ?></strong><span><?= html_escape($usuario->nombre()) ?></span></header>
+<body><header class="cabecera"><strong><?= html_escape($usuario->empresaNombre()) ?></strong><span><?= html_escape($usuario->nombre()) ?> (<?= html_escape($usuario->rolNombre()) ?>)</span></header>
 <main class="pagina-prueba"><a href="<?= html_escape(site_url('inicio')) ?>">Volver al inicio</a>
 <h1>Productos de prueba</h1><p>Esta página comprueba la separación de datos entre empresas. No es el módulo de inventario.</p>
 <div class="tabla"><table><thead><tr><th>Producto</th><th>Código</th><th>Precio</th><th>Detalle</th></tr></thead><tbody>
