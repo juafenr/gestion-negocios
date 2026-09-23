@@ -11,6 +11,7 @@ class Productos extends Protected_Controller
     public function index()
     {
         $this->solo_metodo('GET');
+        $this->requerir_permiso('productos.ver');
         $this->load->view('productos/index', array(
             'usuario' => $this->usuario, 'productos' => $this->productos_model->listar()
         ));
@@ -18,6 +19,7 @@ class Productos extends Protected_Controller
     public function ver($id = NULL)
     {
         $this->solo_metodo('GET');
+        $this->requerir_permiso('productos.ver');
         if (!is_string($id) || !ctype_digit($id) || strlen($id) > 10) { show_404(); }
         $producto = $this->productos_model->buscar($id);
         // La misma respuesta para un ID inexistente y un ID de otra empresa.
