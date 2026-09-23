@@ -1,9 +1,7 @@
--- Esquema inicial: ejecutar solo sobre una base vacía. Sin DROP ni credenciales.
-CREATE TABLE empresas (
- id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
- nombre VARCHAR(120) NOT NULL,
- activa TINYINT(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Migracion unica para instalaciones creadas antes de RBAC.
+-- No ejecutar sobre una instalacion nueva: schema.sql ya contiene estas estructuras.
+-- No contiene DROP ni elimina usuarios existentes.
+
 CREATE TABLE roles (
  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  codigo VARCHAR(40) NOT NULL,
@@ -11,6 +9,7 @@ CREATE TABLE roles (
  descripcion VARCHAR(255) NOT NULL,
  UNIQUE KEY uq_rol_codigo (codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE permisos (
  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  codigo VARCHAR(80) NOT NULL,
@@ -18,6 +17,7 @@ CREATE TABLE permisos (
  descripcion VARCHAR(255) NOT NULL,
  UNIQUE KEY uq_permiso_codigo (codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE rol_permisos (
  rol_id INT UNSIGNED NOT NULL,
  permiso_id INT UNSIGNED NOT NULL,
@@ -25,37 +25,7 @@ CREATE TABLE rol_permisos (
  CONSTRAINT fk_rol_permiso_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE CASCADE,
  CONSTRAINT fk_rol_permiso_permiso FOREIGN KEY (permiso_id) REFERENCES permisos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE usuarios (
- id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
- empresa_id INT UNSIGNED NOT NULL,
- rol_id INT UNSIGNED NOT NULL,
- nombre VARCHAR(100) NOT NULL,
- correo VARCHAR(190) NOT NULL,
- password_hash VARCHAR(255) NOT NULL,
- activo TINYINT(1) NOT NULL DEFAULT 1,
- UNIQUE KEY uq_usuario_correo (correo),
- KEY ix_usuario_empresa (empresa_id),
- KEY ix_usuario_rol (rol_id),
- CONSTRAINT fk_usuario_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id),
- CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE productos (
- id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
- empresa_id INT UNSIGNED NOT NULL,
- sku VARCHAR(40) NOT NULL,
- nombre VARCHAR(150) NOT NULL,
- precio DECIMAL(10,2) UNSIGNED NOT NULL,
- UNIQUE KEY uq_producto_empresa_sku (empresa_id, sku),
- CONSTRAINT fk_producto_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE login_intentos (
- clave CHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
- intentos BIGINT UNSIGNED NOT NULL,
- inicio BIGINT UNSIGNED NOT NULL,
- KEY ix_intento_inicio (inicio)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Catalogos RBAC compartidos. Los datos de negocio siguen aislados por empresa_id.
 INSERT INTO roles (codigo, nombre, descripcion) VALUES
  ('administrador', 'Administrador', 'Administra unicamente los recursos de su empresa.'),
  ('cajero', 'Cajero', 'Registra pedidos, ventas y cobros de su empresa.'),
@@ -80,7 +50,6 @@ INSERT INTO permisos (codigo, nombre, descripcion) VALUES
  ('reportes.ver', 'Ver reportes', 'Permite consultar reportes administrativos.'),
  ('empresa.configurar', 'Configurar empresa', 'Permite modificar la configuracion de la empresa.');
 
--- Administrador recibe todos los permisos del prototipo.
 INSERT INTO rol_permisos (rol_id, permiso_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permisos p
 WHERE r.codigo = 'administrador';
@@ -95,3 +64,17 @@ INSERT INTO rol_permisos (rol_id, permiso_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permisos p
 WHERE r.codigo = 'cocinero'
  AND p.codigo IN ('inicio.ver', 'productos.ver', 'pedidos.ver', 'pedidos.actualizar_cocina');
+
+-- La columna inicia como nullable para poder asignar un rol a las filas existentes.
+ALTER TABLE usuarios ADD COLUMN rol_id INT UNSIGNED NULL AFTER empresa_id;
+
+-- Los usuarios anteriores conservan el acceso como administradores de su propia empresa.
+UPDATE usuarios u
+JOIN roles r ON r.codigo = 'administrador'
+SET u.rol_id = r.id
+WHERE u.rol_id IS NULL;
+
+ALTER TABLE usuarios
+ MODIFY COLUMN rol_id INT UNSIGNED NOT NULL,
+ ADD KEY ix_usuario_rol (rol_id),
+ ADD CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id);
