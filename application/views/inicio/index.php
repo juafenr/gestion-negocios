@@ -32,7 +32,11 @@
                     Inventario
                 </a>
             <?php endif; ?>
-
+            <?php if ($usuario->puede('pedidos.ver')): ?>
+                <a href="<?= html_escape(site_url('pedidos')) ?>">
+                    Pedidos
+                </a>
+            <?php endif; ?>
             <?= form_open('salir') ?>
             <button type="submit" class="boton-salir">Cerrar sesión</button>
             <?= form_close() ?>
