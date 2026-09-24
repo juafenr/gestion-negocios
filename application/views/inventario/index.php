@@ -46,100 +46,60 @@
         </nav>
 
         <main class="contenido">
-            <p>
-                <a href="<?= html_escape(site_url('inventario')) ?>">
-                    Volver al inventario
-                </a>
-            </p>
+    <h1>Inventario</h1>
 
-            <section class="recuadro formulario-inventario">
-                <h1>
-                    <?= $insumo === NULL ? "Agregar insumo" : "Editar insumo" ?>
-                </h1>
+    <?php if ($usuario->puede('inventario.gestionar')): ?>
+        <p>
+            <a href="<?= html_escape(site_url('inventario/crear')) ?>">
+                Agregar insumo
+            </a>
+        </p>
+    <?php endif; ?>
 
-                <?php if (validation_errors()) : ?>
-                    <div class="error">
-                        <?= validation_errors() ?>
-                    </div>
+    <div class="tabla">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cantidad actual</th>
+                    <th>Stock mínimo</th>
+                    <th>Unidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <?php foreach ($insumos as $item): ?>
+                    <tr>
+                        <td><?= html_escape($item['nombre']) ?></td>
+                        <td><?= html_escape($item['cantidad_actual']) ?></td>
+                        <td><?= html_escape($item['stock_minimo']) ?></td>
+                        <td><?= html_escape($item['unidad_medida']) ?></td>
+                        <td>
+                            <?php if ($usuario->puede('inventario.gestionar')): ?>
+                                <a href="<?= html_escape(
+                                    site_url('inventario/'.$item['id'].'/editar')
+                                ) ?>">
+                                    Editar
+                                </a>
+                            <?php else: ?>
+                                Solo consulta
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+
+                <?php if (empty($insumos)): ?>
+                    <tr>
+                        <td colspan="5">
+                            Todavía no hay insumos registrados.
+                        </td>
+                    </tr>
                 <?php endif; ?>
-
-                <?= form_open($accion, array('class' => 'formulario')) ?>
-
-                <label for="nombre>">
-                    Nombre
-                </label>
-
-                <input
-                    id="nombre"
-                    name="nombre"
-                    type="text"
-                    maxlength="150"
-                    required
-                    value="<?= html_escape(set_value('nombre', $insumo['nombre'] ?? '')) ?>">
-
-                <label for="cantidad_actual">
-                    Cantidad actual
-                </label>
-
-                <input
-                    id="cantidad_actual"
-                    name="cantidad_actual"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value="<?= html_escape(set_value('cantidad_actual', $insumo['cantidad_actual'] ?? '0')) ?>">
-
-                <label for="stock_minimo">
-                    Stock mínimo
-                </label>
-
-                <input
-                    id="stock_minimo"
-                    name="stock_minimo"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value="<?= html_escape(set_value('stock_minimo', $insumo['stock_minimo'] ?? '0')) ?>">
-
-                <label for="unidad_medida">
-                    Unidad de medida
-                </label>
-
-                <?php $unidad_actual = set_value('unidad_medida', $insumo['unidad_medida'] ?? 'unidad'); ?>
-
-                <select id="unidad_medida" name="unidad_medida" required>
-                    <option value="unidad" <?= $unidad_actual === 'unidad' ? 'selected' : '' ?>>
-                        Unidad
-                    </option>
-
-                    <option value="kg" <?= $unidad_actual === 'kg' ? 'selected' : '' ?>>
-                        Kilogramos
-                    </option>
-
-                    <option value="g" <?= $unidad_actual === 'g' ? 'selected' : '' ?>>
-                        Gramos
-                    </option>
-
-                    <option value="L" <?= $unidad_actual === 'L' ? 'selected' : '' ?>>
-                        Litros
-                    </option>
-
-                    <option value="mL" <?= $unidad_actual === 'mL' ? 'selected' : '' ?>>
-                        Mililitros
-                    </option>
-                </select>
-
-                <button type="submit">
-                    Guardar
-                </button>
-
-                <?= form_close() ?>
-
-            </section>
-
-        </main>
+            </tbody>
+        </table>
+    </div>
+</main>
 
     </div>
 
