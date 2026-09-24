@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Inicio - Gestión de negocios</title>
     <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css')) ?>">
 </head>
+
 <body>
     <header class="cabecera">
         <div>
@@ -24,8 +26,15 @@
             <?php if ($usuario->puede('productos.ver')): ?>
                 <a href="<?= html_escape(site_url('productos')) ?>">Productos de prueba</a>
             <?php endif; ?>
+
+            <?php if ($usuario->puede('inventario.ver')): ?>
+                <a href="<?= html_escape(site_url('inventario')) ?>">
+                    Inventario
+                </a>
+            <?php endif; ?>
+
             <?= form_open('salir') ?>
-                <button type="submit" class="boton-salir">Cerrar sesión</button>
+            <button type="submit" class="boton-salir">Cerrar sesión</button>
             <?= form_close() ?>
         </nav>
 
@@ -44,4 +53,5 @@
     </div>
     <footer>Proyecto de gestión de negocios</footer>
 </body>
+
 </html>
