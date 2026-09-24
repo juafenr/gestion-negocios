@@ -61,7 +61,11 @@
             <tbody>
                 <?php foreach ($pedidos as $pedido): ?>
                     <tr>
-                        <td><?= (int) $pedido['id'] ?></td>
+                        <td>
+                            <a href="<?= html_escape(site_url('pedidos/'.$pedido['id'])) ?>">
+                                Pedido #<?= (int) $pedido['id'] ?>
+                            </a>
+                        </td>
                         <td><?= html_escape($pedido['referencia']) ?></td>
                         <td><?= html_escape($pedido['estado']) ?></td>
                         <td><?= html_escape($pedido['estado_pago']) ?></td>
