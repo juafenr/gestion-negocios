@@ -1,14 +1,167 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prueba de separación de datos</title><link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css')) ?>"></head>
-<body><header class="cabecera"><strong><?= html_escape($usuario->empresaNombre()) ?></strong><span><?= html_escape($usuario->nombre()) ?> (<?= html_escape($usuario->rolNombre()) ?>)</span></header>
-<main class="pagina-prueba"><a href="<?= html_escape(site_url('inicio')) ?>">Volver al inicio</a>
-<h1>Productos de prueba</h1><p>Esta página comprueba la separación de datos entre empresas. No es el módulo de inventario.</p>
-<div class="tabla"><table><thead><tr><th>Producto</th><th>Código</th><th>Precio</th><th>Detalle</th></tr></thead><tbody>
-<?php foreach ($productos as $producto): ?>
-<tr><td><?= html_escape($producto['nombre']) ?></td><td><?= html_escape($producto['sku']) ?></td><td>Q <?= number_format((float)$producto['precio'],2) ?></td><td><a href="<?= html_escape(site_url('productos/'.$producto['id'])) ?>">Ver detalle</a></td></tr>
-<?php endforeach; ?>
-<?php if (!$productos): ?><tr><td colspan="4">No hay productos de prueba.</td></tr><?php endif; ?>
-</tbody></table></div>
-<?= form_open('salir') ?><button type="submit" class="boton-salir">Cerrar sesión</button><?= form_close() ?>
-</main></body></html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prueba de separación de datos</title>
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css')) ?>">
+</head>
+
+<body>
+    <header class="cabecera"><strong><?= html_escape($usuario->empresaNombre()) ?></strong><span><?= html_escape($usuario->nombre()) ?> (<?= html_escape($usuario->rolNombre()) ?>)</span></header>
+    div class="estructura">
+    <nav class="menu" aria-label="Menú principal">
+        <a href="<?= html_escape(site_url('inicio')) ?>">
+            Inicio
+        </a>
+
+        <?php if ($usuario->puede('inventario.ver')): ?>
+            <a class="seleccionado" href="<?= html_escape(site_url('inventario')) ?>">
+                Inventario
+            </a>
+        <?php endif; ?>
+
+        <?php if ($usuario->puede('inventario.ver')): ?>
+            <a class="seleccionado" href="<?= html_escape(site_url('productos')) ?>">
+                Productos
+            </a>
+        <?php endif; ?>
+
+        <?= form_open('salir') ?>
+        <button type="submit" , class="boton-salir">
+            Cerrar sesión
+        </button>
+        <?= form_close() ?>
+    </nav>
+
+    <main class="contenido">
+        <p>
+            <a href="<?= html_escape(site_url('inventario')) ?>">
+                Volver al inventario
+            </a>
+        </p>
+
+        <section class="recuadro formulario-inventario">
+            <h1>
+                <?= $insumo === NULL ? "Agregar insumo" : "Editar insumo" ?>
+            </h1>
+
+            <?php if (validation_errors()) : ?>
+                <div class="error">
+                    <?= validation_errors() ?>
+                </div>
+            <?php endif; ?>
+
+            <?= form_open($accion, array('class' => 'formulario')) ?>
+
+            <label for="nombre>">
+                Nombre
+            </label>
+
+            <input
+                id="nombre"
+                name="nombre"
+                type="text"
+                maxlength="150"
+                required
+                value="<?= html_escape(set_value('nombre', $insumo['nombre'] ?? '')) ?>">
+
+            <label for="cantidad_actual">
+                Cantidad actual
+            </label>
+
+            <input
+                id="cantidad_actual"
+                name="cantidad_actual"
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                value="<?= html_escape(set_value('cantidad_actual', $insumo['cantidad_actual'] ?? '0')) ?>">
+
+            <label for="stock_minimo">
+                Stock mínimo
+            </label>
+
+            <input
+                id="stock_minimo"
+                name="stock_minimo"
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                value="<?= html_escape(set_value('stock_minimo', $insumo['stock_minimo'] ?? '0')) ?>">
+
+            <label for="unidad_medida">
+                Unidad de medida
+            </label>
+
+            <?php $unidad_actual = set_value('unidad_medida', $insumo['unidad_medida'] ?? 'unidad'); ?>
+
+            <select id="unidad_medida" name="unidad_medida" required>
+                <option value="unidad" <?= $unidad_actual === 'unidad' ? 'selected' : '' ?>>
+                    Unidad
+                </option>
+
+                <option value="kg" <?= $unidad_actual === 'kg' ? 'selected' : '' ?>>
+                    Kilogramos
+                </option>
+
+                <option value="g" <?= $unidad_actual === 'g' ? 'selected' : '' ?>>
+                    Gramos
+                </option>
+
+                <option value="L" <?= $unidad_actual === 'L' ? 'selected' : '' ?>>
+                    Litros
+                </option>
+
+                <option value="mL" <?= $unidad_actual === 'mL' ? 'selected' : '' ?>>
+                    Mililitros
+                </option>
+            </select>
+
+            <button type="submit">
+                Guardar
+            </button>
+
+            <?= form_close() ?>
+
+        </section>
+
+    </main>
+
+    </div>
+    <main class="pagina-prueba"><a href="<?= html_escape(site_url('inicio')) ?>">Volver al inicio</a>
+        <h1>Productos de prueba</h1>
+        <p>Esta página comprueba la separación de datos entre empresas. No es el módulo de inventario.</p>
+        <div class="tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Código</th>
+                        <th>Precio</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($productos as $producto): ?>
+                        <tr>
+                            <td><?= html_escape($producto['nombre']) ?></td>
+                            <td><?= html_escape($producto['sku']) ?></td>
+                            <td>Q <?= number_format((float)$producto['precio'], 2) ?></td>
+                            <td><a href="<?= html_escape(site_url('productos/' . $producto['id'])) ?>">Ver detalle</a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$productos): ?><tr>
+                            <td colspan="4">No hay productos de prueba.</td>
+                        </tr><?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?= form_open('salir') ?><button type="submit" class="boton-salir">Cerrar sesión</button><?= form_close() ?>
+    </main>
+</body>
+
+</html>
