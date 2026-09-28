@@ -34,13 +34,21 @@
                 Inicio
             </a>
 
-            <a class="seleccionado" href="<?= html_escape(site_url('inventario')) ?>">
-                Inventario
-            </a>
+            <?php if ($usuario->puede('inventario.ver')): ?>
+                <a class="seleccionado" href="<?= html_escape(site_url('inventario')) ?>">
+                    Inventario
+                </a>
+            <?php endif; ?>
+
+            <?php if ($usuario->puede('inventario.ver')): ?>
+                <a class="seleccionado" href="<?= html_escape(site_url('productos')) ?>">
+                    Productos
+                </a>
+            <?php endif; ?>
 
             <?= form_open('salir') ?>
             <button type="submit" , class="boton-salir">
-                Salir
+                Cerrar sesión
             </button>
             <?= form_close() ?>
         </nav>
