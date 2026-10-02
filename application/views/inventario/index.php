@@ -1,151 +1,142 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1">
-
-    <title>Inventario</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inventario - Gestión de negocios</title>
     <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css')) ?>">
 </head>
 
 <body>
     <header class="cabecera">
         <div>
-            <strong>
-                <?= html_escape($usuario->empresaNombre()) ?>
-            </strong>
-
+            <strong><?= html_escape($usuario->empresaNombre()) ?></strong>
             <p>Gestión de negocios</p>
         </div>
 
         <span>
-            Usuario:
-            <?= html_escape($usuario->nombre()) ?>
+            Usuario: <?= html_escape($usuario->nombre()) ?>
             (<?= html_escape($usuario->rolNombre()) ?>)
         </span>
     </header>
 
     <div class="estructura">
+
         <nav class="menu" aria-label="Menú principal">
+
             <a href="<?= html_escape(site_url('inicio')) ?>">
                 Inicio
             </a>
 
+            <?php if ($usuario->puede('productos.ver')): ?>
+                <a href="<?= html_escape(site_url('productos')) ?>">
+                    Productos de prueba
+                </a>
+            <?php endif; ?>
+
             <?php if ($usuario->puede('inventario.ver')): ?>
-                <a class="seleccionado" href="<?= html_escape(site_url('inventario')) ?>">
+                <a
+                    class="seleccionado"
+                    href="<?= html_escape(site_url('inventario')) ?>"
+                    aria-current="page">
                     Inventario
                 </a>
             <?php endif; ?>
 
-            <?php if ($usuario->puede('inventario.ver')): ?>
-                <a class="seleccionado" href="<?= html_escape(site_url('productos')) ?>">
-                    Productos
-                </a>
-            <?php endif; ?>
-
             <?= form_open('salir') ?>
-            <button type="submit" , class="boton-salir">
+            <button type="submit" class="boton-salir">
                 Cerrar sesión
             </button>
             <?= form_close() ?>
+
         </nav>
 
         <main class="contenido">
-            <p>
-                <a href="<?= html_escape(site_url('inventario')) ?>">
-                    Volver al inventario
-                </a>
-            </p>
 
-            <section class="recuadro formulario-inventario">
-                <h1>
-                    <?= $insumo === NULL ? "Agregar insumo" : "Editar insumo" ?>
-                </h1>
+            <h1>Inventario</h1>
 
-                <?php if (validation_errors()) : ?>
-                    <div class="error">
-                        <?= validation_errors() ?>
-                    </div>
-                <?php endif; ?>
+            <?php if ($usuario->puede('inventario.gestionar')): ?>
+                <p>
+                    <a href="<?= html_escape(site_url('inventario/crear')) ?>">
+                        Agregar insumo
+                    </a>
+                </p>
+            <?php endif; ?>
 
-                <?= form_open($accion, array('class' => 'formulario')) ?>
+            <div class="tabla">
 
-                <label for="nombre>">
-                    Nombre
-                </label>
+                <table>
 
-                <input
-                    id="nombre"
-                    name="nombre"
-                    type="text"
-                    maxlength="150"
-                    required
-                    value="<?= html_escape(set_value('nombre', $insumo['nombre'] ?? '')) ?>">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Cantidad actual</th>
+                            <th>Stock mínimo</th>
+                            <th>Unidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
 
-                <label for="cantidad_actual">
-                    Cantidad actual
-                </label>
+                    <tbody>
 
-                <input
-                    id="cantidad_actual"
-                    name="cantidad_actual"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value="<?= html_escape(set_value('cantidad_actual', $insumo['cantidad_actual'] ?? '0')) ?>">
+                        <?php foreach ($insumos as $item): ?>
 
-                <label for="stock_minimo">
-                    Stock mínimo
-                </label>
+                            <tr>
+                                <td>
+                                    <?= html_escape($item['nombre']) ?>
+                                </td>
 
-                <input
-                    id="stock_minimo"
-                    name="stock_minimo"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value="<?= html_escape(set_value('stock_minimo', $insumo['stock_minimo'] ?? '0')) ?>">
+                                <td>
+                                    <?= html_escape($item['cantidad_actual']) ?>
+                                </td>
 
-                <label for="unidad_medida">
-                    Unidad de medida
-                </label>
+                                <td>
+                                    <?= html_escape($item['stock_minimo']) ?>
+                                </td>
 
-                <?php $unidad_actual = set_value('unidad_medida', $insumo['unidad_medida'] ?? 'unidad'); ?>
+                                <td>
+                                    <?= html_escape($item['unidad_medida']) ?>
+                                </td>
 
-                <select id="unidad_medida" name="unidad_medida" required>
-                    <option value="unidad" <?= $unidad_actual === 'unidad' ? 'selected' : '' ?>>
-                        Unidad
-                    </option>
+                                <td>
+                                    <?php if ($usuario->puede('inventario.gestionar')): ?>
 
-                    <option value="kg" <?= $unidad_actual === 'kg' ? 'selected' : '' ?>>
-                        Kilogramos
-                    </option>
+                                        <a href="<?= html_escape(
+                                                        site_url(
+                                                            'inventario/' .
+                                                                $item['id'] .
+                                                                '/editar'
+                                                        )
+                                                    ) ?>">
+                                            Editar
+                                        </a>
 
-                    <option value="g" <?= $unidad_actual === 'g' ? 'selected' : '' ?>>
-                        Gramos
-                    </option>
+                                    <?php else: ?>
 
-                    <option value="L" <?= $unidad_actual === 'L' ? 'selected' : '' ?>>
-                        Litros
-                    </option>
+                                        Solo consulta
 
-                    <option value="mL" <?= $unidad_actual === 'mL' ? 'selected' : '' ?>>
-                        Mililitros
-                    </option>
-                </select>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
 
-                <button type="submit">
-                    Guardar
-                </button>
+                        <?php endforeach; ?>
 
-                <?= form_close() ?>
+                        <?php if (empty($insumos)): ?>
 
-            </section>
+                            <tr>
+                                <td colspan="5">
+                                    Todavía no hay insumos registrados.
+                                </td>
+                            </tr>
+
+                        <?php endif; ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
 
         </main>
 

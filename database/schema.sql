@@ -72,13 +72,14 @@ CREATE TABLE
 
 CREATE TABLE
     insumos (
-        id TNT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         empresa_id INT UNSIGNED NOT NULL,
         nombre VARCHAR(150) NOT NULL,
-        cantidad_actual DECIMAL(10, 2) UNSIGNED NOT NULL DEFAULT 0,
-        stock_minimo DECIMAL(10, 2) UNSIGNED NOT NULL DEFAULT 0,
+        cantidad_actual DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+        stock_minimo DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
         unidad_medida VARCHAR(20) NOT NULL,
         activo TINYINT (1) NOT NULL DEFAULT 1,
+        PRIMARY KEY (id),
         KEY ix_insumo_empresa (empresa_id),
         CONSTRAINT fk_insumo_empresa FOREIGN KEY (empresa_id) REFERENCES empresas (id)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
