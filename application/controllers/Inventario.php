@@ -97,7 +97,7 @@ class Inventario extends Protected_Controller
         $datos = $this->datos_formulario();
 
         if (!$this->insumos_model->actualizar($id, $datos)) {
-            show_error("No se pudo actualizar el insumo", 503);
+            show_error('No se pudo actualizar el insumo.', 503);
         }
 
         redirect('inventario');
