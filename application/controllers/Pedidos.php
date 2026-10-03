@@ -1,13 +1,24 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Pedidos extends Protected_Controller
 {
     public function __construct()
     {
         parent::__construct();
-        $this->load->model('Pedido_model', 'pedidos_model');
-        $this->load->helper(array('url', 'form'));
+
+        $this->load->model(
+            'Pedido_model',
+            'pedidos_model'
+        );
+
+        $this->load->helper(
+            array('url', 'form')
+        );
+
+        $this->load->library(
+            'form_validation'
+        );
     }
 
     public function index()
@@ -20,37 +31,53 @@ class Pedidos extends Protected_Controller
 
     public function crear()
     {
-        $this->solo_metodo('POST');
-        $this->requerir_permiso('pedidos.ver');
         $this->requerir_permiso('pedidos.crear');
 
-        $referencia = $this->input->post('referencia');
+        if ($this->input->method(TRUE) === 'GET') {
 
-        if (!is_string($referencia)) {
-            $this->mostrar('Escribe una referencia válida.');
+            $this->load->view('pedidos/formulario', array(
+                'usuario' => $this->usuario
+            ));
+
             return;
         }
 
-        $referencia = trim($referencia);
+        $this->solo_metodo('POST');
 
-        if ($referencia === '' || mb_strlen($referencia, 'UTF-8') > 150) {
-            $this->mostrar(
-                'La referencia debe tener entre 1 y 150 caracteres.',
-                $referencia
-            );
-            return;
-        }
-
-        $usuario_id = (int) $this->session->userdata('usuario_id');
-
-        $id = $this->pedidos_model->crear($referencia, $usuario_id);
-
-        $this->session->set_flashdata(
-            'mensaje_pedido',
-            'Pedido #' . $id . ' creado en borrador.'
+        $this->form_validation->set_rules(
+            'referencia',
+            'Referencia',
+            'required|trim|max_length[100]'
         );
 
-        redirect('pedidos');
+        if ($this->form_validation->run() === FALSE) {
+
+            $this->load->view('pedidos/formulario', array(
+                'usuario' => $this->usuario
+            ));
+
+            return;
+        }
+
+        $referencia = trim(
+            $this->input->post('referencia', TRUE)
+        );
+
+        $usuarioId = $this->usuario->id();
+
+        $pedidoId = $this->pedidos_model->crear(
+            $referencia,
+            $usuarioId
+        );
+
+        if (!$pedidoId) {
+            show_error(
+                'No se pudo registrar el pedido.',
+                503
+            );
+        }
+
+        redirect('pedidos/' . $pedidoId);
     }
 
     private function mostrar($error = '', $referencia = '')

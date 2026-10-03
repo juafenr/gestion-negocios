@@ -1,89 +1,213 @@
 <!doctype html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Pedidos</title>
-    <link rel="stylesheet"
-          href="<?= html_escape(base_url('assets/app.css')) ?>">
+
+    <title>Pedidos - Gestión de negocios</title>
+
+    <link
+        rel="stylesheet"
+        href="<?= html_escape(base_url('assets/app.css')) ?>">
 </head>
+
 <body>
-<header class="cabecera">
-    <strong><?= html_escape($usuario->empresaNombre()) ?></strong>
-    <span><?= html_escape($usuario->nombre()) ?></span>
-</header>
 
-<main class="pagina-prueba">
-    <a href="<?= html_escape(site_url('inicio')) ?>">Volver al inicio</a>
+    <header class="cabecera">
 
-    <h1>Pedidos</h1>
+        <div>
+            <strong>
+                <?= html_escape($usuario->empresaNombre()) ?>
+            </strong>
 
-    <?php if ($mensaje): ?>
-        <p role="status"><?= html_escape($mensaje) ?></p>
-    <?php endif; ?>
+            <p>Gestión de negocios</p>
+        </div>
 
-    <?php if ($error): ?>
-        <p role="alert"><?= html_escape($error) ?></p>
-    <?php endif; ?>
+        <span>
+            Usuario:
+            <?= html_escape($usuario->nombre()) ?>
 
-    <?php if ($usuario->puede('pedidos.crear')): ?>
-        <h2>Crear pedido</h2>
+            (<?= html_escape($usuario->rolNombre()) ?>)
+        </span>
 
-        <?= form_open('pedidos/crear') ?>
-            <label for="referencia">Mesa, cliente o referencia</label>
-            <input
-                type="text"
-                id="referencia"
-                name="referencia"
-                maxlength="150"
-                required
-                placeholder="Ejemplo: Mesa 4"
-                value="<?= html_escape($referencia) ?>"
-            >
-            <button type="submit">Crear pedido</button>
-        <?= form_close() ?>
-    <?php endif; ?>
+    </header>
 
-    <h2>Últimos 50 pedidos</h2>
 
-    <div class="tabla">
-        <table>
-            <thead>
-                <tr>
-                    <th>Número</th>
-                    <th>Referencia</th>
-                    <th>Estado</th>
-                    <th>Pago</th>
-                    <th>Total</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($pedidos as $pedido): ?>
-                    <tr>
-                        <td>
-                            <a href="<?= html_escape(site_url('pedidos/'.$pedido['id'])) ?>">
-                                Pedido #<?= (int) $pedido['id'] ?>
-                            </a>
-                        </td>
-                        <td><?= html_escape($pedido['referencia']) ?></td>
-                        <td><?= html_escape($pedido['estado']) ?></td>
-                        <td><?= html_escape($pedido['estado_pago']) ?></td>
-                        <td>
-                            Q <?= number_format((float) $pedido['total'], 2) ?>
-                        </td>
-                        <td><?= html_escape($pedido['creado_en']) ?></td>
-                    </tr>
-                <?php endforeach; ?>
+    <div class="estructura">
 
-                <?php if (!$pedidos): ?>
-                    <tr>
-                        <td colspan="6">Todavía no hay pedidos.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <nav class="menu" aria-label="Menú principal">
+
+            <a href="<?= html_escape(site_url('inicio')) ?>">
+                Inicio
+            </a>
+
+
+            <?php if ($usuario->puede('productos.ver')): ?>
+
+                <a href="<?= html_escape(site_url('productos')) ?>">
+                    Productos de prueba
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if ($usuario->puede('inventario.ver')): ?>
+
+                <a href="<?= html_escape(site_url('inventario')) ?>">
+                    Inventario
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if ($usuario->puede('pedidos.ver')): ?>
+
+                <a
+                    class="seleccionado"
+                    href="<?= html_escape(site_url('pedidos')) ?>"
+                    aria-current="page">
+                    Pedidos
+                </a>
+
+            <?php endif; ?>
+
+
+            <?= form_open('salir') ?>
+
+            <button
+                type="submit"
+                class="boton-salir">
+                Cerrar sesión
+            </button>
+
+            <?= form_close() ?>
+
+        </nav>
+
+
+        <main class="contenido">
+
+            <h1>Pedidos</h1>
+
+            <?php if ($usuario->puede('pedidos.crear')): ?>
+
+                <p>
+                    <a href="<?= html_escape(site_url('pedidos/crear')) ?>">
+                        Agregar pedido
+                    </a>
+                </p>
+
+            <?php endif; ?>
+
+            <p>
+                Consulta los pedidos registrados para la empresa.
+            </p>
+
+
+            <div class="tabla">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Número</th>
+                            <th>Referencia</th>
+                            <th>Estado</th>
+                            <th>Pago</th>
+                            <th>Total</th>
+                            <th>Detalle</th>
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <?php foreach ($pedidos as $pedido): ?>
+
+                            <tr>
+
+                                <td>
+                                    #<?= (int) $pedido['id'] ?>
+                                </td>
+
+
+                                <td>
+                                    <?= html_escape(
+                                        $pedido['referencia']
+                                    ) ?>
+                                </td>
+
+
+                                <td>
+                                    <?= html_escape(
+                                        $pedido['estado']
+                                    ) ?>
+                                </td>
+
+
+                                <td>
+                                    <?= html_escape(
+                                        $pedido['estado_pago']
+                                    ) ?>
+                                </td>
+
+
+                                <td>
+                                    Q <?= number_format(
+                                            (float) $pedido['total'],
+                                            2
+                                        ) ?>
+                                </td>
+
+
+                                <td>
+
+                                    <a href="<?= html_escape(
+                                                    site_url(
+                                                        'pedidos/' .
+                                                            $pedido['id']
+                                                    )
+                                                ) ?>">
+                                        Ver detalle
+                                    </a>
+
+                                </td>
+
+                            </tr>
+
+                        <?php endforeach; ?>
+
+
+                        <?php if (empty($pedidos)): ?>
+
+                            <tr>
+
+                                <td colspan="6">
+                                    No hay pedidos registrados.
+                                </td>
+
+                            </tr>
+
+                        <?php endif; ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </main>
+
     </div>
-</main>
+
+
+    <footer>
+        Proyecto de gestión de negocios
+    </footer>
+
 </body>
+
 </html>
