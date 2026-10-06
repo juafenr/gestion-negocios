@@ -31,26 +31,46 @@
             </a>
 
             <?php if ($usuario->puede('productos.ver')): ?>
+
                 <a href="<?= html_escape(site_url('productos')) ?>">
                     Productos de prueba
                 </a>
+
             <?php endif; ?>
 
+
             <?php if ($usuario->puede('inventario.ver')): ?>
+
                 <a
                     class="seleccionado"
                     href="<?= html_escape(site_url('inventario')) ?>"
                     aria-current="page">
                     Inventario
                 </a>
+
             <?php endif; ?>
 
+
+            <?php if ($usuario->puede('pedidos.ver')): ?>
+
+                <a href="<?= html_escape(site_url('pedidos')) ?>">
+                    Pedidos
+                </a>
+
+            <?php endif; ?>
+
+
             <?= form_open('salir') ?>
-            <button type="submit" class="boton-salir">
+
+            <button
+                type="submit"
+                class="boton-salir">
                 Cerrar sesión
             </button>
+
             <?= form_close() ?>
 
+        </nav>
         </nav>
 
         <main class="contenido">
