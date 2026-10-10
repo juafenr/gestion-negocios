@@ -117,4 +117,129 @@ class Pedidos extends Protected_Controller
             'productos' => $this->productos_model->listar()
         ));
     }
+        public function agregar($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('pedidos.ver');
+        $this->requerir_permiso('pedidos.crear');
+
+        if (
+            !is_string($id)
+            || !ctype_digit($id)
+            || strlen($id) > 10
+            || (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        // Comprobar que el pedido pertenece a la empresa actual.
+        if (!$this->pedidos_model->buscar($id)) {
+            show_404();
+            return;
+        }
+
+        $producto_id = $this->input->post('producto_id');
+        $cantidad = $this->input->post('cantidad');
+
+        if (
+            !is_string($producto_id)
+            || !ctype_digit($producto_id)
+            || strlen($producto_id) > 10
+            || (int) $producto_id < 1
+        ) {
+            show_error('Selecciona un producto válido.', 400);
+            return;
+        }
+
+        if (
+            !is_string($cantidad)
+            || !ctype_digit($cantidad)
+            || strlen($cantidad) > 3
+            || (int) $cantidad < 1
+            || (int) $cantidad > 999
+        ) {
+            show_error('La cantidad debe estar entre 1 y 999.', 400);
+            return;
+        }
+
+        $error = $this->pedidos_model->agregar_producto(
+            (int) $id,
+            (int) $producto_id,
+            (int) $cantidad
+        );
+
+        if ($error !== NULL) {
+            show_error(html_escape($error), 400);
+            return;
+        }
+
+        redirect('pedidos/' . (int) $id);
+    }
+
+        public function actualizar($id = NULL, $detalle_id = NULL)
+    {
+        $this->procesar_cambio_detalle($id, $detalle_id, FALSE);
+    }
+
+    public function quitar($id = NULL, $detalle_id = NULL)
+    {
+        $this->procesar_cambio_detalle($id, $detalle_id, TRUE);
+    }
+
+    private function procesar_cambio_detalle($id, $detalle_id, $quitar)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('pedidos.ver');
+        $this->requerir_permiso('pedidos.crear');
+
+        foreach (array($id, $detalle_id) as $valor) {
+            if (
+                !is_string($valor)
+                || !ctype_digit($valor)
+                || strlen($valor) > 10
+                || (int) $valor < 1
+            ) {
+                show_404();
+                return;
+            }
+        }
+
+        if (!$this->pedidos_model->buscar($id)) {
+            show_404();
+            return;
+        }
+
+        $cantidad = NULL;
+
+        if (!$quitar) {
+            $valor = $this->input->post('cantidad');
+
+            if (
+                !is_string($valor)
+                || !ctype_digit($valor)
+                || strlen($valor) > 3
+                || (int) $valor < 1
+                || (int) $valor > 999
+            ) {
+                show_error('La cantidad debe estar entre 1 y 999.', 400);
+                return;
+            }
+
+            $cantidad = (int) $valor;
+        }
+
+        $error = $this->pedidos_model->modificar_detalle(
+            (int) $id,
+            (int) $detalle_id,
+            $cantidad
+        );
+
+        if ($error !== NULL) {
+            show_error(html_escape($error), 400);
+            return;
+        }
+
+        redirect('pedidos/' . (int) $id);
+    }
 }
