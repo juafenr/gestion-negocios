@@ -668,6 +668,68 @@ td[colspan] {
   border-color: #d9b955;
 }
 
+/* Cola de cocina */
+.cola-cocina {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.pedido-cocina {
+  padding: 20px;
+  border: 1px solid var(--borde);
+  border-top: 5px solid var(--azul);
+  border-radius: 7px;
+  background: white;
+}
+
+.pedido-cocina h2 {
+  margin-bottom: 4px;
+}
+
+.pedido-cocina-encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.pedido-cocina .estado-preparacion {
+  color: #624808;
+  background: var(--crema);
+  border-color: #d9b955;
+}
+
+.pedido-cocina .estado-listo {
+  color: #176b35;
+  background: #e7f5ec;
+  border-color: #9bc8aa;
+}
+
+.productos-cocina {
+  margin: 18px 0 0;
+  padding: 14px 14px 14px 32px;
+  background: #f7f9fb;
+  border-radius: 6px;
+}
+
+.productos-cocina li + li {
+  margin-top: 8px;
+}
+
+.accion-cocina {
+  margin: 18px 0 0;
+}
+
+.accion-cocina button {
+  width: 100%;
+  justify-content: center;
+}
+
+.tabla-historial-pedido {
+  min-width: 650px;
+}
+
 /* Resumen y filtros de inventario */
 .resumen-inventario {
   display: grid;

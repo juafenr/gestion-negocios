@@ -114,6 +114,7 @@ class Pedidos extends Protected_Controller
             'usuario' => $this->usuario,
             'pedido' => $pedido,
             'detalles' => $this->pedidos_model->detalles($id),
+            'eventos' => $this->pedidos_model->eventos($id),
             'productos' => $this->productos_model->listar()
         ));
     }
@@ -185,6 +186,46 @@ class Pedidos extends Protected_Controller
     public function quitar($id = NULL, $detalle_id = NULL)
     {
         $this->procesar_cambio_detalle($id, $detalle_id, TRUE);
+    }
+
+    public function confirmar($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('pedidos.ver');
+        $this->requerir_permiso('pedidos.confirmar');
+
+        if (
+            !is_string($id)
+            || !ctype_digit($id)
+            || strlen($id) > 10
+            || (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        if (!$this->pedidos_model->buscar($id)) {
+            show_404();
+            return;
+        }
+
+        $error = $this->pedidos_model->confirmar(
+            (int) $id,
+            $this->usuario->id(),
+            $this->usuario->rol()
+        );
+
+        if ($error !== NULL) {
+            show_error(html_escape($error), 400);
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'mensaje_pedido',
+            'Pedido confirmado y enviado a cocina.'
+        );
+
+        redirect('pedidos/' . (int) $id);
     }
 
     private function procesar_cambio_detalle($id, $detalle_id, $quitar)

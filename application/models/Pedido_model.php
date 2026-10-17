@@ -108,6 +108,60 @@ class Pedido_model extends MY_Model
         return $consulta->result_array();
     }
 
+    public function listar_cocina()
+    {
+        $consulta = $this->db
+            ->select('id, numero, referencia, estado, confirmado_en')
+            ->where('empresa_id', $this->empresa_id())
+            ->where_in('estado', array('pendiente', 'preparacion', 'listo'))
+            ->order_by('confirmado_en', 'ASC')
+            ->order_by('id', 'ASC')
+            ->get('pedidos');
+
+        if (!$consulta) {
+            show_error('No se pudo consultar la cola de cocina.', 503);
+        }
+
+        $pedidos = $consulta->result_array();
+
+        if (empty($pedidos)) {
+            return array();
+        }
+
+        $pedidos_por_id = array();
+        $ids = array();
+
+        foreach ($pedidos as $indice => $pedido) {
+            $pedido['detalles'] = array();
+            $pedidos[$indice] = $pedido;
+            $pedidos_por_id[(int) $pedido['id']] = $indice;
+            $ids[] = (int) $pedido['id'];
+        }
+
+        $consulta_detalles = $this->db
+            ->select('pedido_id, producto_nombre, cantidad')
+            ->where('empresa_id', $this->empresa_id())
+            ->where_in('pedido_id', $ids)
+            ->order_by('pedido_id', 'ASC')
+            ->order_by('id', 'ASC')
+            ->get('pedido_detalles');
+
+        if (!$consulta_detalles) {
+            show_error('No se pudieron consultar los productos de cocina.', 503);
+        }
+
+        foreach ($consulta_detalles->result_array() as $detalle) {
+            $pedido_id = (int) $detalle['pedido_id'];
+
+            if (isset($pedidos_por_id[$pedido_id])) {
+                $indice = $pedidos_por_id[$pedido_id];
+                $pedidos[$indice]['detalles'][] = $detalle;
+            }
+        }
+
+        return $pedidos;
+    }
+
     public function buscar($id)
     {
         $consulta = $this->db
@@ -133,6 +187,30 @@ class Pedido_model extends MY_Model
 
         if (!$consulta) {
             show_error('No se pudieron consultar los productos del pedido.', 503);
+        }
+
+        return $consulta->result_array();
+    }
+
+    public function eventos($pedido_id)
+    {
+        $consulta = $this->db
+            ->select(
+                'pedido_eventos.estado_anterior, '
+                . 'pedido_eventos.estado_nuevo, '
+                . 'pedido_eventos.rol_codigo, '
+                . 'pedido_eventos.creado_en, '
+                . 'usuarios.nombre AS usuario_nombre'
+            )
+            ->from('pedido_eventos')
+            ->join('usuarios', 'usuarios.id = pedido_eventos.usuario_id')
+            ->where('pedido_eventos.pedido_id', (int) $pedido_id)
+            ->where('pedido_eventos.empresa_id', $this->empresa_id())
+            ->order_by('pedido_eventos.id', 'ASC')
+            ->get();
+
+        if (!$consulta) {
+            show_error('No se pudo consultar el historial del pedido.', 503);
         }
 
         return $consulta->result_array();
@@ -394,6 +472,233 @@ class Pedido_model extends MY_Model
             log_message('error', 'Fallo al modificar el detalle del pedido.');
 
             return 'No se pudo modificar el pedido. Intenta nuevamente.';
+        } finally {
+            $this->db->db_debug = $debug_anterior;
+        }
+    }
+
+    public function confirmar($pedido_id, $usuario_id, $rol_codigo)
+    {
+        $empresa_id = $this->empresa_id();
+        $debug_anterior = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+
+        $ejecutar = function ($sql, $valores) {
+            $resultado = $this->db->query($sql, $valores);
+
+            if ($resultado === FALSE) {
+                throw new RuntimeException('Error de base de datos.');
+            }
+
+            return $resultado;
+        };
+
+        try {
+            if (!$this->db->trans_begin()) {
+                throw new RuntimeException('No se pudo iniciar la operación.');
+            }
+
+            $pedido = $ejecutar(
+                'SELECT id, estado
+                 FROM pedidos
+                 WHERE id = ? AND empresa_id = ?
+                 FOR UPDATE',
+                array($pedido_id, $empresa_id)
+            )->row_array();
+
+            if (!$pedido) {
+                throw new InvalidArgumentException('Pedido no encontrado.');
+            }
+
+            if ($pedido['estado'] !== 'borrador') {
+                throw new InvalidArgumentException(
+                    'Solo puedes confirmar un pedido en borrador.'
+                );
+            }
+
+            $resumen = $ejecutar(
+                'SELECT
+                    COUNT(*) AS productos,
+                    COALESCE(SUM(cantidad * precio_unitario), 0) AS total,
+                    COALESCE(SUM(cantidad * precio_unitario), 0)
+                        > 9999999999.99 AS excede,
+                    COALESCE(SUM(cantidad < 1 OR cantidad > 999), 0)
+                        AS invalidos
+                 FROM pedido_detalles
+                 WHERE pedido_id = ? AND empresa_id = ?',
+                array($pedido_id, $empresa_id)
+            )->row_array();
+
+            if ((int) $resumen['productos'] === 0) {
+                throw new InvalidArgumentException(
+                    'Agrega al menos un producto antes de confirmar.'
+                );
+            }
+
+            if ((int) $resumen['invalidos'] > 0) {
+                throw new InvalidArgumentException(
+                    'Las cantidades deben estar entre 1 y 999.'
+                );
+            }
+
+            if ($resumen['excede']) {
+                throw new InvalidArgumentException(
+                    'El total supera el límite permitido.'
+                );
+            }
+
+            $ejecutar(
+                'UPDATE pedidos
+                 SET estado = ?,
+                     total = ?,
+                     confirmado_en = CURRENT_TIMESTAMP
+                 WHERE id = ? AND empresa_id = ?',
+                array(
+                    'pendiente',
+                    $resumen['total'],
+                    $pedido_id,
+                    $empresa_id
+                )
+            );
+
+            $ejecutar(
+                'INSERT INTO pedido_eventos
+                 (empresa_id, pedido_id, usuario_id, rol_codigo,
+                  estado_anterior, estado_nuevo)
+                 VALUES (?, ?, ?, ?, ?, ?)',
+                array(
+                    $empresa_id,
+                    $pedido_id,
+                    $usuario_id,
+                    $rol_codigo,
+                    'borrador',
+                    'pendiente'
+                )
+            );
+
+            if (!$this->db->trans_status() || !$this->db->trans_commit()) {
+                throw new RuntimeException('No se pudo completar la operación.');
+            }
+
+            return NULL;
+        } catch (InvalidArgumentException $error) {
+            $this->db->trans_rollback();
+            return $error->getMessage();
+        } catch (Exception $error) {
+            $this->db->trans_rollback();
+            log_message('error', 'Fallo al confirmar el pedido.');
+
+            return 'No se pudo confirmar el pedido. Intenta nuevamente.';
+        } finally {
+            $this->db->db_debug = $debug_anterior;
+        }
+    }
+
+    public function actualizar_estado_cocina(
+        $pedido_id,
+        $estado_nuevo,
+        $usuario_id,
+        $rol_codigo
+    )
+    {
+        $transiciones = array(
+            'pendiente' => 'preparacion',
+            'preparacion' => 'listo',
+            'listo' => 'entregado'
+        );
+
+        if (!in_array($estado_nuevo, array_values($transiciones), TRUE)) {
+            return 'El estado solicitado no es válido.';
+        }
+
+        $empresa_id = $this->empresa_id();
+        $debug_anterior = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+
+        $ejecutar = function ($sql, $valores) {
+            $resultado = $this->db->query($sql, $valores);
+
+            if ($resultado === FALSE) {
+                throw new RuntimeException('Error de base de datos.');
+            }
+
+            return $resultado;
+        };
+
+        try {
+            if (!$this->db->trans_begin()) {
+                throw new RuntimeException('No se pudo iniciar la operación.');
+            }
+
+            $usuario = $ejecutar(
+                'SELECT id
+                 FROM usuarios
+                 WHERE id = ? AND empresa_id = ? AND activo = 1',
+                array($usuario_id, $empresa_id)
+            )->row_array();
+
+            if (!$usuario) {
+                throw new InvalidArgumentException('Usuario no autorizado.');
+            }
+
+            $pedido = $ejecutar(
+                'SELECT id, estado
+                 FROM pedidos
+                 WHERE id = ? AND empresa_id = ?
+                 FOR UPDATE',
+                array($pedido_id, $empresa_id)
+            )->row_array();
+
+            if (!$pedido) {
+                throw new InvalidArgumentException('Pedido no encontrado.');
+            }
+
+            $estado_anterior = $pedido['estado'];
+
+            if (
+                !isset($transiciones[$estado_anterior])
+                || $transiciones[$estado_anterior] !== $estado_nuevo
+            ) {
+                throw new InvalidArgumentException(
+                    'La transición solicitada no está permitida.'
+                );
+            }
+
+            $ejecutar(
+                'UPDATE pedidos
+                 SET estado = ?
+                 WHERE id = ? AND empresa_id = ?',
+                array($estado_nuevo, $pedido_id, $empresa_id)
+            );
+
+            $ejecutar(
+                'INSERT INTO pedido_eventos
+                 (empresa_id, pedido_id, usuario_id, rol_codigo,
+                  estado_anterior, estado_nuevo)
+                 VALUES (?, ?, ?, ?, ?, ?)',
+                array(
+                    $empresa_id,
+                    $pedido_id,
+                    $usuario_id,
+                    $rol_codigo,
+                    $estado_anterior,
+                    $estado_nuevo
+                )
+            );
+
+            if (!$this->db->trans_status() || !$this->db->trans_commit()) {
+                throw new RuntimeException('No se pudo completar la operación.');
+            }
+
+            return NULL;
+        } catch (InvalidArgumentException $error) {
+            $this->db->trans_rollback();
+            return $error->getMessage();
+        } catch (Exception $error) {
+            $this->db->trans_rollback();
+            log_message('error', 'Fallo al actualizar el estado de cocina.');
+
+            return 'No se pudo actualizar el pedido. Intenta nuevamente.';
         } finally {
             $this->db->db_debug = $debug_anterior;
         }

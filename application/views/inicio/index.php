@@ -11,6 +11,13 @@
 </section>
 <h2>Accesos rápidos</h2>
 <div class="accesos">
+    <?php if ($usuario->puede('pedidos.actualizar_cocina')): ?>
+        <a class="acceso" href="<?= html_escape(site_url('cocina')) ?>">
+            <span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/correcto.svg')) ?>" alt="" width="22" height="22"></span>
+            <h3>Cocina</h3><p>Consulta los pedidos confirmados y sus productos.</p>
+            <span class="acceso-abrir">Abrir cocina <img class="icono" src="<?= html_escape(base_url('assets/iconos/flecha.svg')) ?>" alt="" width="22" height="22"></span>
+        </a>
+    <?php endif; ?>
     <?php if ($usuario->puede('inventario.ver')): ?>
         <a class="acceso" href="<?= html_escape(site_url('inventario')) ?>">
             <span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/inventario.svg')) ?>" alt="" width="22" height="22"></span>

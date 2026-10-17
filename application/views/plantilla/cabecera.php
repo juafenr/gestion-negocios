@@ -35,6 +35,9 @@
             <?php if ($usuario->puede('pedidos.ver')): ?>
                 <a class="<?= $seccion === 'pedidos' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('pedidos')) ?>" <?= $seccion === 'pedidos' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/pedidos.svg')) ?>" alt="" width="22" height="22"><span>Pedidos</span></a>
             <?php endif; ?>
+            <?php if ($usuario->puede('pedidos.actualizar_cocina')): ?>
+                <a class="<?= $seccion === 'cocina' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('cocina')) ?>" <?= $seccion === 'cocina' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/correcto.svg')) ?>" alt="" width="22" height="22"><span>Cocina</span></a>
+            <?php endif; ?>
             <?php if ($usuario->puede('usuarios.ver')): ?>
                 <a class="<?= $seccion === 'usuarios' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('usuarios')) ?>" <?= $seccion === 'usuarios' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/usuario.svg')) ?>" alt="" width="22" height="22"><span>Usuarios</span></a>
             <?php endif; ?>

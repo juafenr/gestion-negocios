@@ -17,6 +17,10 @@ $route['inventario'] = 'inventario/index';
 $route['inventario/crear'] = 'inventario/crear';
 $route['inventario/(:num)/editar'] = 'inventario/editar/$1';
 
+$route['cocina'] = 'cocina/index';
+$route['cocina/pedidos/(:num)/estado'] = 'cocina/actualizar_estado/$1';
+
 $route['pedidos'] = 'pedidos/index';
 $route['pedidos/crear'] = 'pedidos/crear';
+$route['pedidos/(:num)/confirmar'] = 'pedidos/confirmar/$1';
 $route['pedidos/(:num)'] = 'pedidos/ver/$1';
