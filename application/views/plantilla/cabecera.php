@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=3')) ?>">
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=4')) ?>">
 </head>
 <body>
     <a class="saltar-contenido" href="#contenido">Ir al contenido</a>
