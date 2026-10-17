@@ -603,7 +603,12 @@ class Pedido_model extends MY_Model
                 );
             }
 
-            if ($pedido['estado_pago'] !== 'pendiente') {
+            $pago_registrado = $ejecutar(
+                'SELECT id FROM pagos WHERE empresa_id = ? AND pedido_id = ? LIMIT 1',
+                array($empresa_id, $pedido_id)
+            )->row_array();
+
+            if ($pago_registrado || $pedido['estado_pago'] !== 'pendiente') {
                 throw new InvalidArgumentException(
                     'Un pedido con pagos requiere gestionar la devolución antes de cancelarlo.'
                 );

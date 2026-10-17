@@ -8,7 +8,7 @@
 
 <?php if (!empty($mensaje)): ?>
     <p role="status">
-        <?= html_escape($mensaje) ?>git
+        <?= html_escape($mensaje) ?>
     </p>
 <?php endif; ?>
 
@@ -35,6 +35,10 @@
         <strong>Pago:</strong>
         <?= html_escape($pedido['estado_pago']) ?>
     </p>
+
+    <?php if ($usuario->puede('ventas.ver') && $usuario->puede('pedidos.ver') && $pedido['estado'] !== 'borrador'): ?>
+        <p><a class="boton" href="<?= html_escape(site_url('pagos/'.(int)$pedido['id'])) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="">Pagos y cuentas</a></p>
+    <?php endif; ?>
 
     <?php if ($puede_editar): ?>
         <h2 class="subtitulo-linea">Agregar producto</h2>
@@ -193,10 +197,13 @@
         </table>
     </div>
 
-    <p class="total-pedido"><strong>Total del pedido</strong>
+    <p class="total-pedido"><strong>Consumo del pedido</strong>
         Q <?= number_format((float) $pedido['total'], 2) ?>
     </p>
                     
+    <p>Propina (10%): <strong><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']))) ?></strong> ·
+    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']))) ?></strong></p>
+
     <?php if ($pedido['estado'] === 'borrador'
         && $usuario->puede('pedidos.confirmar')
     ): ?>
