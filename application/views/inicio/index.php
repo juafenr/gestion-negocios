@@ -11,6 +11,13 @@
 </section>
 <h2>Accesos rápidos</h2>
 <div class="accesos">
+    <?php if ($usuario->puede('ventas.ver') && $usuario->puede('pedidos.ver')): ?>
+        <a class="acceso" href="<?= html_escape(site_url('pagos')) ?>">
+            <span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="" width="22" height="22"></span>
+            <h3>Pagos</h3><p>Cobra pedidos, separa cuentas y consulta los saldos.</p>
+            <span class="acceso-abrir">Abrir pagos <img class="icono" src="<?= html_escape(base_url('assets/iconos/flecha.svg')) ?>" alt="" width="22" height="22"></span>
+        </a>
+    <?php endif; ?>
     <?php if ($usuario->puede('inventario.ver')): ?>
         <a class="acceso" href="<?= html_escape(site_url('inventario')) ?>">
             <span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/inventario.svg')) ?>" alt="" width="22" height="22"></span>

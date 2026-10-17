@@ -6,6 +6,7 @@ class Pedidos extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Dinero');
 
         $this->load->model(
             'Pedido_model',
