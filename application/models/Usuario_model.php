@@ -7,6 +7,7 @@ class Usuario_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Validacion_negocio');
     }
 
     private function buscar($campo, $valor)
@@ -82,6 +83,14 @@ class Usuario_model extends MY_Model
 
     public function crear_en_empresa($datos)
     {
+        try {
+            if (!is_array($datos)) { return FALSE; }
+            $validos = Validacion_negocio::usuario($datos);
+            $hash = $datos['password_hash'] ?? NULL;
+            if (!is_string($hash) || (password_get_info($hash)['algoName'] ?? 'unknown') === 'unknown') { return FALSE; }
+            if (!in_array($validos['rol_id'], array_map('intval', array_column($this->roles_disponibles(), 'id')), TRUE)) { return FALSE; }
+            $datos = array_merge($datos, $validos);
+        } catch (InvalidArgumentException $e) { return FALSE; }
         return $this->db->insert('usuarios', array(
             'empresa_id' => $this->empresa_id(),
             'rol_id' => (int) $datos['rol_id'],
@@ -95,6 +104,12 @@ class Usuario_model extends MY_Model
 
     public function actualizar_en_empresa($id, $nombre, $nombreUsuario, $rolId)
     {
+        try {
+            $id = Validacion_negocio::id($id);
+            $d = Validacion_negocio::usuario(array('nombre'=>$nombre, 'nombre_usuario'=>$nombreUsuario, 'rol_id'=>$rolId), FALSE);
+            if (!in_array($d['rol_id'], array_map('intval', array_column($this->roles_disponibles(), 'id')), TRUE)) { return FALSE; }
+            $nombre=$d['nombre']; $nombreUsuario=$d['nombre_usuario']; $rolId=$d['rol_id'];
+        } catch (InvalidArgumentException $e) { return FALSE; }
         return $this->db->where('empresa_id', $this->empresa_id())->where('id', (int) $id)
             ->update('usuarios', array('nombre' => $nombre, 'nombre_usuario' => $nombreUsuario, 'rol_id' => (int) $rolId));
     }

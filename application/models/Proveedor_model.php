@@ -7,6 +7,7 @@ class Proveedor_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Validacion_negocio');
     }
 
     public function buscar($id)
@@ -50,11 +51,10 @@ class Proveedor_model extends MY_Model
 
     public function actualizar($id, array $datos)
     {
-        $id = (int) $id;
-
-        if ($id < 1) {
-            return FALSE;
-        }
+        try {
+            $id = Validacion_negocio::id($id);
+            $datos = Validacion_negocio::proveedor($datos);
+        } catch (InvalidArgumentException $e) { return FALSE; }
 
         // Verificar que el proveedor pertenece a la empresa.
         $proveedor = $this->buscar($id);
@@ -125,6 +125,10 @@ class Proveedor_model extends MY_Model
 
     public function asociar_insumo($proveedorId, $insumoId)
     {
+        try {
+            $proveedorId = Validacion_negocio::id($proveedorId, 'Proveedor');
+            $insumoId = Validacion_negocio::id($insumoId, 'Insumo');
+        } catch (InvalidArgumentException $e) { return FALSE; }
         $empresaId = $this->empresa_id();
 
         $this->db->trans_begin();
@@ -183,6 +187,10 @@ class Proveedor_model extends MY_Model
 
     public function desasociar_insumo($proveedorId, $insumoId)
     {
+        try {
+            $proveedorId = Validacion_negocio::id($proveedorId, 'Proveedor');
+            $insumoId = Validacion_negocio::id($insumoId, 'Insumo');
+        } catch (InvalidArgumentException $e) { return FALSE; }
         $empresaId = $this->empresa_id();
 
         $this->db->trans_begin();

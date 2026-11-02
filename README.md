@@ -14,3 +14,8 @@ La guía de esta entrega está en **[LEEME_PAGOS.md](LEEME_PAGOS.md)**: instalac
 - El acceso acepta nombre de usuario o correo. En bases actualizadas, revisa los nombres iniciales `usuario<ID>` en el listado de Usuarios.
 
 Requisitos de esta entrega: PHP 8.2 de 64 bits, mysqli y mbstring, Apache y MySQL/MariaDB con InnoDB. El cobro es un registro interno: no procesa tarjetas ni realiza operaciones bancarias.
+
+## Validaciones RF-61 y RF-62
+
+Ver `LEEME_VALIDACIONES_RF61_RF62.md`. No hay migraciones nuevas para estas correcciones.
+Ejecutar `php tests/ejecutar_validaciones.php` con MySQL activo para obtener evidencia de aceptación sobre bases temporales.

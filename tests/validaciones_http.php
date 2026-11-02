@@ -1,0 +1,277 @@
+<?php
+/** RF-61/62: aceptación HTTP con CodeIgniter real, dos empresas y tres roles.
+ * Usa una copia temporal de la aplicación y una base vacía de nombre aleatorio.
+ * No modifica local.php ni la base del negocio. Requiere PHP CLI, curl, mysqli,
+ * mbstring, proc_open y permiso CREATE/DROP DATABASE en el MySQL de local.php.
+ */
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+define('BASEPATH', dirname(__DIR__).'/system/');
+$root=dirname(__DIR__);$db=NULL;$creada=FALSE;$proceso=NULL;$temp=NULL;$base=NULL;$codigo=0;$pasadas=0;
+$reporte=array('inicio'=>date(DATE_ATOM),'resultado'=>'FALLO','casos'=>array());
+function exigir($ok,$caso) {
+    global $pasadas,$reporte;
+    $reporte['casos'][]=array('caso'=>$caso,'ok'=>(bool)$ok);
+    if (!$ok) { throw new RuntimeException($caso); }
+    $pasadas++;echo "OK: $caso\n";
+}
+function copiar_arbol($origen,$destino) {
+    if (!mkdir($destino,0700,TRUE) && !is_dir($destino)) { throw new RuntimeException('No se pudo crear el entorno temporal.'); }
+    foreach (new DirectoryIterator($origen) as $f) {
+        if ($f->isDot() || $f->isLink() || in_array($f->getFilename(),array('local.php','development','logs','cache'),TRUE)) { continue; }
+        $d=$destino.'/'.$f->getFilename();
+        if ($f->isDir()) { copiar_arbol($f->getPathname(),$d); }
+        elseif (!copy($f->getPathname(),$d)) { throw new RuntimeException('No se pudo copiar un archivo de la aplicación.'); }
+    }
+}
+function borrar_arbol($dir) {
+    if (!is_dir($dir)) { return; }
+    foreach (new DirectoryIterator($dir) as $f) {
+        if ($f->isDot()) { continue; }
+        if ($f->isDir() && !$f->isLink()) { borrar_arbol($f->getPathname()); }
+        else { unlink($f->getPathname()); }
+    }
+    rmdir($dir);
+}
+function huella() {
+    global $db;
+    $datos=array();$tablas=$db->query('SHOW TABLES')->fetch_all(MYSQLI_NUM);
+    foreach ($tablas as $t) {
+        // Intentos de acceso es un contador de autenticación, no un dato de negocio.
+        if (strpos($t[0],'intento')!==FALSE) { continue; }
+        $filas=$db->query('SELECT * FROM `'.$t[0].'`')->fetch_all(MYSQLI_ASSOC);
+        $serializadas=array_map('serialize',$filas);sort($serializadas);
+        $datos[$t[0]]=$serializadas;
+    }
+    ksort($datos);return hash('sha256',serialize($datos));
+}
+function fila($sql) { global $db;return $db->query($sql)->fetch_assoc(); }
+final class ClienteValidacion {
+    private $c;private $base;
+    public function __construct($base) {
+        $this->base=$base.'index.php/';$this->c=curl_init();
+        curl_setopt_array($this->c,array(CURLOPT_RETURNTRANSFER=>TRUE,CURLOPT_FOLLOWLOCATION=>FALSE,
+            CURLOPT_COOKIEFILE=>'',CURLOPT_CONNECTTIMEOUT=>2,CURLOPT_TIMEOUT=>15));
+    }
+    public function pedir($ruta,$datos=NULL) {
+        curl_setopt($this->c,CURLOPT_URL,$this->base.$ruta);
+        if ($datos===NULL) { curl_setopt($this->c,CURLOPT_HTTPGET,TRUE); }
+        else { curl_setopt($this->c,CURLOPT_POST,TRUE);curl_setopt($this->c,CURLOPT_POSTFIELDS,http_build_query($datos)); }
+        $body=curl_exec($this->c);
+        if ($body===FALSE) { throw new RuntimeException('HTTP: '.curl_error($this->c)); }
+        if (preg_match('/A PHP Error was encountered|Fatal error:|Parse error:|Uncaught .*Error|Severity: (Warning|Notice)/i',$body)) {
+            throw new RuntimeException('Error PHP en '.$ruta.'. Consulta el registro temporal de la prueba.');
+        }
+        return array('status'=>(int)curl_getinfo($this->c,CURLINFO_HTTP_CODE),'body'=>$body,
+            'destino'=>curl_getinfo($this->c,CURLINFO_REDIRECT_URL));
+    }
+    public static function campo($html,$nombre) {
+        if (!preg_match('/<input\b[^>]*\bname="'.preg_quote($nombre,'/').'"[^>]*\bvalue="([^"]*)"/s',$html,$m)) {
+            throw new RuntimeException('No se encontró el campo '.$nombre.'.');
+        }
+        return html_entity_decode($m[1],ENT_QUOTES,'UTF-8');
+    }
+    public function post($ruta,$datos,$formulario='inicio') {
+        $form=$this->pedir($formulario);
+        if ($form['status']!==200) { throw new RuntimeException('No abrió formulario '.$formulario.': HTTP '.$form['status']); }
+        $datos['gestion_csrf']=self::campo($form['body'],'gestion_csrf');
+        return $this->pedir($ruta,$datos);
+    }
+    public function seguir($r) {
+        if (strpos($r['destino'],$this->base)!==0) { throw new RuntimeException('Redirección inesperada: '.$r['destino']); }
+        return $this->pedir(substr($r['destino'],strlen($this->base)));
+    }
+    public function entrar($nombre,$password) {
+        $r=$this->post('login',array('identificador'=>$nombre,'password'=>$password),'login');
+        exigir(in_array($r['status'],array(302,303,307),TRUE) && strpos($r['destino'],'/inicio')!==FALSE,'Login '.$nombre);
+    }
+    public function invalido($ruta,$datos,$caso,$formulario='inicio') {
+        $antes=huella();$r=$this->post($ruta,$datos,$formulario);
+        $rechazado=in_array($r['status'],array(400,409,422),TRUE);
+        if ($r['status']===303) {
+            $pantalla=$this->seguir($r);
+            $rechazado=$pantalla['status']===200 && preg_match('/class="[^"]*\berror\b/',$pantalla['body']);
+        }
+        exigir($rechazado && huella()===$antes,$caso.' (rechazo y base sin cambios)');
+    }
+    public function __destruct() { curl_close($this->c); }
+}
+try {
+    foreach (array('curl','mysqli','mbstring') as $ext) {
+        if (!extension_loaded($ext)) { throw new RuntimeException('Falta extensión '.$ext.'. Usa PHP de XAMPP.'); }
+    }
+    if (!function_exists('proc_open')) { throw new RuntimeException('Habilita proc_open en PHP CLI para iniciar el servidor temporal.'); }
+    $config=require $root.'/application/config/local.php';
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    $db=new mysqli($config['db_host'],$config['db_user'],$config['db_pass'],'',(int)$config['db_port']);
+    $db->set_charset('utf8mb4');
+    $base='gn_validacion_test_'.bin2hex(random_bytes(8));
+    $db->query('CREATE DATABASE `'.$base.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');$creada=TRUE;
+    $db->select_db($base);$db->multi_query(file_get_contents($root.'/database/schema.sql'));
+    do { if ($res=$db->store_result()) { $res->free(); } } while ($db->more_results() && $db->next_result());
+    $db->query("INSERT INTO empresas (id,nombre) VALUES (1,'Prueba A'),(2,'Prueba B')");
+    $password=bin2hex(random_bytes(12));$hash=password_hash($password,PASSWORD_BCRYPT);
+    foreach (array(array(1,1,'administrador','admin_a'),array(2,2,'administrador','admin_b'),array(3,1,'cajero','cajero_a'),array(4,1,'cocinero','cocinero_a')) as $u) {
+        $q=$db->prepare('INSERT INTO usuarios (id,empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash) SELECT ?,?,id,?,?,?,? FROM roles WHERE codigo=?');
+        $correo=$u[3].'@prueba.test';$q->bind_param('iisssss',$u[0],$u[1],$u[3],$u[3],$correo,$hash,$u[2]);$q->execute();
+    }
+    $db->query("INSERT INTO proveedores (id,empresa_id,nombre) VALUES (1,1,'Proveedor A'),(2,2,'Proveedor B')");
+    $db->query("INSERT INTO insumos (id,empresa_id,nombre,cantidad_actual,stock_minimo,unidad_medida,proveedor_id) VALUES (1,1,'Harina',10,2,'kg',1),(2,1,'Sal',1,0,'kg',NULL),(3,2,'Insumo B',10,1,'kg',2)");
+    $db->query("INSERT INTO productos (id,empresa_id,sku,nombre,precio) VALUES (1,1,'A','Producto A',10),(2,2,'B','Producto B',20)");
+    $temp=sys_get_temp_dir().DIRECTORY_SEPARATOR.$base;
+    mkdir($temp,0700);
+    foreach (array('application','system','assets') as $dir) { copiar_arbol($root.'/'.$dir,$temp.'/'.$dir); }
+    mkdir($temp.'/application/logs',0700);mkdir($temp.'/application/cache',0700);
+    copy($root.'/index.php',$temp.'/index.php');
+    $socket=stream_socket_server('tcp://127.0.0.1:0',$errno,$errstr);
+    if (!$socket) { throw new RuntimeException('No hay puerto local disponible.'); }
+    $direccion=stream_socket_get_name($socket,FALSE);fclose($socket);
+    $url='http://'.$direccion.'/';$config['base_url']=$url;$config['db_name']=$base;$config['cookie_secure']=FALSE;
+    file_put_contents($temp.'/application/config/local.php',"<?php\nreturn ".var_export($config,TRUE).";\n");
+    // Las sesiones de la copia se eliminan junto con el resto del entorno temporal.
+    mkdir($temp.'/sesiones',0700);
+    file_put_contents($temp.'/application/config/config.php',"\n\$config['sess_save_path'] = ".var_export($temp.'/sesiones',TRUE).";\n",FILE_APPEND);
+    $proceso=proc_open(array(PHP_BINARY,'-d','display_errors=1','-S',$direccion,'-t',$temp),
+        array(0=>array('pipe','r'),1=>array('file',$temp.'/servidor.log','a'),2=>array('file',$temp.'/servidor.log','a')),$pipes,$temp);
+    if (!is_resource($proceso)) { throw new RuntimeException('No se pudo iniciar PHP temporal.'); }
+    fclose($pipes[0]);$listo=FALSE;
+    for ($i=0;$i<50;$i++) {
+        $s=@stream_socket_client('tcp://'.$direccion,$errno,$errstr,0.1);
+        if ($s) { fclose($s);$listo=TRUE;break; } usleep(100000);
+    }
+    if (!$listo) { throw new RuntimeException('El servidor temporal no inició.'); }
+    $a=new ClienteValidacion($url);$b=new ClienteValidacion($url);$caja=new ClienteValidacion($url);$cocina=new ClienteValidacion($url);
+    $invitado=new ClienteValidacion($url);
+    $r=$invitado->pedir('inventario');exigir(in_array($r['status'],array(302,303,307),TRUE) && strpos($r['destino'],'/login')!==FALSE,'Inventario exige sesión');
+    foreach (array(array('identificador'=>array('admin_a'),'password'=>$password),array('identificador'=>'admin_a','password'=>array('x')),array('identificador'=>'','password'=>'')) as $mal) {
+        $r=$invitado->post('login',$mal,'login');exigir($r['status']===422,'Login rechaza campos vacíos o anidados');
+    }
+    $a->entrar('admin_a',$password);$b->entrar('admin_b',$password);$caja->entrar('cajero_a',$password);$cocina->entrar('cocinero_a',$password);
+    foreach (array('usuarios','ventas','compras','proveedores/1/editar') as $ruta) {
+        exigir($cocina->pedir($ruta)['status']===403,'Cocinero sin permiso: '.$ruta);
+    }
+    exigir($caja->pedir('usuarios')['status']===403,'Cajero no administra usuarios');
+    $antes=huella();$r=$a->pedir('usuarios/crear',array('nombre'=>'Sin token'));exigir($r['status']===403 && huella()===$antes,'CSRF impide guardar sin token');
+    foreach (array('inventario/1/editar','proveedores/1/editar') as $ruta) { exigir($b->pedir($ruta)['status']===404,'Empresa B no consulta '.$ruta); }
+
+    $rol=(string)fila("SELECT id FROM roles WHERE codigo='cajero'")['id'];
+    $usuario=array('nombre'=>'Nuevo usuario','nombre_usuario'=>'nuevo_usuario','correo'=>'nuevo@prueba.test','rol_id'=>$rol,'password'=>'Clave-prueba-123');
+    foreach (array('nombre','nombre_usuario','correo','rol_id','password') as $campo) {
+        $d=$usuario;unset($d[$campo]);$a->invalido('usuarios/crear',$d,'Usuario exige '.$campo);
+        $d=$usuario;$d[$campo]=array('x');$a->invalido('usuarios/crear',$d,'Usuario rechaza arreglo en '.$campo);
+    }
+    foreach (array('        ',str_repeat('x',73)) as $pass) {
+        $d=$usuario;$d['password']=$pass;$a->invalido('usuarios/crear',$d,'Contraseña inválida');
+    }
+    $d=$usuario;$d['rol_id']='999999';$a->invalido('usuarios/crear',$d,'Rol inexistente');
+    $d=$usuario;$d['correo']='sin-arroba';$a->invalido('usuarios/crear',$d,'Correo inválido');
+    $r=$a->post('usuarios/crear',$usuario);exigir(in_array($r['status'],array(302,303),TRUE) && (int)fila("SELECT COUNT(*) n FROM usuarios WHERE nombre_usuario='nuevo_usuario' AND empresa_id=1")['n']===1,'Registro válido de usuario');
+    $uid=(int)fila("SELECT id FROM usuarios WHERE nombre_usuario='nuevo_usuario'")['id'];
+    $a->invalido('usuarios/'.$uid.'/editar',array('nombre'=>' ','nombre_usuario'=>'nuevo_usuario','rol_id'=>$rol),'Edición exige nombre');
+    $a->invalido('usuarios/crear',$usuario,'Usuario duplicado');
+
+    $proveedor=array('nombre'=>'Proveedor válido','contacto'=>'','telefono'=>'','correo'=>'','direccion'=>'');
+    foreach (array('nombre','contacto','telefono','correo','direccion') as $campo) {
+        $d=$proveedor;$d[$campo]=array('x');$a->invalido('proveedores/1/editar',$d,'Edición de proveedor rechaza arreglo en '.$campo);
+        $a->invalido('compras/proveedor_nuevo',$d,'Alta de proveedor rechaza arreglo en '.$campo);
+    }
+    $d=$proveedor;$d['nombre']=' ';$a->invalido('proveedores/1/editar',$d,'Proveedor exige nombre');
+    $d=$proveedor;$d['correo']='correo-invalido';$a->invalido('proveedores/1/editar',$d,'Proveedor valida correo');
+    $r=$a->post('proveedores/1/editar',$proveedor);exigir($r['status']===303 && fila('SELECT nombre FROM proveedores WHERE id=1')['nombre']==='Proveedor válido','Proveedor permite contactos opcionales vacíos');
+    $a->invalido('proveedores/1/asociar',array('insumo_id'=>'3'),'Asociación rechaza insumo ajeno');
+
+    $insumo=array('nombre'=>'Nuevo insumo','cantidad_actual'=>'0','stock_minimo'=>'0','unidad_medida'=>'unidad','fecha_vencimiento'=>'');
+    foreach (array('nombre','cantidad_actual','stock_minimo','unidad_medida') as $campo) {
+        $d=$insumo;unset($d[$campo]);$a->invalido('inventario/crear',$d,'Insumo exige '.$campo);
+        $d=$insumo;$d[$campo]=array('1');$a->invalido('inventario/crear',$d,'Insumo rechaza arreglo en '.$campo);
+    }
+    foreach (array('-1','1e2','1,25','1.001','100000000') as $cantidad) {
+        $d=$insumo;$d['cantidad_actual']=$cantidad;$a->invalido('inventario/crear',$d,'Existencia inicial inválida: '.$cantidad);
+    }
+    foreach (array('2026-02-30','0001-01-01','9999-12-31') as $fecha) {
+        $d=$insumo;$d['fecha_vencimiento']=$fecha;$a->invalido('inventario/crear',$d,'Vencimiento inválido: '.$fecha);
+    }
+    $r=$a->post('inventario/crear',$insumo);exigir(in_array($r['status'],array(302,303),TRUE) && fila("SELECT cantidad_actual FROM insumos WHERE nombre='Nuevo insumo'")['cantidad_actual']==='0.00','Inventario acepta cero inicial');
+    $a->invalido('inventario/1/movimiento',array('tipo'=>'salida','cantidad'=>'11','motivo'=>'Prueba'),'Movimiento no deja existencia negativa');
+    $a->invalido('inventario/1/movimiento',array('tipo'=>'entrada','cantidad'=>'1','motivo'=>' '),'Movimiento exige motivo');
+    $a->invalido('inventario/2/vender',array('sku'=>'SAL','precio'=>'-1'),'Producto rechaza precio negativo');
+    $a->invalido('inventario/2/vender',array('sku'=>'','precio'=>'1'),'Producto exige código');
+    $r=$a->post('inventario/2/vender',array('sku'=>'SAL','precio'=>'0'));exigir(in_array($r['status'],array(302,303),TRUE) && fila("SELECT precio FROM productos WHERE sku='SAL'")['precio']==='0.00','Producto admite precio cero');
+
+    foreach (array('', '   ', array('Mesa')) as $ref) { $a->invalido('pedidos/crear',array('referencia'=>$ref),'Pedido exige referencia válida'); }
+    $r=$a->post('pedidos/crear',array('referencia'=>'Pedido aceptación'));exigir(in_array($r['status'],array(302,303),TRUE),'Crear pedido válido');
+    $pid=(int)fila("SELECT id FROM pedidos WHERE referencia='Pedido aceptación'")['id'];
+    foreach (array('-1','0','1.5','1000',array('1')) as $q) { $a->invalido('pedidos/agregar/'.$pid,array('producto_id'=>'1','cantidad'=>$q),'Pedido rechaza cantidad inválida'); }
+    $a->invalido('pedidos/agregar/'.$pid,array('producto_id'=>'2','cantidad'=>'1'),'Pedido rechaza producto ajeno');
+    $r=$a->post('pedidos/agregar/'.$pid,array('producto_id'=>'1','cantidad'=>'1'));exigir(in_array($r['status'],array(302,303),TRUE),'Agregar producto válido');
+    $r=$a->post('pedidos/'.$pid.'/confirmar',array());exigir(in_array($r['status'],array(302,303),TRUE),'Confirmar pedido válido');
+    $cocina->invalido('cocina/pedidos/'.$pid.'/estado',array('estado'=>array('listo')),'Cocina rechaza estado anidado');
+    $cocina->invalido('cocina/pedidos/'.$pid.'/estado',array('estado'=>'entregado'),'Cocina no salta estados');
+    $r=$cocina->post('cocina/pedidos/'.$pid.'/estado',array('estado'=>'en_preparacion'));exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT estado FROM pedidos WHERE id='.$pid)['estado']==='en_preparacion','Cocina acepta transición válida');
+    $r=$caja->post('pagos/preparar/'.$pid,array());exigir($r['status']===303,'Preparar cuenta');
+    $cuenta=(string)fila('SELECT id FROM pago_cuentas WHERE pedido_id='.$pid)['id'];
+    $pago=array('cuenta_id'=>$cuenta,'efectivo'=>'11','credito'=>'0','debito'=>'0','recibido'=>'11','clave'=>bin2hex(random_bytes(32)));
+    foreach (array('efectivo','credito','debito','recibido') as $campo) {
+        foreach (array('-1','1.001',array('1'),NULL) as $monto) {
+            $d=$pago;$d[$campo]=$monto;$caja->invalido('pagos/registrar/'.$pid,$d,'Pago rechaza '.$campo.' inválido');
+        }
+    }
+    $d=$pago;$d['recibido']='10';$caja->invalido('pagos/registrar/'.$pid,$d,'Efectivo recibido insuficiente');
+    $d=$pago;$d['efectivo']='12';$d['recibido']='12';$caja->invalido('pagos/registrar/'.$pid,$d,'Pago mayor al saldo');
+    $r=$caja->post('pagos/registrar/'.$pid,$pago);exigir($r['status']===303 && fila('SELECT estado_pago FROM pedidos WHERE id='.$pid)['estado_pago']==='pagado','Pago válido completa pedido y venta');
+    $antes=huella();$caja->post('pagos/registrar/'.$pid,$pago);exigir(huella()===$antes,'Reintento de pago no duplica registros');
+    exigir($a->pedir('ventas?desde=2026-02-30&hasta=2026-03-01')['status']===422,'Ventas rechaza fecha imposible');
+    exigir($a->pedir('ventas?desde=2026-12-01&hasta=2026-01-01')['status']===422,'Ventas rechaza rango invertido');
+
+    $sol=array('proveedor_id'=>'1','fecha'=>'2026-11-02','observaciones'=>'','insumos'=>array('1'),'cantidades'=>array('2.50'),'clave'=>bin2hex(random_bytes(32)));
+    foreach (array('proveedor_id','fecha','insumos','cantidades','clave') as $campo) {
+        $d=$sol;unset($d[$campo]);$a->invalido('compras/crear',$d,'Solicitud exige '.$campo);
+    }
+    foreach (array('-1','0','1.001',array('1')) as $q) { $d=$sol;$d['cantidades']=array($q);$a->invalido('compras/crear',$d,'Solicitud rechaza cantidad inválida'); }
+    $d=$sol;$d['proveedor_id']='2';$a->invalido('compras/crear',$d,'Solicitud rechaza proveedor ajeno');
+    $d=$sol;$d['insumos']=array('3');$a->invalido('compras/crear',$d,'Solicitud rechaza insumo ajeno');
+    $d=$sol;$d['insumos']=array('1','1');$d['cantidades']=array('1','1');$a->invalido('compras/crear',$d,'Solicitud rechaza insumos duplicados');
+    $r=$a->post('compras/crear',$sol);exigir($r['status']===303,'Solicitud válida con observación opcional');
+    $sid=(int)fila('SELECT MAX(id) id FROM solicitudes_compra')['id'];
+    $d=$sol;unset($d['clave']);$d['version']='2';$a->invalido('compras/'.$sid.'/editar',$d,'Edición rechaza versión ajena a la vigente');
+    $a->invalido('compras/'.$sid.'/confirmar',array('version'=>'1'),'Confirmación exige revisión');
+    $r=$a->post('compras/'.$sid.'/confirmar',array('version'=>'1','revisada'=>'1'));exigir($r['status']===303 && fila('SELECT estado FROM solicitudes_compra WHERE id='.$sid)['estado']==='confirmada','Confirmación válida');
+    $a->invalido('compras/'.$sid.'/estado',array('version'=>'2','estado'=>'cancelada','motivo'=>' '),'Cancelar compra exige motivo');
+    $r=$a->post('compras/'.$sid.'/estado',array('version'=>'2','estado'=>'enviada'));exigir($r['status']===303 && fila('SELECT estado FROM solicitudes_compra WHERE id='.$sid)['estado']==='enviada','Enviar compra válida');
+    $detalle=(int)fila('SELECT id FROM solicitud_compra_detalles WHERE solicitud_id='.$sid)['id'];
+    $recepcion=array('version'=>'3','clave'=>bin2hex(random_bytes(32)),'cantidades'=>array($detalle=>'1'));
+    foreach (array('-1','0','3','1.001',array('1')) as $q) { $d=$recepcion;$d['cantidades']=array($detalle=>$q);$a->invalido('compras/'.$sid.'/recepcion',$d,'Recepción rechaza cantidad inválida o excedente'); }
+    $d=$recepcion;$d['cantidades']=array($detalle=>'1','0'.$detalle=>'1');$a->invalido('compras/'.$sid.'/recepcion',$d,'Recepción rechaza duplicados normalizados');
+    $db->query("UPDATE insumos SET unidad_medida='g' WHERE id=1");
+    $a->invalido('compras/'.$sid.'/recepcion',$recepcion,'Recepción rechaza cambio de unidad');
+    $db->query("UPDATE insumos SET unidad_medida='kg' WHERE id=1");
+    $r=$a->post('compras/'.$sid.'/recepcion',$recepcion);exigir($r['status']===303 && fila('SELECT cantidad_actual FROM insumos WHERE id=1')['cantidad_actual']==='11.00','Recepción parcial válida');
+    $antes=huella();$a->post('compras/'.$sid.'/recepcion',$recepcion);exigir(huella()===$antes,'Reintento de recepción no duplica stock');
+    $d=$recepcion;$d['version']='4';$d['clave']=bin2hex(random_bytes(32));$d['cantidades']=array($detalle=>'1.50');
+    $r=$a->post('compras/'.$sid.'/recepcion',$d);exigir($r['status']===303 && fila('SELECT estado FROM solicitudes_compra WHERE id='.$sid)['estado']==='recibida','Recepción final válida');
+    exigir($b->pedir('compras/'.$sid.'/exportar')['status']===404,'Exportación aislada por empresa');
+    foreach (array(array('cantidad'=>array(1=>'-1')),array('cantidad'=>array(1=>array('1'))),array('cantidad'=>array(3=>'1')),array('cantidad'=>array(1=>'1','01'=>'2'))) as $d) {
+        $a->invalido('compras/seleccionar',$d,'Selección agrupada rechaza negativos, arreglos o empresa ajena');
+    }
+    $r=$a->post('compras/seleccionar',array('cantidad'=>array(1=>'1')));exigir(in_array($r['status'],array(302,303),TRUE),'Selección agrupada válida');
+    $antes=huella();$r=$a->post('compras/generar',array('fecha'=>'2026-02-30','observaciones'=>''));
+    $pantalla=$a->seguir($r);exigir(huella()===$antes && strpos($pantalla['body'],'no es válida')!==FALSE,'Generación agrupada rechaza fecha imposible');
+    $r=$a->post('compras/generar',array('fecha'=>'2026-11-02','observaciones'=>''));exigir($r['status']===303 && (int)fila('SELECT COUNT(*) n FROM solicitudes_compra')['n']===2,'Generación agrupada válida');
+    $antes=huella();$a->post('compras/generar',array('fecha'=>'2026-11-02','observaciones'=>''));exigir(huella()===$antes,'Reintento de generación no duplica documentos');
+    $reporte['resultado']='APROBADO';echo "\nAPROBADO: $pasadas comprobaciones HTTP y de persistencia.\n";
+} catch (Throwable $e) {
+    $codigo=1;$reporte['error']=$e->getMessage();fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");
+} finally {
+    if (is_resource($proceso)) { proc_terminate($proceso);proc_close($proceso); }
+    $salida=$root.'/test-results';if (!is_dir($salida)) { mkdir($salida,0700,TRUE); }
+    if ($codigo && $temp && is_file($temp.'/servidor.log')) { copy($temp.'/servidor.log',$salida.'/validaciones-servidor.log'); }
+    if ($db && $creada && preg_match('/^gn_validacion_test_[a-f0-9]{16}$/D',$base)) {
+        try { $db->query('DROP DATABASE `'.$base.'`'); }
+        catch (Throwable $e) { $codigo=1;$reporte['limpieza_error']='No se pudo borrar la base temporal '.$base;fwrite(STDERR,$reporte['limpieza_error']."\n"); }
+    }
+    if ($temp && is_dir($temp) && preg_match('/^gn_validacion_test_[a-f0-9]{16}$/D',basename($temp))) { borrar_arbol($temp); }
+    $reporte['fin']=date(DATE_ATOM);$reporte['total_aprobadas']=$pasadas;
+    if ($codigo) { $reporte['resultado']='FALLO'; }
+    file_put_contents($salida.'/validaciones-http.json',json_encode($reporte,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE));
+    echo "Reporte: test-results/validaciones-http.json\n";
+}
+exit($codigo);
