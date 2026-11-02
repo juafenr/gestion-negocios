@@ -7,7 +7,7 @@ class Autenticacion
     private $ci;
     private $resuelto = FALSE;
     private $usuario = NULL;
-    // Hash válido usado solo para igualar el trabajo cuando el correo no existe.
+    // Hash válido usado solo para igualar el trabajo cuando la cuenta no existe.
     private const HASH_FICTICIO = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
 
     public function __construct()
@@ -17,19 +17,21 @@ class Autenticacion
         $this->ci->load->model('Intento_model', 'intentos');
     }
 
-    public function ingresar($correo, $password)
+    public function ingresar($identificador, $password)
     {
-        if (!$this->ci->intentos->reservar($correo, $this->ci->input->ip_address())) {
+        if (!$this->ci->intentos->reservar($identificador, $this->ci->input->ip_address())) {
             return 'limite';
         }
-        $fila = $this->ci->usuarios->por_correo($correo);
+        $fila = strpos($identificador, '@') === FALSE
+            ? $this->ci->usuarios->por_nombre_usuario($identificador)
+            : $this->ci->usuarios->por_correo($identificador);
         $valido = password_verify($password, $fila ? $fila['password_hash'] : self::HASH_FICTICIO);
         if (!$fila || !$valido) { return 'invalido'; }
         $this->ci->session->sess_regenerate(TRUE);
         $this->ci->session->set_userdata(array(
             'usuario_id' => (int) $fila['id'], 'ingreso_en' => time(), 'ultima_actividad' => time()
         ));
-        $this->ci->intentos->limpiar_correo($correo);
+        $this->ci->intentos->limpiar_identificador($identificador);
         $this->usuario = new UsuarioAutenticado($fila);
         $this->resuelto = TRUE;
         return 'ok';

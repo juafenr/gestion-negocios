@@ -25,10 +25,11 @@ class Usuarios extends Protected_Controller
         $metodo = $this->input->method(TRUE);
         if (!in_array($metodo, array('GET', 'POST'), TRUE)) { $this->solo_metodo('GET'); }
         $roles = $this->usuarios_model->roles_disponibles();
-        $datos = array('nombre' => '', 'correo' => '', 'rol_id' => '', 'error' => '');
+        $datos = array('nombre' => '', 'nombre_usuario' => '', 'correo' => '', 'rol_id' => '', 'error' => '');
         if ($metodo === 'POST') {
             $datos = array(
                 'nombre' => $this->texto_post('nombre'),
+                'nombre_usuario' => strtolower($this->texto_post('nombre_usuario')),
                 'correo' => strtolower($this->texto_post('correo')),
                 'rol_id' => $this->texto_post('rol_id'),
                 'error' => ''
@@ -38,9 +39,13 @@ class Usuarios extends Protected_Controller
             if ($error === '' && !$this->usuarios_model->correo_disponible($datos['correo'])) {
                 $error = 'Ya existe una cuenta con ese correo.';
             }
+            if ($error === '' && !$this->usuarios_model->nombre_usuario_disponible($datos['nombre_usuario'])) {
+                $error = 'Ese nombre de usuario ya está en uso.';
+            }
             if ($error === '') {
                 $ok = $this->usuarios_model->crear_en_empresa(array(
-                    'nombre' => $datos['nombre'], 'correo' => $datos['correo'], 'rol_id' => $datos['rol_id'],
+                    'nombre' => $datos['nombre'], 'nombre_usuario' => $datos['nombre_usuario'],
+                    'correo' => $datos['correo'], 'rol_id' => $datos['rol_id'],
                     'password_hash' => password_hash($password, PASSWORD_BCRYPT, array('cost' => 10))
                 ));
                 if (!$ok) { show_error('No se pudo crear el usuario.', 503); }
@@ -65,12 +70,16 @@ class Usuarios extends Protected_Controller
         $metodo = $this->input->method(TRUE);
         if (!in_array($metodo, array('GET', 'POST'), TRUE)) { $this->solo_metodo('GET'); }
         $roles = $this->usuarios_model->roles_disponibles();
-        $datos = array('nombre' => $cuenta['nombre'], 'correo' => $cuenta['correo'],
+        $datos = array('nombre' => $cuenta['nombre'], 'nombre_usuario' => $cuenta['nombre_usuario'], 'correo' => $cuenta['correo'],
             'rol_id' => (string) $cuenta['rol_id'], 'error' => '');
         if ($metodo === 'POST') {
             $datos['nombre'] = $this->texto_post('nombre');
+            $datos['nombre_usuario'] = strtolower($this->texto_post('nombre_usuario'));
             $datos['rol_id'] = $this->texto_post('rol_id');
             $error = $this->validar($datos, $roles, NULL, FALSE);
+            if ($error === '' && !$this->usuarios_model->nombre_usuario_disponible($datos['nombre_usuario'], $id)) {
+                $error = 'Ese nombre de usuario ya está en uso.';
+            }
             if ($id === $this->usuario->id() && (int) $datos['rol_id'] !== (int) $cuenta['rol_id']) {
                 $error = 'No puedes cambiar tu propio rol mientras utilizas la cuenta.';
             }
@@ -78,7 +87,7 @@ class Usuarios extends Protected_Controller
                 $datos['rol_id'] = (string) $cuenta['rol_id'];
             }
             if ($error === '') {
-                if (!$this->usuarios_model->actualizar_en_empresa($id, $datos['nombre'], $datos['rol_id'])) {
+                if (!$this->usuarios_model->actualizar_en_empresa($id, $datos['nombre'], $datos['nombre_usuario'], $datos['rol_id'])) {
                     show_error('No se pudo actualizar el usuario.', 503);
                 }
                 redirect('usuarios');
@@ -125,6 +134,9 @@ class Usuarios extends Protected_Controller
     {
         if ($datos['nombre'] === '' || mb_strlen($datos['nombre']) > 100) {
             return 'El nombre es obligatorio y admite hasta 100 caracteres.';
+        }
+        if (preg_match('/^[a-z][a-z0-9._-]{2,39}$/D', $datos['nombre_usuario']) !== 1) {
+            return 'El usuario debe tener de 3 a 40 caracteres: letras minúsculas, números, punto, guion o guion bajo; empieza con una letra.';
         }
         if ($validarCorreo && (!filter_var($datos['correo'], FILTER_VALIDATE_EMAIL) || strlen($datos['correo']) > 190)) {
             return 'Introduce un correo válido de hasta 190 caracteres.';

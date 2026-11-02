@@ -65,9 +65,9 @@ try {
     $db->multi_query(file_get_contents(__DIR__.'/../database/schema.sql'));
     do { if ($r=$db->store_result()) { $r->free(); } } while ($db->more_results() && $db->next_result());
     $db->query("INSERT INTO empresas (id,nombre) VALUES (1,'A prueba'),(2,'B prueba')");
-    $db->query("INSERT INTO usuarios (id,empresa_id,rol_id,nombre,correo,password_hash) SELECT 1,1,id,'Admin A','a@prueba.test','sin_login' FROM roles WHERE codigo='administrador'");
-    $db->query("INSERT INTO usuarios (id,empresa_id,rol_id,nombre,correo,password_hash) SELECT 2,2,id,'Admin B','b@prueba.test','sin_login' FROM roles WHERE codigo='administrador'");
-    $db->query("INSERT INTO usuarios (id,empresa_id,rol_id,nombre,correo,password_hash) SELECT 3,1,id,'Cocinero','c@prueba.test','sin_login' FROM roles WHERE codigo='cocinero'");
+    $db->query("INSERT INTO usuarios (id,empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash) SELECT 1,1,id,'Admin A','admin_a','a@prueba.test','sin_login' FROM roles WHERE codigo='administrador'");
+    $db->query("INSERT INTO usuarios (id,empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash) SELECT 2,2,id,'Admin B','admin_b','b@prueba.test','sin_login' FROM roles WHERE codigo='administrador'");
+    $db->query("INSERT INTO usuarios (id,empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash) SELECT 3,1,id,'Cocinero','cocinero_a','c@prueba.test','sin_login' FROM roles WHERE codigo='cocinero'");
     $db->query("INSERT INTO productos (id,empresa_id,sku,nombre,precio) VALUES (1,1,'a','Producto A',60),(2,1,'b','Producto B',40),(3,2,'c','Producto C',100)");
     $db->query("INSERT INTO pedidos (id,empresa_id,numero,usuario_id,referencia,estado,total) VALUES (1,1,1,1,'Prueba','pendiente',100),(2,2,1,2,'Ajeno','pendiente',100),(3,1,2,1,'Borrador','borrador',100),(4,1,3,1,'Cancelado','cancelado',100),(5,1,4,1,'Efectivo','pendiente',100),(6,1,5,1,'Rollback','pendiente',100)");
     $db->query("INSERT INTO pedido_detalles (id,empresa_id,pedido_id,producto_id,producto_nombre,cantidad,precio_unitario) VALUES (1,1,1,1,'A',1,60),(2,1,1,2,'B',1,40),(3,2,2,3,'C',1,100),(4,1,3,1,'A',1,100),(5,1,4,1,'A',1,100),(6,1,5,1,'A',1,100),(7,1,6,1,'A',1,100)");

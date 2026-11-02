@@ -115,8 +115,8 @@ try {
 
     $hash = password_hash($password, PASSWORD_BCRYPT, array('cost' => 10));
     $insertarUsuario = $db->prepare(
-        'INSERT INTO usuarios (empresa_id, rol_id, nombre, correo, password_hash)
-         VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO usuarios (empresa_id, rol_id, nombre, nombre_usuario, correo, password_hash)
+         VALUES (?, ?, ?, ?, ?, ?)'
     );
     $cuentas = array(
         array($empresaA, $roles['cajero'], 'Cajero cocina temporal', $prefijo.'-cajero@example.test'),
@@ -124,9 +124,10 @@ try {
         array($empresaB, $roles['cocinero'], 'Cocinero temporal B', $prefijo.'-cocinero-b@example.test'),
         array($empresaA, $roles['administrador'], 'Administrador cocina temporal', $prefijo.'-admin@example.test')
     );
-    foreach ($cuentas as $cuenta) {
+    foreach ($cuentas as $indice => $cuenta) {
         [$empresaId, $rolId, $nombre, $correo] = $cuenta;
-        $insertarUsuario->bind_param('iisss', $empresaId, $rolId, $nombre, $correo, $hash);
+        $nombreUsuario = $prefijo.'-'.$indice;
+        $insertarUsuario->bind_param('iissss', $empresaId, $rolId, $nombre, $nombreUsuario, $correo, $hash);
         $insertarUsuario->execute();
         $usuarios[] = (int) $db->insert_id;
     }

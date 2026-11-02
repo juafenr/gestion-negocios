@@ -145,6 +145,15 @@ try {
         $nullable=$db->query("SHOW COLUMNS FROM usuarios LIKE 'rol_id'")->fetch_assoc();
         if ($nullable['Null']==='YES') { $a->operacion('usuarios.rol_id obligatorio','ALTER TABLE usuarios MODIFY rol_id INT UNSIGNED NOT NULL'); }
     }
+    $a->agregar('usuarios','nombre_usuario','VARCHAR(40) NULL AFTER nombre');
+    if ($a->columna('usuarios','nombre_usuario')) {
+        if ($db->query('SELECT id FROM usuarios WHERE nombre_usuario IS NULL LIMIT 1')->num_rows) {
+            $a->operacion('asignar nombres de usuario a cuentas existentes',
+                "UPDATE usuarios SET nombre_usuario=CONCAT('usuario',id) WHERE nombre_usuario IS NULL");
+        }
+        $nullable=$db->query("SHOW COLUMNS FROM usuarios LIKE 'nombre_usuario'")->fetch_assoc();
+        if ($nullable['Null']==='YES') { $a->operacion('usuarios.nombre_usuario obligatorio','ALTER TABLE usuarios MODIFY nombre_usuario VARCHAR(40) NOT NULL'); }
+    }
     $a->agregar('empresas','ultimo_numero_pedido','INT UNSIGNED NOT NULL DEFAULT 0');
     $a->crear('insumos',$creaciones['insumos']);
     $a->agregar('insumos','fecha_vencimiento','DATE NULL');

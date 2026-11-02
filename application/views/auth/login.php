@@ -20,8 +20,8 @@
             <p class="error" role="alert"><?= html_escape($error) ?></p>
         <?php endif; ?>
         <?= form_open('login', array('class' => 'formulario')) ?>
-            <label for="correo">Correo electrónico</label>
-            <input id="correo" name="correo" type="email" maxlength="190" autocomplete="username" placeholder="tu@correo.com" required value="<?= html_escape($correo) ?>">
+            <label for="identificador">Nombre de usuario o correo electrónico</label>
+            <input id="identificador" name="identificador" type="text" maxlength="190" autocomplete="username" placeholder="tu_usuario o tu@correo.com" required value="<?= html_escape($identificador) ?>">
             <label for="password">Contraseña</label>
             <div class="campo-password">
                 <input id="password" name="password" type="password" maxlength="72" autocomplete="current-password" required>

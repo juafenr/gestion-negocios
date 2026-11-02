@@ -6,10 +6,11 @@ class Intento_model extends CI_Model
 {
     public function __construct() { parent::__construct(); $this->load->database(); }
 
-    public function reservar($correo, $ip)
+    public function reservar($identificador, $ip)
     {
         $ahora = time();
-        $buckets = array(hash('sha256', 'correo:'.$correo) => 5, hash('sha256', 'ip:'.$ip) => 30);
+        // Conserva las claves de límites anteriores para los correos existentes.
+        $buckets = array(hash('sha256', 'correo:'.$identificador) => 5, hash('sha256', 'ip:'.$ip) => 30);
         $permitido = TRUE;
         $this->db->trans_begin();
         foreach ($buckets as $clave => $limite) {
@@ -31,8 +32,8 @@ class Intento_model extends CI_Model
         $this->db->where('inicio <', $ahora - 86400)->delete('login_intentos');
         return $permitido;
     }
-    public function limpiar_correo($correo)
+    public function limpiar_identificador($identificador)
     {
-        $this->db->delete('login_intentos', array('clave' => hash('sha256', 'correo:'.$correo)));
+        $this->db->delete('login_intentos', array('clave' => hash('sha256', 'correo:'.$identificador)));
     }
 }

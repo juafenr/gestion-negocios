@@ -8,24 +8,27 @@ class Auth extends MY_Controller
         $metodo = $this->input->method(TRUE);
         if (!in_array($metodo, array('GET', 'POST'), TRUE)) { $this->solo_metodo('GET'); }
         if ($this->autenticacion->usuario_actual() !== NULL) { redirect('inicio'); }
-        $datos = array('error' => '', 'correo' => '');
+        $datos = array('error' => '', 'identificador' => '');
         if ($metodo === 'POST') {
-            $correo = $this->input->post('correo');
+            $identificador = $this->input->post('identificador');
+            if ($identificador === NULL) { $identificador = $this->input->post('correo'); }
             $password = $this->input->post('password');
-            $correo = is_string($correo) ? strtolower(trim($correo)) : '';
-            $datos['correo'] = substr($correo, 0, 190);
-            if (!filter_var($correo, FILTER_VALIDATE_EMAIL) || strlen($correo) > 190
+            $identificador = is_string($identificador) ? strtolower(trim($identificador)) : '';
+            $datos['identificador'] = substr($identificador, 0, 190);
+            $esCorreo = filter_var($identificador, FILTER_VALIDATE_EMAIL) && strlen($identificador) <= 190;
+            $esUsuario = preg_match('/^[a-z][a-z0-9._-]{2,39}$/D', $identificador) === 1;
+            if ((!$esCorreo && !$esUsuario)
                 || !is_string($password) || strlen($password) < 1 || strlen($password) > 72) {
-                $datos['error'] = 'Introduce un correo válido y una contraseña de hasta 72 bytes.';
+                $datos['error'] = 'Introduce un usuario o correo válido y una contraseña de hasta 72 bytes.';
                 $this->output->set_status_header(422);
             } else {
-                $resultado = $this->autenticacion->ingresar($correo, $password);
+                $resultado = $this->autenticacion->ingresar($identificador, $password);
                 if ($resultado === 'ok') { redirect('inicio'); }
                 if ($resultado === 'limite') {
                     $datos['error'] = 'Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.';
                     $this->output->set_status_header(429)->set_header('Retry-After: 900');
                 } else {
-                    $datos['error'] = 'Correo o contraseña incorrectos.';
+                    $datos['error'] = 'Usuario, correo o contraseña incorrectos.';
                     $this->output->set_status_header(401);
                 }
             }

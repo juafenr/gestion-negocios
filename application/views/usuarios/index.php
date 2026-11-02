@@ -11,11 +11,12 @@
 </div>
 <div class="tabla">
     <table>
-        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
         <?php foreach ($usuarios as $cuenta): ?>
             <tr>
                 <td><?= html_escape($cuenta['nombre']) ?><?= (int) $cuenta['id'] === $usuario->id() ? ' (tú)' : '' ?></td>
+                <td><?= html_escape($cuenta['nombre_usuario']) ?></td>
                 <td><?= html_escape($cuenta['correo']) ?></td>
                 <td><?= html_escape($cuenta['rol_nombre']) ?></td>
                 <td><span class="estado <?= $cuenta['activo'] ? 'activo' : 'inactivo' ?>"><?= $cuenta['activo'] ? 'Activo' : 'Inactivo' ?></span></td>
@@ -31,7 +32,7 @@
                 </td>
             </tr>
         <?php endforeach; ?>
-        <?php if (!$usuarios): ?><tr><td colspan="5">No hay usuarios registrados.</td></tr><?php endif; ?>
+        <?php if (!$usuarios): ?><tr><td colspan="6">No hay usuarios registrados.</td></tr><?php endif; ?>
         </tbody>
     </table>
 </div>

@@ -33,14 +33,15 @@ class Usuario_model extends MY_Model
         return array_column($q->result_array(), 'codigo');
     }
 
-    // Excepción al filtro tenant: identifica a quien inicia sesión por correo global único.
+    // Excepción al filtro tenant: ambos identificadores de acceso son globalmente únicos.
     public function por_correo($correo) { return $this->buscar('u.correo', $correo); }
+    public function por_nombre_usuario($nombreUsuario) { return $this->buscar('u.nombre_usuario', $nombreUsuario); }
     public function activo_por_id($id) { return $this->buscar('u.id', (int) $id); }
 
     /** Usuarios visibles para el administrador autenticado, siempre de su empresa. */
     public function listar_empresa()
     {
-        $q = $this->db->select('u.id, u.nombre, u.correo, u.activo, r.codigo AS rol_codigo, r.nombre AS rol_nombre')
+        $q = $this->db->select('u.id, u.nombre, u.nombre_usuario, u.correo, u.activo, r.codigo AS rol_codigo, r.nombre AS rol_nombre')
             ->from('usuarios u')->join('roles r', 'r.id = u.rol_id')
             ->where('u.empresa_id', $this->empresa_id())->order_by('u.nombre')->get();
         if ($q === FALSE) { show_error('No se pudieron consultar los usuarios.', 503); }
@@ -49,7 +50,7 @@ class Usuario_model extends MY_Model
 
     public function buscar_para_gestion($id)
     {
-        $q = $this->db->select('u.id, u.nombre, u.correo, u.rol_id, u.activo, r.nombre AS rol_nombre')
+        $q = $this->db->select('u.id, u.nombre, u.nombre_usuario, u.correo, u.rol_id, u.activo, r.nombre AS rol_nombre')
             ->from('usuarios u')->join('roles r', 'r.id = u.rol_id')
             ->where('u.empresa_id', $this->empresa_id())->where('u.id', (int) $id)->limit(1)->get();
         if ($q === FALSE) { show_error('No se pudo consultar el usuario.', 503); }
@@ -70,22 +71,32 @@ class Usuario_model extends MY_Model
         return $q->num_rows() === 0;
     }
 
+    public function nombre_usuario_disponible($nombreUsuario, $exceptoId = NULL)
+    {
+        $this->db->select('id')->from('usuarios')->where('nombre_usuario', $nombreUsuario);
+        if ($exceptoId !== NULL) { $this->db->where('id !=', (int) $exceptoId); }
+        $q = $this->db->limit(1)->get();
+        if ($q === FALSE) { show_error('No se pudo validar el nombre de usuario.', 503); }
+        return $q->num_rows() === 0;
+    }
+
     public function crear_en_empresa($datos)
     {
         return $this->db->insert('usuarios', array(
             'empresa_id' => $this->empresa_id(),
             'rol_id' => (int) $datos['rol_id'],
             'nombre' => $datos['nombre'],
+            'nombre_usuario' => $datos['nombre_usuario'],
             'correo' => $datos['correo'],
             'password_hash' => $datos['password_hash'],
             'activo' => 1
         ));
     }
 
-    public function actualizar_en_empresa($id, $nombre, $rolId)
+    public function actualizar_en_empresa($id, $nombre, $nombreUsuario, $rolId)
     {
         return $this->db->where('empresa_id', $this->empresa_id())->where('id', (int) $id)
-            ->update('usuarios', array('nombre' => $nombre, 'rol_id' => (int) $rolId));
+            ->update('usuarios', array('nombre' => $nombre, 'nombre_usuario' => $nombreUsuario, 'rol_id' => (int) $rolId));
     }
 
     public function cambiar_estado_en_empresa($id, $activo)

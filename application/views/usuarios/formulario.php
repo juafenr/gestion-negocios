@@ -7,6 +7,9 @@
     <?= form_open($accion, array('class' => 'formulario recuadro')) ?>
         <label for="nombre">Nombre</label>
         <input id="nombre" name="nombre" maxlength="100" required value="<?= html_escape($datos['nombre']) ?>">
+        <label for="nombre_usuario">Nombre de usuario</label>
+        <input id="nombre_usuario" name="nombre_usuario" maxlength="40" minlength="3" pattern="[a-z][a-z0-9._-]{2,39}" required autocomplete="off" value="<?= html_escape($datos['nombre_usuario']) ?>" aria-describedby="ayuda-usuario">
+        <p id="ayuda-usuario" class="nota">Único para iniciar sesión. Usa letras minúsculas, números, punto, guion o guion bajo.</p>
         <label for="correo">Correo</label>
         <input id="correo" name="correo" type="email" maxlength="190" required value="<?= html_escape($datos['correo']) ?>" <?= $creando ? '' : 'readonly' ?>>
         <label for="rol_id">Rol</label>

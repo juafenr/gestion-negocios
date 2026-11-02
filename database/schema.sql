@@ -1,4 +1,4 @@
--- Esquema completo hasta 008, incluido pagos y propina del 10%.
+-- Esquema completo con pagos, eventos de cocina y nombres de usuario.
 -- SOLO para una base VACÍA. Para una base existente: tools/actualizar.php.
 
 CREATE TABLE
@@ -42,10 +42,12 @@ CREATE TABLE
         empresa_id INT UNSIGNED NOT NULL,
         rol_id INT UNSIGNED NOT NULL,
         nombre VARCHAR(100) NOT NULL,
+        nombre_usuario VARCHAR(40) NOT NULL,
         correo VARCHAR(190) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         activo TINYINT (1) NOT NULL DEFAULT 1,
         UNIQUE KEY uq_usuario_empresa_id (empresa_id, id),
+        UNIQUE KEY uq_usuario_nombre_usuario (nombre_usuario),
         UNIQUE KEY uq_usuario_correo (correo),
         KEY ix_usuario_empresa (empresa_id),
         KEY ix_usuario_rol (rol_id),

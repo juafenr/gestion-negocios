@@ -20,27 +20,27 @@ try {
     $db->multi_query(file_get_contents($root.'/database/schema.sql'));
     do { if ($r = $db->store_result()) { $r->free(); } } while ($db->more_results() && $db->next_result());
     $cuentas = array(
-        array(1, 'administrador', 'Ana Aurora', 'ana@aurora.test'),
-        array(1, 'cajero', 'Carlos Caja', 'cajero@aurora.test'),
-        array(1, 'cocinero', 'Carmen Cocina', 'cocina@aurora.test'),
-        array(2, 'administrador', 'Bruno Roble', 'bruno@roble.test'),
-        array(2, 'cajero', 'Beatriz Caja', 'cajero@roble.test'),
-        array(2, 'cocinero', 'Benito Cocina', 'cocina@roble.test')
+        array(1, 'administrador', 'Ana Aurora', 'ana_aurora', 'ana@aurora.test'),
+        array(1, 'cajero', 'Carlos Caja', 'cajero_aurora', 'cajero@aurora.test'),
+        array(1, 'cocinero', 'Carmen Cocina', 'cocina_aurora', 'cocina@aurora.test'),
+        array(2, 'administrador', 'Bruno Roble', 'bruno_roble', 'bruno@roble.test'),
+        array(2, 'cajero', 'Beatriz Caja', 'cajero_roble', 'cajero@roble.test'),
+        array(2, 'cocinero', 'Benito Cocina', 'cocina_roble', 'cocina@roble.test')
     );
     $db->begin_transaction();
     $db->query("INSERT INTO empresas (id,nombre) VALUES (1,'Papelería Aurora'),(2,'Ferretería Roble')");
-    $s = $db->prepare('INSERT INTO usuarios (empresa_id,rol_id,nombre,correo,password_hash) VALUES (?,?,?,?,?)');
+    $s = $db->prepare('INSERT INTO usuarios (empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash) VALUES (?,?,?,?,?,?)');
     $roles = array();
     $resultadoRoles = $db->query('SELECT id, codigo FROM roles');
     while ($rol = $resultadoRoles->fetch_assoc()) { $roles[$rol['codigo']] = (int) $rol['id']; }
     $credenciales = array();
     foreach ($cuentas as $cuenta) {
-        [$empresa,$rolCodigo,$nombre,$correo] = $cuenta;
+        [$empresa,$rolCodigo,$nombre,$nombreUsuario,$correo] = $cuenta;
         $rolId = $roles[$rolCodigo];
         $password = bin2hex(random_bytes(10));
         $hash = password_hash($password, PASSWORD_BCRYPT, array('cost' => 10));
-        $s->bind_param('iisss',$empresa,$rolId,$nombre,$correo,$hash); $s->execute();
-        $credenciales[] = array($correo, $rolCodigo, $password);
+        $s->bind_param('iissss',$empresa,$rolId,$nombre,$nombreUsuario,$correo,$hash); $s->execute();
+        $credenciales[] = array($nombreUsuario, $correo, $rolCodigo, $password);
     }
     $db->query("INSERT INTO productos (id,empresa_id,sku,nombre,precio) VALUES
         (1,1,'A-001','Cuaderno Aurora',18.50),(2,1,'A-002','Lápices Aurora',12.00),
@@ -48,8 +48,8 @@ try {
     $db->commit();
     echo "Instalación terminada. Guarda estas contraseñas de PRUEBA; no se guardan en texto plano.\n\n";
     foreach ($credenciales as $credencial) {
-        [$correo,$rol,$password] = $credencial;
-        echo "$correo ($rol)\nContraseña: $password\n\n";
+        [$nombreUsuario,$correo,$rol,$password] = $credencial;
+        echo "$nombreUsuario / $correo ($rol)\nContraseña: $password\n\n";
     }
     echo "Abre ".$c['base_url']."index.php/login\n";
 } catch (Throwable $e) {

@@ -47,11 +47,11 @@ final class ClienteUsuarios
         );
     }
 
-    public function login($correo, $password)
+    public function login($identificador, $password)
     {
         $formulario = $this->pedir('login');
         return $this->pedir('login', array(
-            'correo' => $correo,
+            'identificador' => $identificador,
             'password' => $password,
             'gestion_csrf' => self::token($formulario['body'])
         ));
@@ -101,7 +101,7 @@ try {
         if (!isset($roles[$codigo])) { throw new RuntimeException('Falta el rol '.$codigo.'.'); }
     }
 
-    $insertar = $db->prepare('INSERT INTO usuarios (empresa_id, rol_id, nombre, correo, password_hash) VALUES (?, ?, ?, ?, ?)');
+    $insertar = $db->prepare('INSERT INTO usuarios (empresa_id, rol_id, nombre, nombre_usuario, correo, password_hash) VALUES (?, ?, ?, ?, ?, ?)');
     $hash = password_hash($password, PASSWORD_BCRYPT, array('cost' => 10));
     $cuentas = array(
         array($empresaA, $roles['administrador'], 'Administrador temporal', $prefijo.'-admin@example.test'),
@@ -109,9 +109,10 @@ try {
         array($empresaA, $roles['cocinero'], 'Cocinero temporal', $prefijo.'-cocinero@example.test'),
         array($empresaB, $roles['cajero'], 'Usuario empresa ajena', $prefijo.'-ajeno@example.test')
     );
-    foreach ($cuentas as $cuenta) {
+    foreach ($cuentas as $indice => $cuenta) {
         [$empresaId, $rolId, $nombre, $correo] = $cuenta;
-        $insertar->bind_param('iisss', $empresaId, $rolId, $nombre, $correo, $hash);
+        $nombreUsuario = $prefijo.'-'.$indice;
+        $insertar->bind_param('iissss', $empresaId, $rolId, $nombre, $nombreUsuario, $correo, $hash);
         $insertar->execute();
         $idsTemporales[] = $db->insert_id;
     }
@@ -140,30 +141,53 @@ try {
     comprobar($admin->pedir('usuarios/crear', array())['status'] === 403, 'Crear sin CSRF es rechazado');
     $formularioCrear = $admin->pedir('usuarios/crear');
     $correoNuevo = $prefijo.'-nuevo@example.test';
+    $usuarioNuevo = $prefijo.'-nuevo';
     $creado = $admin->pedir('usuarios/crear', array(
         'nombre' => 'Nuevo usuario temporal',
+        'nombre_usuario' => $usuarioNuevo,
         'correo' => $correoNuevo,
         'rol_id' => $roles['cajero'],
         'password' => $password,
         'gestion_csrf' => ClienteUsuarios::token($formularioCrear['body'])
     ));
     comprobar(redirige_a($creado, 'usuarios'), 'El administrador crea un usuario');
-    $nuevo = $db->query("SELECT id, empresa_id, rol_id, activo, password_hash FROM usuarios WHERE correo = '".$db->real_escape_string($correoNuevo)."'")->fetch_assoc();
-    comprobar($nuevo && (int) $nuevo['empresa_id'] === $empresaA && password_verify($password, $nuevo['password_hash']),
-        'La cuenta creada pertenece a la empresa correcta y almacena un hash válido');
+    $nuevo = $db->query("SELECT id, empresa_id, rol_id, nombre_usuario, activo, password_hash FROM usuarios WHERE correo = '".$db->real_escape_string($correoNuevo)."'")->fetch_assoc();
+    comprobar($nuevo && (int) $nuevo['empresa_id'] === $empresaA && $nuevo['nombre_usuario'] === $usuarioNuevo && password_verify($password, $nuevo['password_hash']),
+        'La cuenta creada pertenece a la empresa correcta y almacena usuario y hash válidos');
     $nuevoId = (int) $nuevo['id'];
     $idsTemporales[] = $nuevoId;
 
+    $accesoPorUsuario = new ClienteUsuarios($config['base_url']);
+    comprobar(redirige_a($accesoPorUsuario->login($usuarioNuevo, $password), 'inicio'),
+        'La cuenta nueva inicia sesión con nombre de usuario');
+
+    $formularioDuplicado = $admin->pedir('usuarios/crear');
+    $duplicado = $admin->pedir('usuarios/crear', array(
+        'nombre' => 'Usuario duplicado',
+        'nombre_usuario' => $prefijo.'-3',
+        'correo' => $prefijo.'-duplicado@example.test',
+        'rol_id' => $roles['cajero'],
+        'password' => $password,
+        'gestion_csrf' => ClienteUsuarios::token($formularioDuplicado['body'])
+    ));
+    comprobar($duplicado['status'] === 422 && str_contains($duplicado['body'], 'ya está en uso'),
+        'El nombre de usuario es único incluso entre empresas');
+
     $formularioEditar = $admin->pedir('usuarios/'.$nuevoId.'/editar');
+    $usuarioEditado = $prefijo.'-editado';
     $editado = $admin->pedir('usuarios/'.$nuevoId.'/editar', array(
         'nombre' => 'Usuario editado temporal',
+        'nombre_usuario' => $usuarioEditado,
         'rol_id' => $roles['cocinero'],
         'gestion_csrf' => ClienteUsuarios::token($formularioEditar['body'])
     ));
     comprobar(redirige_a($editado, 'usuarios'), 'El administrador edita nombre y rol');
-    $filaEditada = $db->query('SELECT nombre, rol_id FROM usuarios WHERE id = '.$nuevoId)->fetch_assoc();
-    comprobar($filaEditada['nombre'] === 'Usuario editado temporal' && (int) $filaEditada['rol_id'] === $roles['cocinero'],
+    $filaEditada = $db->query('SELECT nombre, nombre_usuario, rol_id FROM usuarios WHERE id = '.$nuevoId)->fetch_assoc();
+    comprobar($filaEditada['nombre'] === 'Usuario editado temporal' && $filaEditada['nombre_usuario'] === $usuarioEditado && (int) $filaEditada['rol_id'] === $roles['cocinero'],
         'La edición quedó almacenada');
+    $accesoEditado = new ClienteUsuarios($config['base_url']);
+    comprobar(redirige_a($accesoEditado->login($usuarioEditado, $password), 'inicio'),
+        'El usuario editado inicia sesión con el nombre nuevo');
 
     $formularioPropio = $admin->pedir('usuarios/'.$adminId.'/editar');
     comprobar((bool) preg_match('/<select\b[^>]*\bid="rol_id"[^>]*\bdisabled\b/', $formularioPropio['body'])
@@ -173,6 +197,7 @@ try {
         'El formulario conserva el rol propio al guardar otros datos');
     $cambioPropio = $admin->pedir('usuarios/'.$adminId.'/editar', array(
         'nombre' => 'Administrador temporal',
+        'nombre_usuario' => $prefijo.'-0',
         'rol_id' => $roles['cajero'],
         'gestion_csrf' => ClienteUsuarios::token($formularioPropio['body'])
     ));
@@ -182,6 +207,7 @@ try {
     $formularioPropio = $admin->pedir('usuarios/'.$adminId.'/editar');
     $nombrePropio = $admin->pedir('usuarios/'.$adminId.'/editar', array(
         'nombre' => 'Administrador con nombre actualizado',
+        'nombre_usuario' => $prefijo.'-0',
         'rol_id' => $roles['administrador'],
         'gestion_csrf' => ClienteUsuarios::token($formularioPropio['body'])
     ));

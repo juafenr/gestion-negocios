@@ -86,6 +86,8 @@ La ruta `usuarios` es la primera pantalla administrativa protegida por RBAC:
 - Crear, editar, activar o desactivar exige `usuarios.gestionar`.
 - Todas las consultas y escrituras toman `empresa_id` de la identidad autenticada.
 - El correo de una cuenta no se modifica después del alta.
+- Cada cuenta tiene un `nombre_usuario` único globalmente. Puede iniciar sesión con ese nombre o con su correo.
+- Al actualizar una base existente, `tools/actualizar.php` asigna `usuario<ID>` a las cuentas anteriores; el administrador puede cambiarlo desde Usuarios.
 - Un administrador no puede cambiar su propio rol ni desactivar su propia cuenta durante la sesión.
 
 Los identificadores y roles enviados por formularios se validan en el servidor. Un ID de otra empresa se responde como inexistente y nunca se acepta un `empresa_id` enviado por el cliente.

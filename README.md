@@ -8,5 +8,6 @@ La guía de esta entrega está en **[LEEME_PAGOS.md](LEEME_PAGOS.md)**: instalac
 - Base existente: respaldo, diagnóstico con `php tools/actualizar.php`, actualización con `php tools/actualizar.php --aplicar` y nuevo diagnóstico.
 - No importar el esquema completo encima de una base que ya tiene datos.
 - Las contraseñas de prueba las imprime el instalador; cada instalación genera sus propias credenciales.
+- El acceso acepta nombre de usuario o correo. En bases actualizadas, revisa los nombres iniciales `usuario<ID>` en el listado de Usuarios.
 
 Requisitos de esta entrega: PHP 8.2 de 64 bits, mysqli y mbstring, Apache y MySQL/MariaDB con InnoDB. El cobro es un registro interno: no procesa tarjetas ni realiza operaciones bancarias.
