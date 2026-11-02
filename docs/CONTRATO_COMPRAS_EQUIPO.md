@@ -45,7 +45,7 @@ La vista nueva manual sirve para probar RF-54–56; no implementa la agrupación
 
 La pantalla de Inventario permite enviar un insumo activo y su cantidad a `compras/seleccionar`. La selección se conserva en la sesión del usuario, se vuelve a validar contra su empresa y muestra el proveedor asociado a cada insumo. `compras/generar` agrupa por `insumos.proveedor_id` y crea un borrador por grupo mediante `Solicitud_compra_model::crear_borrador()`. Cada grupo usa una clave estable durante los reintentos de esa selección.
 
-Si falla un grupo, los documentos creados antes del fallo permanecen guardados y se muestran con enlaces para revisarlos. La selección conserva solo las líneas pendientes para reintentar. Los insumos sin proveedor activo asociado no se agrupan ni se guardan automáticamente: la edición de `insumos.proveedor_id` sigue pendiente del módulo de Andrés.
+Si falla un grupo, los documentos creados antes del fallo permanecen guardados y se muestran con enlaces para revisarlos. La selección conserva solo las líneas pendientes para reintentar. Los insumos sin proveedor activo asociado no se agrupan ni se guardan automáticamente. La pantalla de proveedores incorporada desde `upstream/main` `521767c` permite asociarlos y se verificó mediante una prueba HTTP.
 
 ## Edición y confirmación (RF-55)
 
@@ -57,9 +57,9 @@ Las rutas POST requieren CSRF. Los controles de la vista ayudan al usuario, pero
 
 ## Continuación de Manuel
 
-Los estados `enviada`, `recibida`, `cancelada` y la recepción parcial todavía son responsabilidad de RF-57–60. Las columnas de estado son VARCHAR para permitir ampliar el flujo, pero las transiciones deben validarse expresamente en el servidor.
+Los estados `enviada`, `recibida`, `cancelada` y la recepción parcial de RF-57–60 ya llegaron desde `upstream/main` `521767c`. Las transiciones se validan en el servidor. La prueba de integración comprueba recepción parcial, reintento idempotente y recepción completa.
 
-Para recibir: bloquear la solicitud y sus líneas; comprobar estado y empresa; validar que la recepción adicional sea positiva y no exceda `cantidad - recibido`; bloquear insumos en orden de ID; actualizar recibido y existencias, e insertar movimientos/eventos en la MISMA transacción. Añadir una clave de recepción idempotente para que un reenvío no duplique stock. Hace falta la migración que relacione esos movimientos con la solicitud/recepción; esta entrega no implementa esa relación ni el movimiento de stock.
+La recepción bloquea la solicitud y sus líneas; comprueba estado y empresa; valida que la cantidad adicional no exceda `cantidad - recibido`; actualiza recibido y existencias e inserta movimientos/eventos en la misma transacción. La clave de recepción evita duplicar stock al reenviar y rechaza la misma clave si se reutiliza con otras cantidades. Las tablas `recepciones_compra` y `recepcion_compra_detalles` están en `013_recepciones_compra.sql`, en `schema.sql` y en el actualizador local.
 
 No habilitar edición de detalles que ya tengan `recibido > 0`. El documento conserva su cantidad solicitada original.
 

@@ -31,6 +31,7 @@ $route['inventario/exportar'] = 'inventario/exportar';
 $route['inventario/(:num)/movimiento'] = 'inventario/movimiento/$1';
 $route['inventario/(:num)/historial'] = 'inventario/historial/$1';
 $route['inventario/(:num)/estado'] = 'inventario/estado/$1';
+$route['inventario/sugerencias'] = 'inventario/sugerencias';
 $route['pagos'] = 'pagos/index';
 $route['pagos/(:num)'] = 'pagos/ver/$1';
 $route['pagos/preparar/(:num)'] = 'pagos/preparar/$1';
@@ -53,3 +54,14 @@ $route['compras/(:num)/editar'] = 'compras/editar/$1';
 $route['compras/(:num)/confirmar'] = 'compras/confirmar/$1';
 $route['compras/(:num)/documento'] = 'compras/documento/$1';
 $route['compras/(:num)/exportar'] = 'compras/exportar/$1';
+
+$route['proveedores/crear'] = 'compras/proveedor_nuevo';
+$route['proveedores'] = 'proveedores/index';
+$route['proveedores/(:num)/editar'] = 'proveedores/editar/$1';
+$route['proveedores/(:num)/asociar'] = 'proveedores/asociar/$1';
+$route['proveedores/(:num)/desasociar'] = 'proveedores/desasociar/$1';
+$route['proveedores/(:num)'] = 'proveedores/ver/$1';
+
+$route['compras/(:num)/estado'] = 'compras/cambiar_estado/$1';
+$route['compras/proveedor/(:num)/historial'] = 'compras/historial_proveedor/$1';
+$route['compras/(:num)/recepcion'] = 'compras/recepcion/$1';

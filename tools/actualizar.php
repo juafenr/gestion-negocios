@@ -210,7 +210,7 @@ try {
     $indices('pedido_detalles',$creaciones['pedido_detalles']);
     foreach (array('pago_cuentas','pago_cuenta_detalles','pagos') as $t) { $a->crear($t,$creaciones[$t]); }
     foreach (array('pago_cuentas','pagos') as $t) { $a->agregar($t,'propina','DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0'); }
-    foreach (array('ventas','solicitudes_compra','solicitud_compra_detalles','solicitud_compra_eventos') as $t) { $a->crear($t,$creaciones[$t]); }
+    foreach (array('ventas','solicitudes_compra','solicitud_compra_detalles','solicitud_compra_eventos','recepciones_compra','recepcion_compra_detalles') as $t) { $a->crear($t,$creaciones[$t]); }
     if ($a->tabla('solicitudes_compra') && $a->columna('empresas','ultimo_numero_compra') && $db->query('SELECT e.id FROM empresas e JOIN solicitudes_compra s ON s.empresa_id=e.id WHERE s.numero>e.ultimo_numero_compra LIMIT 1')->num_rows) {
         $a->operacion('actualizar contador de compras sin reducirlo','UPDATE empresas e JOIN (SELECT empresa_id,MAX(numero) ultimo FROM solicitudes_compra GROUP BY empresa_id) s ON s.empresa_id=e.id SET e.ultimo_numero_compra=GREATEST(e.ultimo_numero_compra,s.ultimo)');
     }

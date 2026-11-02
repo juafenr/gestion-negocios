@@ -29,15 +29,15 @@ class Insumo_model extends MY_Model
 
         if (!empty($filtros['estado'])) {
 
-            if ($filtros['estado'] === 'bajo') {
+            if ($filtros['estado'] === 'agotado') {
+                $this->db->where('cantidad_actual', 0);
+            } elseif ($filtros['estado'] === 'bajo') {
                 $this->db->where(
-                    'cantidad_actual <= stock_minimo',
+                    'cantidad_actual > 0 AND cantidad_actual <= stock_minimo',
                     NULL,
                     FALSE
                 );
-            }
-
-            if ($filtros['estado'] === 'normal') {
+            } elseif ($filtros['estado'] === 'normal') {
                 $this->db->where(
                     'cantidad_actual > stock_minimo',
                     NULL,
@@ -119,11 +119,42 @@ class Insumo_model extends MY_Model
 
     public function resumen()
     {
-        $consulta = $this->db->select("COUNT(*) AS total, COALESCE(SUM(CASE WHEN cantidad_actual > stock_minimo THEN 1 ELSE 0 END), 0) AS normales, COALESCE(SUM(CASE WHEN cantidad_actual <= stock_minimo THEN 1 ELSE 0 END), 0) AS bajos", FALSE)
-            ->from('insumos')->where('empresa_id', $this->empresa_id())->where('activo', 1)->get();
+        $consulta = $this->db
+            ->select("
+            COUNT(*) AS total,
+
+            COALESCE(SUM(
+                CASE
+                    WHEN cantidad_actual > stock_minimo
+                    THEN 1 ELSE 0
+                END
+            ), 0) AS normales,
+
+            COALESCE(SUM(
+                CASE
+                    WHEN cantidad_actual > 0
+                     AND cantidad_actual <= stock_minimo
+                    THEN 1 ELSE 0
+                END
+            ), 0) AS bajos,
+
+            COALESCE(SUM(
+                CASE
+                    WHEN cantidad_actual = 0
+                    THEN 1 ELSE 0
+                END
+            ), 0) AS agotados
+        ", FALSE)
+            ->from('insumos')
+            ->where('empresa_id', $this->empresa_id())
+            ->where('activo', 1)
+            ->get();
 
         if (!$consulta) {
-            show_error('No se pudo consultar el resumen del inventario.', 503);
+            show_error(
+                'No se pudo consultar el resumen del inventario.',
+                503
+            );
         }
 
         return $consulta->row_array();
@@ -149,8 +180,11 @@ class Insumo_model extends MY_Model
 
     public function crear(array $datos, $usuarioId)
     {
-        try { $datos=Validacion_negocio::insumo($datos,TRUE); }
-        catch (InvalidArgumentException $e) { return FALSE; }
+        try {
+            $datos = Validacion_negocio::insumo($datos, TRUE);
+        } catch (InvalidArgumentException $e) {
+            return FALSE;
+        }
         $empresaId = $this->empresa_id();
 
         $this->db->trans_begin();
@@ -209,8 +243,11 @@ class Insumo_model extends MY_Model
 
     public function actualizar($id, array $datos)
     {
-        try { $datos=Validacion_negocio::insumo($datos,FALSE); }
-        catch (InvalidArgumentException $e) { return FALSE; }
+        try {
+            $datos = Validacion_negocio::insumo($datos, FALSE);
+        } catch (InvalidArgumentException $e) {
+            return FALSE;
+        }
         return $this->db
             ->where('id', (int) $id)
             ->where('empresa_id', $this->empresa_id())
@@ -276,13 +313,65 @@ class Insumo_model extends MY_Model
         }
 
         if (!empty($filtros['estado'])) {
-            if ($filtros['estado'] === 'bajo') {
-                $this->db->where('cantidad_actual <= stock_minimo', NULL, FALSE);
+
+            if ($filtros['estado'] === 'agotado') {
+                $this->db->where('cantidad_actual', 0);
+            } elseif ($filtros['estado'] === 'bajo') {
+                $this->db->where(
+                    'cantidad_actual > 0 AND cantidad_actual <= stock_minimo',
+                    NULL,
+                    FALSE
+                );
             } elseif ($filtros['estado'] === 'normal') {
-                $this->db->where('cantidad_actual > stock_minimo', NULL, FALSE);
+                $this->db->where(
+                    'cantidad_actual > stock_minimo',
+                    NULL,
+                    FALSE
+                );
             }
         }
 
         return $this->db->count_all_results();
+    }
+
+    public function sugerencias_compra()
+    {
+        $consulta = $this->db
+            ->select(
+                'id, nombre, cantidad_actual, stock_minimo, unidad_medida'
+            )
+            ->from('insumos')
+            ->where('empresa_id', $this->empresa_id())
+            ->where('activo', 1)
+            ->where(
+                'cantidad_actual < stock_minimo',
+                NULL,
+                FALSE
+            )
+            ->order_by('nombre', 'ASC')
+            ->get();
+
+        if (!$consulta) {
+            show_error(
+                'No se pudieron consultar las sugerencias de compra.',
+                503
+            );
+        }
+
+        $insumos = $consulta->result_array();
+
+        foreach ($insumos as &$insumo) {
+            $actual = (float) $insumo['cantidad_actual'];
+            $minimo = (float) $insumo['stock_minimo'];
+
+            $insumo['cantidad_sugerida'] = round(
+                max(0, $minimo - $actual),
+                2
+            );
+        }
+
+        unset($insumo);
+
+        return $insumos;
     }
 }

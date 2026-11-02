@@ -30,7 +30,11 @@ class Inventario extends Protected_Controller
         $activo = $this->input->get('activo', TRUE)
             === 'inactivos' ? 'inactivos' : 'activos';
 
-        if (!in_array($estado, array('', 'bajo', 'normal'), TRUE)) {
+        if (!in_array(
+            $estado,
+            array('', 'normal', 'bajo', 'agotado'),
+            TRUE
+        )) {
             $estado = '';
         }
 
@@ -188,9 +192,11 @@ class Inventario extends Protected_Controller
 
     private function configurar_validacion($nuevo = FALSE)
     {
-        foreach (array('nombre','stock_minimo','unidad_medida','fecha_vencimiento','cantidad_actual') as $campo) {
-            $valor=$this->input->post($campo);
-            if ($valor!==NULL && !is_string($valor)) { show_error('Formato inválido en '.html_escape($campo).'.',422); }
+        foreach (array('nombre', 'stock_minimo', 'unidad_medida', 'fecha_vencimiento', 'cantidad_actual') as $campo) {
+            $valor = $this->input->post($campo);
+            if ($valor !== NULL && !is_string($valor)) {
+                show_error('Formato inválido en ' . html_escape($campo) . '.', 422);
+            }
         }
         $this->form_validation->set_rules('nombre', 'Nombre', 'trim|required|max_length[150]');
         $this->form_validation->set_rules('stock_minimo', 'Stock mínimo', 'required|callback_cantidad_valida');
@@ -208,9 +214,12 @@ class Inventario extends Protected_Controller
 
     public function cantidad_valida($valor)
     {
-        try { Validacion_negocio::decimal($valor,'Cantidad');return TRUE; }
-        catch (InvalidArgumentException $e) {
-            $this->form_validation->set_message('cantidad_valida','{field}: usa un número de 0 a 99999999.99, con hasta dos decimales.');return FALSE;
+        try {
+            Validacion_negocio::decimal($valor, 'Cantidad');
+            return TRUE;
+        } catch (InvalidArgumentException $e) {
+            $this->form_validation->set_message('cantidad_valida', '{field}: usa un número de 0 a 99999999.99, con hasta dos decimales.');
+            return FALSE;
         }
     }
 
@@ -271,8 +280,11 @@ class Inventario extends Protected_Controller
         $tipo = $this->input->post('tipo', TRUE);
         $cantidad = $this->input->post('cantidad', TRUE);
         $motivo = $this->input->post('motivo');
-        if (!is_string($motivo)) { show_error('El motivo debe ser texto.',422);return; }
-        $motivo=trim($motivo);
+        if (!is_string($motivo)) {
+            show_error('El motivo debe ser texto.', 422);
+            return;
+        }
+        $motivo = trim($motivo);
 
         if (
             !in_array(
@@ -313,23 +325,67 @@ class Inventario extends Protected_Controller
         $this->solo_metodo('GET');
         $this->requerir_permiso('inventario.ver');
 
-        if (!is_string($id) || !ctype_digit($id) || strlen($id) > 10) {
+        if (
+            !is_string($id) ||
+            !ctype_digit($id) ||
+            strlen($id) > 10 ||
+            (int) $id < 1
+        ) {
             show_404();
             return;
         }
 
-        $insumo = $this->insumos_model->buscar_incluyendo_inactivos($id);
+        $insumo = $this->insumos_model
+            ->buscar_incluyendo_inactivos($id);
 
         if (!$insumo) {
             show_404();
             return;
         }
 
+        $porPagina = 20;
+
+        $total = $this->movimientos_model
+            ->contar_historial($id);
+
+        $paginas = max(
+            1,
+            (int) ceil($total / $porPagina)
+        );
+
+        $paginaSolicitada = $this->input->get('pagina', TRUE);
+
+        $pagina = filter_var(
+            $paginaSolicitada,
+            FILTER_VALIDATE_INT,
+            array(
+                'options' => array(
+                    'min_range' => 1
+                )
+            )
+        );
+
+        if ($pagina === FALSE || $pagina === NULL) {
+            $pagina = 1;
+        }
+
+        $pagina = min($pagina, $paginas);
+
+        $offset = ($pagina - 1) * $porPagina;
+
+        $movimientos = $this->movimientos_model->historial(
+            $id,
+            $porPagina,
+            $offset
+        );
+
         $this->load->view('inventario/historial', array(
             'usuario' => $this->usuario,
             'insumo' => $insumo,
-            'movimientos' =>
-            $this->movimientos_model->historial($id)
+            'movimientos' => $movimientos,
+            'total' => $total,
+            'pagina' => $pagina,
+            'paginas' => $paginas
         ));
     }
 
@@ -414,69 +470,81 @@ class Inventario extends Protected_Controller
             )
             ->set_output($contenido);
     }
+
     public function vender($id = NULL)
-{
-    $this->requerir_permiso('inventario.ver');
-    $this->requerir_permiso('productos.gestionar');
+    {
+        $this->requerir_permiso('inventario.ver');
+        $this->requerir_permiso('productos.gestionar');
 
-    if (
-        !is_string($id)
-        || !ctype_digit($id)
-        || strlen($id) > 10
-        || (int) $id < 1
-    ) {
-        show_404();
-        return;
+        if (
+            !is_string($id)
+            || !ctype_digit($id)
+            || strlen($id) > 10
+            || (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        $insumo = $this->insumos_model->buscar($id);
+
+        if (!$insumo) {
+            show_404();
+            return;
+        }
+
+        $datos = array(
+            'usuario' => $this->usuario,
+            'insumo' => $insumo,
+            'sku' => '',
+            'precio' => '',
+            'error' => ''
+        );
+
+        if ($this->input->method(TRUE) === 'GET') {
+            $this->load->view('inventario/vender', $datos);
+            return;
+        }
+
+        $this->solo_metodo('POST');
+
+        $sku = $this->input->post('sku');
+        $precio = $this->input->post('precio');
+
+        // Conservar lo escrito si falla la validación.
+        $datos['sku'] = is_string($sku) ? $sku : '';
+        $datos['precio'] = is_string($precio) ? $precio : '';
+
+        $this->load->model('Producto_model', 'productos_model');
+
+        $error = $this->productos_model->crear_desde_insumo(
+            $id,
+            $sku,
+            $precio
+        );
+
+        if ($error !== NULL) {
+            $datos['error'] = $error;
+            $this->load->view('inventario/vender', $datos);
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'mensaje_inventario',
+            'Artículo habilitado para venta. Ya está disponible en pedidos.'
+        );
+
+        redirect('inventario');
     }
 
-    $insumo = $this->insumos_model->buscar($id);
+    public function sugerencias()
+    {
+        $this->solo_metodo('GET');
+        $this->requerir_permiso('inventario.ver');
 
-    if (!$insumo) {
-        show_404();
-        return;
+        $this->load->view('inventario/sugerencias', array(
+            'usuario' => $this->usuario,
+            'insumos' => $this->insumos_model->sugerencias_compra()
+        ));
     }
-
-    $datos = array(
-        'usuario' => $this->usuario,
-        'insumo' => $insumo,
-        'sku' => '',
-        'precio' => '',
-        'error' => ''
-    );
-
-    if ($this->input->method(TRUE) === 'GET') {
-        $this->load->view('inventario/vender', $datos);
-        return;
-    }
-
-    $this->solo_metodo('POST');
-
-    $sku = $this->input->post('sku');
-    $precio = $this->input->post('precio');
-
-    // Conservar lo escrito si falla la validación.
-    $datos['sku'] = is_string($sku) ? $sku : '';
-    $datos['precio'] = is_string($precio) ? $precio : '';
-
-    $this->load->model('Producto_model', 'productos_model');
-
-    $error = $this->productos_model->crear_desde_insumo(
-        $id,
-        $sku,
-        $precio
-    );
-
-    if ($error !== NULL) {
-        $datos['error'] = $error;
-        $this->load->view('inventario/vender', $datos);
-        return;
-    }
-
-    $this->session->set_flashdata(
-        'mensaje_inventario',
-        'Artículo habilitado para venta. Ya está disponible en pedidos.'
-    );
-
-    redirect('inventario');
-}
 }

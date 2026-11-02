@@ -1,6 +1,6 @@
 # Estado de los requisitos de Emmanuel en la rama integrada
 
-**Corte:** 2 de noviembre de 2026 (Guatemala). **Rama de trabajo:** `RBAC-implementacion-emmanuel`. La integración del push `upstream/main` `3f7c318` quedó en el commit `fa0b26c` y se publicó en `backup/RBAC-implementacion-emmanuel`. Este estado describe la rama personal; el trabajo aún no está en `main` del equipo.
+**Corte:** 2 de noviembre de 2026 (Guatemala). **Rama de trabajo:** `RBAC-implementacion-emmanuel`. Se integró `upstream/main` hasta `521767c` conservando el trabajo personal. El estado de publicación se confirma con las referencias de Git y el pull request del equipo.
 
 | RF | Alcance implementado en esta rama | Verificación |
 |---|---|---|
@@ -17,8 +17,8 @@
 
 ## Dependencias pendientes del equipo
 
-- **Andrés — RF-49:** falta una pantalla para asignar y editar `insumos.proveedor_id`. La columna, la clave foránea y la creación mínima de proveedores ya están integradas. RF-52 y RF-53 funcionan cuando la asociación existe; su recorrido normal desde la interfaz queda pendiente de ese módulo. Los insumos sin proveedor activo no se asignan a uno inventado ni se guardan automáticamente.
-- **Integración en `main`:** los diez RF están publicados en la rama personal. Antes de incorporarlos a la rama del equipo hay que revisar el diff y repetir el recorrido conjunto con las entregas posteriores de Andrés, Juanfer y Manuel. Los permisos de ventas y compras ya se comprobaron en la base local.
-- **Manuel — RF-57 a RF-60:** estados posteriores y recepción de compras. Dependen de los documentos creados, pero no bloquean RF-50 a RF-53.
+- **RF-49 disponible en el push del equipo:** la nueva pantalla de proveedores permite asociar insumos desde la interfaz. `tests/compras_seleccion_http.php` comprobó el aislamiento entre empresas y el recorrido desde esa pantalla hasta la agrupación y creación de dos borradores. Los insumos sin proveedor activo permanecen pendientes.
+- **Integración en `main`:** antes de considerar cerrados los diez RF en la rama del equipo, hay que confirmar que el pull request con la rama personal se haya fusionado y repetir allí las pruebas principales.
+- **Manuel — RF-57 a RF-60:** estados, historial y recepción de compras llegaron en el push nuevo. La prueba de integración comprueba recepción parcial, reintento idempotente, rechazo de la misma clave con otras cantidades, recepción completa y aislamiento por empresa.
 
-La base local actualizada informó `Sin cambios pendientes` en `tools/actualizar.php`. Las pruebas citadas pasaron con datos temporales que se eliminaron al terminar.
+La base local actualizada informó `Sin cambios pendientes` en `tools/actualizar.php`. Las pruebas citadas pasaron con datos temporales que se eliminaron al terminar. La prueba HTTP también recorrió edición de proveedor, confirmación y envío del borrador, recepción parcial y final, reintento sin duplicar stock, CSRF, cantidades excesivas y acceso entre empresas. Se agregaron las tablas de recepción al esquema y al actualizador y se renumeró su migración como `013_recepciones_compra.sql`.

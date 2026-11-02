@@ -21,6 +21,22 @@ $this->load->view('plantilla/cabecera', array(
             </a>
         </p>
     <?php endif; ?>
+
+    <a
+        class="boton boton-secundario"
+        href="<?= html_escape(
+                    site_url('inventario/sugerencias')
+                ) ?>">
+        <img
+            class="icono"
+            src="<?= html_escape(
+                        base_url('assets/iconos/alerta.svg')
+                    ) ?>"
+            alt=""
+            width="22"
+            height="22">
+        <span>Sugerencias de compra</span>
+    </a>
 </div>
 
 <?php
@@ -69,6 +85,24 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
         </strong>
     </div>
 
+    <div class="resumen-tarjeta">
+
+        <span class="resumen-etiqueta">
+            <img
+                class="icono"
+                src="<?= html_escape(base_url('assets/iconos/alerta.svg')) ?>"
+                alt=""
+                width="22"
+                height="22">
+            Agotados
+        </span>
+
+        <strong class="resumen-agotado">
+            <?= (int) $resumen['agotados'] ?>
+        </strong>
+
+    </div>
+
 </div>
 
 <?php if ($usuario->puede('compras.gestionar') && $usuario->puede('compras.ver')): ?>
@@ -105,6 +139,13 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
             value="normal"
             <?= $filtros['estado'] === 'normal' ? 'selected' : '' ?>>
             Stock normal
+        </option>
+
+        <option
+            value="agotado"
+            <?= $filtros['estado'] === 'agotado'
+                ? 'selected' : '' ?>>
+            Agotado
         </option>
     </select>
 
@@ -229,9 +270,11 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
             <?php foreach ($insumos as $item): ?>
 
                 <?php
+
                 $cantidadActual = (float) $item['cantidad_actual'];
                 $stockMinimo = (float) $item['stock_minimo'];
-                $stockBajo = $cantidadActual <= $stockMinimo;
+                $agotado = $cantidadActual <= 0;
+                $stockBajo = !$agotado && $cantidadActual <= $stockMinimo;
 
                 $idInsumo = (int) $item['id'];
                 $activoInsumo = (int) $item['activo'] === 1;
@@ -266,6 +309,12 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                                 Inactivo
                             </span>
 
+                        <?php elseif ($agotado): ?>
+
+                            <span class="estado-stock estado-agotado">
+                                Agotado
+                            </span>
+
                         <?php elseif ($stockBajo): ?>
 
                             <span class="estado-stock estado-bajo">
@@ -285,74 +334,146 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
                     <!-- Acciones -->
 
+
+                    <!-- Acciones -->
+
                     <td class="acciones-inventario-fila">
-                        <div class="acciones-insumo" role="group" aria-label="Acciones de <?= html_escape($item['nombre']) ?>">
-                        <?php if (
-                            $activoInsumo
-                            && $usuario->puede('inventario.ver')
-                            && $usuario->puede('productos.gestionar')
-                        ): ?>
+
+                        <div
+                            class="acciones-insumo"
+                            role="group"
+                            aria-label="Acciones de <?= html_escape($item['nombre']) ?>">
+
+                            <!-- Habilitar para venta -->
+
+                            <?php if (
+                                $activoInsumo &&
+                                $usuario->puede('inventario.ver') &&
+                                $usuario->puede('productos.gestionar')
+                            ): ?>
+
+                                <a
+                                    class="boton boton-secundario boton-compacto accion-venta"
+                                    href="<?= html_escape(
+                                                site_url('inventario/vender/' . $idInsumo)
+                                            ) ?>">
+                                    <img
+                                        class="icono"
+                                        src="<?= html_escape(
+                                                    base_url('assets/iconos/productos.svg')
+                                                ) ?>"
+                                        alt=""
+                                        width="22"
+                                        height="22">
+                                    <span>Habilitar para venta</span>
+                                </a>
+
+                            <?php endif; ?>
+
+
+                            <!-- Editar y registrar movimiento -->
+
+                            <?php if ($puedeGestionar && $activoInsumo): ?>
+
+                                <a
+                                    class="boton boton-secundario boton-compacto"
+                                    href="<?= html_escape(
+                                                site_url('inventario/' . $idInsumo . '/editar')
+                                            ) ?>">
+                                    <img
+                                        class="icono"
+                                        src="<?= html_escape(
+                                                    base_url('assets/iconos/editar.svg')
+                                                ) ?>"
+                                        alt=""
+                                        width="22"
+                                        height="22">
+                                    <span>Editar</span>
+                                </a>
+
+                                <a
+                                    class="boton boton-secundario boton-compacto"
+                                    href="<?= html_escape(
+                                                site_url('inventario/' . $idInsumo . '/movimiento')
+                                            ) ?>">
+                                    <img
+                                        class="icono"
+                                        src="<?= html_escape(
+                                                    base_url('assets/iconos/movimiento.svg')
+                                                ) ?>"
+                                        alt=""
+                                        width="22"
+                                        height="22">
+                                    <span>Movimiento</span>
+                                </a>
+
+                            <?php endif; ?>
+
+                            <?php if ($activoInsumo && $usuario->puede('compras.gestionar') && $usuario->puede('compras.ver')): ?>
+                                <?= form_open('compras/agregar', array('class' => 'form-compra-insumo')) ?>
+                                    <input type="hidden" name="insumo_id" value="<?= $idInsumo ?>">
+                                    <label for="compra-cantidad-<?= $idInsumo ?>">Cantidad a comprar de <?= html_escape($item['nombre']) ?></label>
+                                    <input id="compra-cantidad-<?= $idInsumo ?>" name="cantidad" type="number" min="0.01" max="99999999.99" step="0.01" inputmode="decimal" required>
+                                    <button type="submit" class="boton boton-secundario boton-compacto">Agregar a compra</button>
+                                <?= form_close() ?>
+                            <?php endif; ?>
+
+
+                            <!-- Historial -->
 
                             <a
-                                class="boton boton-secundario boton-compacto accion-venta"
+                                class="boton boton-secundario boton-compacto"
                                 href="<?= html_escape(
-                                    site_url('inventario/vender/' . $idInsumo)
-                                ) ?>">
-                                <img class="icono" src="<?= html_escape(base_url('assets/iconos/productos.svg')) ?>" alt="" width="22" height="22">
-                                <span>Habilitar para venta</span>
-                            </a>
-
-                        <?php endif; ?>
-
-                        <?php if ($puedeGestionar && $activoInsumo): ?>
-
-                            <a class="boton boton-secundario boton-compacto"
-                                href="<?= html_escape(site_url('inventario/' . $idInsumo . '/editar')) ?>">
-                                <img class="icono" src="<?= html_escape(base_url('assets/iconos/editar.svg')) ?>" alt="" width="22" height="22">
-                                <span>Editar</span>
-                            </a>
-
-                            <a class="boton boton-secundario boton-compacto"
-                                href="<?= html_escape(site_url('inventario/' . $idInsumo . '/movimiento')) ?>">
-                                <img class="icono" src="<?= html_escape(base_url('assets/iconos/movimiento.svg')) ?>" alt="" width="22" height="22">
-                                <span>Movimiento</span>
-                            </a>
-
-                        <?php endif; ?>
-
-                        <?php if ($activoInsumo && $usuario->puede('compras.gestionar') && $usuario->puede('compras.ver')): ?>
-                            <?= form_open('compras/agregar', array('class' => 'form-compra-insumo')) ?>
-                                <input type="hidden" name="insumo_id" value="<?= $idInsumo ?>">
-                                <label for="compra-cantidad-<?= $idInsumo ?>">Cantidad a comprar de <?= html_escape($item['nombre']) ?></label>
-                                <input id="compra-cantidad-<?= $idInsumo ?>" name="cantidad" type="number" min="0.01" max="99999999.99" step="0.01" inputmode="decimal" required>
-                                <button type="submit" class="boton boton-secundario boton-compacto">Agregar a compra</button>
-                            <?= form_close() ?>
-                        <?php endif; ?>
-
-                        <a class="boton boton-secundario boton-compacto"
-                            href="<?= html_escape(site_url('inventario/' . $idInsumo . '/historial')) ?>">
-                            <img class="icono" src="<?= html_escape(base_url('assets/iconos/historial.svg')) ?>" alt="" width="22" height="22">
+                                            site_url('inventario/' . $idInsumo . '/historial')
+                                        ) ?>">
+                                <img
+                                    class="icono"
+                                    src="<?= html_escape(
+                                                base_url('assets/iconos/historial.svg')
+                                            ) ?>"
+                                    alt=""
+                                    width="22"
+                                    height="22">
                                 <span>Historial</span>
-                        </a>
+                            </a>
 
-                        <?php if ($puedeGestionar): ?>
 
-                            <?= form_open(
-                                'inventario/' . $idInsumo . '/estado',
-                                array('class' => 'form-estado-insumo')
-                            ) ?>
+                            <!-- Activar o desactivar -->
 
-                            <button type="submit" class="boton boton-secundario boton-compacto">
-                                <img class="icono" src="<?= html_escape(base_url('assets/iconos/activar.svg')) ?>" alt="" width="22" height="22">
-                                <span><?= $activoInsumo ? 'Desactivar' : 'Reactivar' ?></span>
-                            </button>
+                            <?php if ($puedeGestionar): ?>
 
-                            <?= form_close() ?>
+                                <?= form_open(
+                                    'inventario/' . $idInsumo . '/estado',
+                                    array('class' => 'form-estado-insumo')
+                                ) ?>
 
-                        <?php endif; ?>
+                                <button
+                                    type="submit"
+                                    class="boton boton-secundario boton-compacto">
+                                    <img
+                                        class="icono"
+                                        src="<?= html_escape(
+                                                    base_url('assets/iconos/activar.svg')
+                                                ) ?>"
+                                        alt=""
+                                        width="22"
+                                        height="22">
+
+                                    <span>
+                                        <?= $activoInsumo
+                                            ? 'Desactivar'
+                                            : 'Reactivar' ?>
+                                    </span>
+                                </button>
+
+                                <?= form_close() ?>
+
+                            <?php endif; ?>
 
                         </div>
+
                     </td>
+
 
 
                     <!-- Fecha de vencimiento -->

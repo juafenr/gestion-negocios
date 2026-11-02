@@ -1,5 +1,5 @@
 <?php
-/** Prueba HTTP de selección de insumos sin crear solicitudes persistentes. */
+/** Prueba HTTP de proveedores, selección y recepción con datos temporales. */
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 if (!extension_loaded('curl') || !extension_loaded('mysqli')) {
     fwrite(STDERR, "PHP necesita curl y mysqli.\n"); exit(1);
@@ -20,6 +20,7 @@ final class ClienteCompras
             CURLOPT_RETURNTRANSFER => TRUE,
             CURLOPT_FOLLOWLOCATION => FALSE,
             CURLOPT_COOKIEFILE => '',
+            CURLOPT_INTERFACE => '127.0.0.2',
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15
         ));
@@ -224,7 +225,51 @@ try {
     $proveedores[] = (int) $db->insert_id;
     $db->query("INSERT INTO proveedores (empresa_id,nombre) VALUES ($empresaA,'$prefijo proveedor 2')");
     $proveedores[] = (int) $db->insert_id;
-    $db->query('UPDATE insumos SET proveedor_id='.$proveedores[0].' WHERE id='.$insumos[0]);
+    comprobar_compra($adminB->pedir('proveedores/'.$proveedores[0].'/editar')['status'] === 404,
+        'Otra empresa no puede editar el proveedor');
+    $edicionProveedor = $adminA->pedir('proveedores/'.$proveedores[0].'/editar');
+    comprobar_compra($edicionProveedor['status'] === 200, 'Abre el formulario de edición del proveedor');
+    $nombreEditado = $prefijo.' proveedor editado';
+    $guardadoProveedor = $adminA->pedir('proveedores/'.$proveedores[0].'/editar', array(
+        'nombre' => $nombreEditado,
+        'contacto' => 'Contacto de prueba',
+        'telefono' => '12345678',
+        'correo' => 'compras@prueba.test',
+        'direccion' => 'Dirección de prueba',
+        'gestion_csrf' => ClienteCompras::token($edicionProveedor['body'])
+    ));
+    comprobar_compra($guardadoProveedor['status'] === 303
+        && $db->query('SELECT nombre FROM proveedores WHERE id='.$proveedores[0])->fetch_assoc()['nombre'] === $nombreEditado,
+        'Guarda la edición del proveedor');
+    $edicionProveedor = $adminA->pedir('proveedores/'.$proveedores[0].'/editar');
+    $duplicadoProveedor = $adminA->pedir('proveedores/'.$proveedores[0].'/editar', array(
+        'nombre' => $prefijo.' proveedor 2',
+        'contacto' => '', 'telefono' => '', 'correo' => '', 'direccion' => '',
+        'gestion_csrf' => ClienteCompras::token($edicionProveedor['body'])
+    ));
+    comprobar_compra($duplicadoProveedor['status'] === 200
+        && str_contains($duplicadoProveedor['body'], 'Ya existe otro proveedor')
+        && $db->query('SELECT nombre FROM proveedores WHERE id='.$proveedores[0])->fetch_assoc()['nombre'] === $nombreEditado,
+        'Rechaza el nombre duplicado sin alterar el proveedor');
+    comprobar_compra($adminB->pedir('proveedores/'.$proveedores[0])['status'] === 404,
+        'Otra empresa no puede consultar el proveedor');
+    $paginaB = $adminB->pedir('compras/seleccionar');
+    comprobar_compra($adminB->pedir('proveedores/'.$proveedores[0].'/asociar', array(
+        'insumo_id' => (string) $insumos[1],
+        'gestion_csrf' => ClienteCompras::token($paginaB['body'])
+    ))['status'] === 422
+        && $db->query('SELECT proveedor_id FROM insumos WHERE id='.$insumos[1])->fetch_assoc()['proveedor_id'] === NULL,
+        'Otra empresa no puede asociar insumos al proveedor');
+    $proveedorA = $adminA->pedir('proveedores/'.$proveedores[0]);
+    comprobar_compra($proveedorA['status'] === 200 && str_contains($proveedorA['body'], $datosInsumos[0][1]),
+        'El proveedor muestra los insumos disponibles para asociar');
+    $asociacion = $adminA->pedir('proveedores/'.$proveedores[0].'/asociar', array(
+        'insumo_id' => (string) $insumos[0],
+        'gestion_csrf' => ClienteCompras::token($proveedorA['body'])
+    ));
+    comprobar_compra($asociacion['status'] === 303
+        && (int)$db->query('SELECT proveedor_id FROM insumos WHERE id='.$insumos[0])->fetch_assoc()['proveedor_id'] === $proveedores[0],
+        'RF-49 asocia el insumo desde la interfaz de proveedores');
     $db->query("INSERT INTO insumos (empresa_id,nombre,cantidad_actual,stock_minimo,unidad_medida,proveedor_id)
         VALUES ($empresaA,'$prefijo segundo insumo',0,2,'unidad',".$proveedores[1].')');
     $segundoInsumo = (int) $db->insert_id;
@@ -251,6 +296,82 @@ try {
         'Genera una solicitud independiente por proveedor');
     comprobar_compra(str_contains($adminA->pedir('compras')['body'], '2 solicitudes creadas.'),
         'El listado muestra el resultado de la agrupación');
+
+    $solicitudId = (int) $db->query("SELECT id FROM solicitudes_compra WHERE observaciones='$prefijo' AND proveedor_id=".$proveedores[0])->fetch_assoc()['id'];
+    comprobar_compra($adminB->pedir('compras/'.$solicitudId)['status'] === 404
+        && $adminB->pedir('compras/'.$solicitudId.'/recepcion')['status'] === 404,
+        'Otra empresa no puede consultar ni recibir la solicitud');
+    $detalleCompra = $adminA->pedir('compras/'.$solicitudId);
+    comprobar_compra($detalleCompra['status'] === 200 && str_contains($detalleCompra['body'], 'Confirmar documento'),
+        'Abre el borrador generado desde la selección');
+    $confirmada = $adminA->pedir('compras/'.$solicitudId.'/confirmar', array(
+        'version' => '1', 'revisada' => '1',
+        'gestion_csrf' => ClienteCompras::token($detalleCompra['body'])
+    ));
+    comprobar_compra($confirmada['status'] === 303
+        && $db->query('SELECT estado FROM solicitudes_compra WHERE id='.$solicitudId)->fetch_assoc()['estado'] === 'confirmada',
+        'Confirma el borrador desde la interfaz');
+    $detalleCompra = $adminA->pedir('compras/'.$solicitudId);
+    $enviada = $adminA->pedir('compras/'.$solicitudId.'/estado', array(
+        'version' => '2', 'estado' => 'enviada',
+        'gestion_csrf' => ClienteCompras::token($detalleCompra['body'])
+    ));
+    comprobar_compra($enviada['status'] === 303
+        && $db->query('SELECT estado FROM solicitudes_compra WHERE id='.$solicitudId)->fetch_assoc()['estado'] === 'enviada',
+        'Marca la solicitud como enviada desde la interfaz');
+    $detalleId = (int) $db->query('SELECT id FROM solicitud_compra_detalles WHERE solicitud_id='.$solicitudId)->fetch_assoc()['id'];
+    $formRecepcion = $adminA->pedir('compras/'.$solicitudId.'/recepcion');
+    comprobar_compra($formRecepcion['status'] === 200
+        && preg_match('/name="clave"\s+value="([a-f0-9]{64})"/', $formRecepcion['body'], $claveEncontrada) === 1,
+        'Abre el formulario de recepción con clave de operación');
+    comprobar_compra($adminA->pedir('compras/'.$solicitudId.'/recepcion', array(
+        'version' => '3', 'clave' => bin2hex(random_bytes(32)),
+        'cantidades' => array($detalleId => '1.00')
+    ))['status'] === 403, 'La recepción exige CSRF');
+    $formRecepcion = $adminA->pedir('compras/'.$solicitudId.'/recepcion');
+    $demasiado = $adminA->pedir('compras/'.$solicitudId.'/recepcion', array(
+        'version' => '3', 'clave' => bin2hex(random_bytes(32)),
+        'cantidades' => array($detalleId => '3.00'),
+        'gestion_csrf' => ClienteCompras::token($formRecepcion['body'])
+    ));
+    comprobar_compra($demasiado['status'] === 303
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id='.$insumos[0])->fetch_assoc()['cantidad_actual'] === '0.00'
+        && (int)$db->query('SELECT COUNT(*) total FROM recepciones_compra WHERE solicitud_id='.$solicitudId)->fetch_assoc()['total'] === 0,
+        'Rechaza recibir más de lo solicitado sin cambiar stock');
+    $formRecepcion = $adminA->pedir('compras/'.$solicitudId.'/recepcion');
+    $claveRecepcion = $claveEncontrada[1];
+    $recepcionParcial = $adminA->pedir('compras/'.$solicitudId.'/recepcion', array(
+        'version' => '3', 'clave' => $claveRecepcion,
+        'cantidades' => array($detalleId => '1.00'),
+        'gestion_csrf' => ClienteCompras::token($formRecepcion['body'])
+    ));
+    comprobar_compra($recepcionParcial['status'] === 303
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id='.$insumos[0])->fetch_assoc()['cantidad_actual'] === '1.00'
+        && $db->query('SELECT estado FROM solicitudes_compra WHERE id='.$solicitudId)->fetch_assoc()['estado'] === 'enviada',
+        'La recepción parcial desde HTTP aumenta stock y mantiene la solicitud abierta');
+    $detalleCompra = $adminA->pedir('compras/'.$solicitudId);
+    $reenvio = $adminA->pedir('compras/'.$solicitudId.'/recepcion', array(
+        'version' => '3', 'clave' => $claveRecepcion,
+        'cantidades' => array($detalleId => '1.00'),
+        'gestion_csrf' => ClienteCompras::token($detalleCompra['body'])
+    ));
+    comprobar_compra($reenvio['status'] === 303
+        && (int)$db->query('SELECT COUNT(*) total FROM recepciones_compra WHERE solicitud_id='.$solicitudId)->fetch_assoc()['total'] === 1
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id='.$insumos[0])->fetch_assoc()['cantidad_actual'] === '1.00',
+        'Reenviar la recepción desde HTTP no duplica stock');
+    $formRecepcion = $adminA->pedir('compras/'.$solicitudId.'/recepcion');
+    comprobar_compra($formRecepcion['status'] === 200, 'La solicitud permite continuar una recepción parcial');
+    $recepcionFinal = $adminA->pedir('compras/'.$solicitudId.'/recepcion', array(
+        'version' => '4', 'clave' => bin2hex(random_bytes(32)),
+        'cantidades' => array($detalleId => '1.50'),
+        'gestion_csrf' => ClienteCompras::token($formRecepcion['body'])
+    ));
+    comprobar_compra($recepcionFinal['status'] === 303
+        && $db->query('SELECT estado FROM solicitudes_compra WHERE id='.$solicitudId)->fetch_assoc()['estado'] === 'recibida'
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id='.$insumos[0])->fetch_assoc()['cantidad_actual'] === '2.50',
+        'La recepción final desde HTTP cierra la solicitud y actualiza stock');
+    comprobar_compra($adminA->pedir('compras/'.$solicitudId.'/recepcion')['status'] === 409,
+        'Una solicitud recibida ya no muestra el formulario de recepción');
 
     $paginaA = $adminA->pedir('compras/seleccionar');
     $adminA->pedir('compras/seleccionar', array(
@@ -291,6 +412,13 @@ try {
         $idsCompra = $db->query("SELECT id FROM solicitudes_compra WHERE observaciones LIKE '$prefijo%'")->fetch_all(MYSQLI_ASSOC);
         if ($idsCompra) {
             $ids = implode(',', array_map(static fn($fila) => (int) $fila['id'], $idsCompra));
+            $movimientosRecepcion = $db->query('SELECT movimiento_id FROM recepcion_compra_detalles WHERE solicitud_id IN ('.$ids.')')->fetch_all(MYSQLI_ASSOC);
+            $db->query('DELETE FROM recepcion_compra_detalles WHERE solicitud_id IN ('.$ids.')');
+            $db->query('DELETE FROM recepciones_compra WHERE solicitud_id IN ('.$ids.')');
+            if ($movimientosRecepcion) {
+                $movimientoIds = implode(',', array_map(static fn($fila) => (int) $fila['movimiento_id'], $movimientosRecepcion));
+                $db->query('DELETE FROM movimientos_inventario WHERE id IN ('.$movimientoIds.')');
+            }
             $db->query('DELETE FROM solicitud_compra_eventos WHERE solicitud_id IN ('.$ids.')');
             $db->query('DELETE FROM solicitud_compra_detalles WHERE solicitud_id IN ('.$ids.')');
             $db->query('DELETE FROM solicitudes_compra WHERE id IN ('.$ids.')');
@@ -298,7 +426,11 @@ try {
         if ($insumos) { $db->query('DELETE FROM insumos WHERE id IN ('.implode(',', $insumos).')'); }
         if ($proveedores) { $db->query('DELETE FROM proveedores WHERE id IN ('.implode(',', $proveedores).')'); }
         if ($usuarios) { $db->query('DELETE FROM usuarios WHERE id IN ('.implode(',', $usuarios).')'); }
-        echo "Datos temporales eliminados.\n";
+        $restantes = (int)$db->query("SELECT COUNT(*) total FROM solicitudes_compra WHERE observaciones LIKE '$prefijo%'")->fetch_assoc()['total'];
+        $restantes += (int)$db->query("SELECT COUNT(*) total FROM proveedores WHERE nombre LIKE '$prefijo%'")->fetch_assoc()['total'];
+        $restantes += (int)$db->query("SELECT COUNT(*) total FROM insumos WHERE nombre LIKE '$prefijo%'")->fetch_assoc()['total'];
+        if ($restantes === 0) { echo "Datos temporales eliminados.\n"; }
+        else { fwrite(STDERR, "FALLO: quedaron datos temporales.\n"); $codigoSalida = 1; }
     }
 }
 exit($codigoSalida);

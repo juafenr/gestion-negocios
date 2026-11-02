@@ -189,6 +189,32 @@ try {
     $datosB=array('proveedor_id'=>$pb,'fecha'=>'2026-11-01','observaciones'=>'','lineas'=>array(array('insumo_id'=>3,'cantidad'=>'1')));
     $sb=$compra->crear_borrador($datosB,bin2hex(random_bytes(32)));
     verificar($sb['error']===NULL && (int)$compra->buscar($sb['id'])['numero']===1,'Empresa B tiene su propio número 1');
+    $ci_pago_test->autenticacion->usuario=identidad(1,1);
+    verificar($compra->cambiar_estado($sid,3,'enviada')['error']===NULL,'La solicitud confirmada pasa a enviada');
+    $lineas=$compra->detalles($sid);
+    $harinaId=(int)$lineas[0]['id'];$salId=(int)$lineas[1]['id'];
+    $claveRecepcion=bin2hex(random_bytes(32));
+    verificar($compra->recibir($sid,4,$claveRecepcion,array($harinaId=>'1.00'))['error']===NULL,'Recibe una parte de la solicitud');
+    verificar($compra->buscar($sid)['estado']==='enviada'
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id=1')->fetch_assoc()['cantidad_actual']==='6.00'
+        && $compra->detalles($sid)[0]['recibido']==='1.00','La recepción parcial actualiza stock y saldo');
+    verificar($compra->recibir($sid,4,$claveRecepcion,array($harinaId=>'1.00'))['error']===NULL
+        && (int)$db->query("SELECT COUNT(*) n FROM recepciones_compra WHERE solicitud_id=$sid")->fetch_assoc()['n']===1,
+        'Reintentar la misma recepción no duplica stock');
+    verificar($compra->recibir($sid,4,$claveRecepcion,array($harinaId=>'0.50'))['error']!==NULL
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id=1')->fetch_assoc()['cantidad_actual']==='6.00',
+        'La misma clave con otra cantidad se rechaza sin cambiar el stock');
+    verificar($compra->recibir($sid,5,bin2hex(random_bytes(32)),array($harinaId=>'2.00'))['error']!==NULL,
+        'Rechaza recibir más de lo pendiente');
+    verificar($compra->recibir($sid,5,bin2hex(random_bytes(32)),array($harinaId=>'1.50',$salId=>'1.00'))['error']===NULL,
+        'Completa la recepción de ambas líneas');
+    verificar($compra->buscar($sid)['estado']==='recibida'
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id=1')->fetch_assoc()['cantidad_actual']==='7.50'
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id=2')->fetch_assoc()['cantidad_actual']==='2.00',
+        'La solicitud queda recibida y el stock coincide');
+    $ci_pago_test->autenticacion->usuario=identidad(2,2);
+    verificar($compra->recibir($sid,6,bin2hex(random_bytes(32)),array($harinaId=>'1.00'))['error']!==NULL,
+        'Otra empresa no puede recibir la solicitud');
     $ci_pago_test->autenticacion->usuario=identidad(3,1,'cocinero');
     verificar($compra->crear_borrador($datos,bin2hex(random_bytes(32)))['error']!==NULL,'Cocinero no registra compras');
     echo "\nPruebas de pagos, ventas y documentos de compra completadas. Comprueba también los formularios, CSRF y roles desde el navegador.\n";
