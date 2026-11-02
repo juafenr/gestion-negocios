@@ -223,6 +223,10 @@ class Compras extends Protected_Controller
         $estado = $this->input->post('estado', TRUE);
         $motivo = $this->input->post('motivo', TRUE);
 
+        if ($motivo === NULL) {
+            $motivo = '';
+        }
+
         $resultado = $this->compras_model->cambiar_estado(
             (int) $solicitud['id'],
             $version,
@@ -281,6 +285,76 @@ class Compras extends Protected_Controller
         $this->load->view(
             'compras/historial_proveedor',
             $datos
+        );
+    }
+
+    public function recepcion($id = NULL)
+    {
+        $this->requerir_permiso('compras.confirmar');
+
+        $s = $this->solicitud($id);
+
+        if ($this->input->method(TRUE) === 'GET') {
+
+            if ($s['estado'] !== 'enviada') {
+                show_error(
+                    'La solicitud no está disponible para recepción.',
+                    409
+                );
+                return;
+            }
+
+            $this->load->view('compras/recepcion', array(
+                'usuario' => $this->usuario,
+                'solicitud' => $s,
+                'lineas' => $this->compras_model->detalles($s['id']),
+                'clave' => bin2hex(random_bytes(32))
+            ));
+
+            return;
+        }
+
+        $this->solo_metodo('POST');
+
+        $cantidades = $this->input->post('cantidades');
+
+        if (!is_array($cantidades)) {
+            show_error('Cantidades inválidas.', 422);
+            return;
+        }
+
+        $resultado = $this->compras_model->recibir(
+            (int) $s['id'],
+            $this->input->post('version'),
+            $this->input->post('clave'),
+            $cantidades
+        );
+
+        if ($resultado['error'] !== NULL) {
+
+            $this->session->set_flashdata(
+                'error_compra',
+                $resultado['error']
+            );
+
+            redirect(
+                'compras/' . (int) $s['id'] . '/recepcion',
+                'location',
+                303
+            );
+
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'mensaje_compra',
+            'Recepción registrada correctamente.'
+        );
+
+        redirect(
+            'compras/' . (int) $s['id'],
+            'location',
+            303
         );
     }
 }
