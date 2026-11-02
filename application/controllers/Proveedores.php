@@ -146,4 +146,131 @@ class Proveedores extends Protected_Controller
             'error' => $error
         ));
     }
+
+    public function ver($id = NULL)
+    {
+        $this->solo_metodo('GET');
+        $this->requerir_permiso('compras.ver');
+
+        if (
+            !is_string($id) ||
+            !ctype_digit($id) ||
+            strlen($id) > 10 ||
+            (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        $proveedor = $this->proveedores_model->buscar($id);
+
+        if (!$proveedor) {
+            show_404();
+            return;
+        }
+
+        $this->load->view('proveedores/detalle', array(
+            'usuario' => $this->usuario,
+            'proveedor' => $proveedor,
+            'insumos' => $this->proveedores_model
+                ->insumos_asociados($id),
+            'disponibles' => $this->proveedores_model
+                ->insumos_disponibles(),
+            'mensaje' => $this->session
+                ->flashdata('mensaje_proveedor')
+        ));
+    }
+
+    public function asociar($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('proveedores.gestionar');
+
+        if (
+            !is_string($id) ||
+            !ctype_digit($id) ||
+            strlen($id) > 10 ||
+            (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        $insumoId = $this->input->post('insumo_id', TRUE);
+
+        if (
+            !is_string($insumoId) ||
+            !ctype_digit($insumoId) ||
+            strlen($insumoId) > 10 ||
+            (int) $insumoId < 1
+        ) {
+            show_error('Insumo inválido.', 422);
+            return;
+        }
+
+        if (!$this->proveedores_model->asociar_insumo(
+            $id,
+            $insumoId
+        )) {
+            show_error(
+                'No se pudo asociar el insumo. '
+                    . 'Verifica que esté activo y sin proveedor.',
+                422
+            );
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'mensaje_proveedor',
+            'Insumo asociado correctamente.'
+        );
+
+        redirect('proveedores/' . $id, 'location', 303);
+    }
+
+    public function desasociar($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('proveedores.gestionar');
+
+        if (
+            !is_string($id) ||
+            !ctype_digit($id) ||
+            strlen($id) > 10 ||
+            (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        $insumoId = $this->input->post('insumo_id', TRUE);
+
+        if (
+            !is_string($insumoId) ||
+            !ctype_digit($insumoId) ||
+            strlen($insumoId) > 10 ||
+            (int) $insumoId < 1
+        ) {
+            show_error('Insumo inválido.', 422);
+            return;
+        }
+
+        if (!$this->proveedores_model->desasociar_insumo(
+            $id,
+            $insumoId
+        )) {
+            show_error(
+                'No se pudo retirar la asociación.',
+                422
+            );
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'mensaje_proveedor',
+            'Asociación retirada correctamente.'
+        );
+
+        redirect('proveedores/' . $id, 'location', 303);
+    }
 }

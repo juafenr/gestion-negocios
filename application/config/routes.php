@@ -44,3 +44,6 @@ $route['compras/(:num)/exportar'] = 'compras/exportar/$1';
 $route['proveedores/crear'] = 'compras/proveedor_nuevo';
 $route['proveedores'] = 'proveedores/index';
 $route['proveedores/(:num)/editar'] = 'proveedores/editar/$1';
+$route['proveedores/(:num)/asociar'] = 'proveedores/asociar/$1';
+$route['proveedores/(:num)/desasociar'] = 'proveedores/desasociar/$1';
+$route['proveedores/(:num)'] = 'proveedores/ver/$1';
