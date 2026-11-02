@@ -1008,13 +1008,3 @@ td[colspan] {
 .cantidad-cuenta { max-width: 110px; }
 .cuentas-pagos ul { padding-left: 20px; }
 details summary { cursor: pointer; margin-bottom: 14px; }
-
-/* Documentos de compra y consulta de ventas. */
-.texto-compra { display: block; width: 100%; margin: 8px 0 16px; }
-.documento-compra { font-family: monospace; line-height: 1.6; }
-.acciones-documento { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
-#lineas-compra select { width: 100%; min-width: 220px; }
-#lineas-compra input { width: 150px; }
-.campos-pagos label { display: block; margin-bottom: 6px; }
-.campos-pagos select { width: 100%; }
-.paginacion-pagos { margin-top: 16px; margin-bottom: 24px; }

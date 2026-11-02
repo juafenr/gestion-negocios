@@ -30,7 +30,11 @@ class Inventario extends Protected_Controller
         $activo = $this->input->get('activo', TRUE)
             === 'inactivos' ? 'inactivos' : 'activos';
 
-        if (!in_array($estado, array('', 'bajo', 'normal'), TRUE)) {
+        if (!in_array(
+            $estado,
+            array('', 'normal', 'bajo', 'agotado'),
+            TRUE
+        )) {
             $estado = '';
         }
 
@@ -414,6 +418,7 @@ class Inventario extends Protected_Controller
             )
             ->set_output($contenido);
     }
+
     public function vender($id = NULL)
 {
     $this->requerir_permiso('inventario.ver');
@@ -479,4 +484,5 @@ class Inventario extends Protected_Controller
 
     redirect('inventario');
 }
+
 }
