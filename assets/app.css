@@ -694,7 +694,7 @@ td[colspan] {
   gap: 14px;
 }
 
-.pedido-cocina .estado-preparacion {
+.pedido-cocina .estado-en_preparacion {
   color: #624808;
   background: var(--crema);
   border-color: #d9b955;

@@ -113,7 +113,7 @@ class Pedido_model extends MY_Model
         $consulta = $this->db
             ->select('id, numero, referencia, estado, confirmado_en')
             ->where('empresa_id', $this->empresa_id())
-            ->where_in('estado', array('pendiente', 'preparacion', 'listo'))
+            ->where_in('estado', array('pendiente', 'en_preparacion', 'listo'))
             ->order_by('confirmado_en', 'ASC')
             ->order_by('id', 'ASC')
             ->get('pedidos');
@@ -602,8 +602,8 @@ class Pedido_model extends MY_Model
     )
     {
         $transiciones = array(
-            'pendiente' => 'preparacion',
-            'preparacion' => 'listo',
+            'pendiente' => 'en_preparacion',
+            'en_preparacion' => 'listo',
             'listo' => 'entregado'
         );
 

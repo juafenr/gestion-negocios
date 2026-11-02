@@ -24,7 +24,7 @@
                     </div>
 
                     <span class="estado estado-<?= html_escape($pedido['estado']) ?>">
-                        <?= html_escape(ucfirst($pedido['estado'])) ?>
+                        <?= html_escape($pedido['estado'] === 'en_preparacion' ? 'En preparación' : ucfirst($pedido['estado'])) ?>
                     </span>
                 </div>
 
@@ -45,8 +45,8 @@
 
                 <?php
                 $siguientes = array(
-                    'pendiente' => array('preparacion', 'Iniciar preparación'),
-                    'preparacion' => array('listo', 'Marcar como listo'),
+                    'pendiente' => array('en_preparacion', 'Iniciar preparación'),
+                    'en_preparacion' => array('listo', 'Marcar como listo'),
                     'listo' => array('entregado', 'Marcar como entregado')
                 );
                 $siguiente = $siguientes[$pedido['estado']];

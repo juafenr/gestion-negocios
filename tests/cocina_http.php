@@ -201,7 +201,7 @@ try {
     comprobar(redirige_a($cocineroB->login($cuentas[2][3], $password), 'inicio'), 'El cocinero B inicia sesión');
     $colaB = $cocineroB->pedir('cocina');
     $ajeno = $cocineroB->pedir('cocina/pedidos/'.$pedidoA.'/estado', array(
-        'estado' => 'preparacion',
+        'estado' => 'en_preparacion',
         'gestion_csrf' => ClienteCocina::token($colaB['body'])
     ));
     comprobar($ajeno['status'] === 404, 'Cambiar un pedido de otra empresa responde 404');
@@ -213,7 +213,7 @@ try {
     comprobar($salto['status'] === 400, 'Cocina rechaza saltar de pendiente a listo');
 
     $transiciones = array(
-        'preparacion' => 'Inicia la preparación',
+        'en_preparacion' => 'Inicia la preparación',
         'listo' => 'Marca el pedido como listo',
         'entregado' => 'Marca el pedido como entregado'
     );
@@ -224,6 +224,8 @@ try {
             'gestion_csrf' => ClienteCocina::token($pagina['body'])
         ));
         comprobar(redirige_a($respuesta, 'cocina'), $mensaje);
+        $estadoGuardado = $db->query('SELECT estado FROM pedidos WHERE id = '.$pedidoA)->fetch_assoc()['estado'];
+        comprobar($estadoGuardado === $estadoNuevo, 'Cocina conserva el estado '.$estadoNuevo);
     }
 
     $fila = $db->query('SELECT estado FROM pedidos WHERE id = '.$pedidoA)->fetch_assoc();

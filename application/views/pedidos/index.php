@@ -47,7 +47,7 @@
 
                     <td>
                         <?= html_escape(
-                            $pedido['estado']
+                            $pedido['estado'] === 'en_preparacion' ? 'En preparación' : $pedido['estado']
                         ) ?>
                     </td>
 

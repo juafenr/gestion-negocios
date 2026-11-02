@@ -22,7 +22,7 @@
 
     <p>
         <strong>Estado:</strong>
-        <?= html_escape($pedido['estado']) ?>
+        <?= html_escape($pedido['estado'] === 'en_preparacion' ? 'En preparación' : $pedido['estado']) ?>
     </p>
 
     <p>
@@ -236,9 +236,9 @@
                     <?php foreach ($eventos as $evento): ?>
                         <tr>
                             <td>
-                                <?= html_escape(ucfirst($evento['estado_anterior'])) ?>
+                                <?= html_escape($evento['estado_anterior'] === 'en_preparacion' ? 'En preparación' : ucfirst($evento['estado_anterior'])) ?>
                                 →
-                                <?= html_escape(ucfirst($evento['estado_nuevo'])) ?>
+                                <?= html_escape($evento['estado_nuevo'] === 'en_preparacion' ? 'En preparación' : ucfirst($evento['estado_nuevo'])) ?>
                             </td>
                             <td><?= html_escape($evento['usuario_nombre']) ?></td>
                             <td><?= html_escape(ucfirst($evento['rol_codigo'])) ?></td>
