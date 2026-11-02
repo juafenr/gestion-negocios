@@ -27,3 +27,15 @@ $route['pagos/preparar/(:num)'] = 'pagos/preparar/$1';
 $route['pagos/separar/(:num)'] = 'pagos/separar/$1';
 $route['pagos/reiniciar/(:num)'] = 'pagos/reiniciar/$1';
 $route['pagos/registrar/(:num)'] = 'pagos/registrar/$1';
+
+// Ventas y documentos de compra (RF de Juan Fernando).
+$route['ventas'] = 'ventas/index';
+$route['ventas/(:num)'] = 'ventas/ver/$1';
+$route['compras'] = 'compras/index';
+$route['compras/crear'] = 'compras/crear';
+$route['compras/proveedor_nuevo'] = 'compras/proveedor_nuevo';
+$route['compras/(:num)'] = 'compras/ver/$1';
+$route['compras/(:num)/editar'] = 'compras/editar/$1';
+$route['compras/(:num)/confirmar'] = 'compras/confirmar/$1';
+$route['compras/(:num)/documento'] = 'compras/documento/$1';
+$route['compras/(:num)/exportar'] = 'compras/exportar/$1';

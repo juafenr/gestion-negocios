@@ -1,3 +1,5 @@
+> Actualización posterior: para la entrega de ventas y compras consulta `LEEME_JUAN_RF.md`. El esquema y el actualizador ahora incluyen hasta 010.
+
 # Actualización: pagos, cuentas separadas y propina
 
 Esta entrega parte de gestion-negocios(7).zip. Conserva CodeIgniter 3.1.13 y el diseño del proyecto. Usa PHP 8.2 de 64 bits con mysqli y mbstring, y MySQL/MariaDB con tablas InnoDB.
