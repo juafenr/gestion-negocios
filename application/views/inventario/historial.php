@@ -4,6 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 /** @var UsuarioAutenticado $usuario */
 /** @var array $insumo */
 /** @var array $movimientos */
+/** @var int $pagina */
+/** @var int $paginas */
+/** @var int $total */
 ?>
 
 <!doctype html>
@@ -11,10 +14,13 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport"
+    <meta
+        name="viewport"
         content="width=device-width, initial-scale=1">
     <title>Historial de inventario</title>
-    <link rel="stylesheet"
+
+    <link
+        rel="stylesheet"
         href="<?= html_escape(base_url('assets/app.css')) ?>">
 </head>
 
@@ -27,12 +33,16 @@ defined('BASEPATH') or exit('No direct script access allowed');
             </strong>
             <p>Gestión de negocios</p>
         </div>
-        <span><?= html_escape($usuario->nombre()) ?></span>
+
+        <span>
+            <?= html_escape($usuario->nombre()) ?>
+        </span>
     </header>
 
     <div class="estructura">
 
         <nav class="menu" aria-label="Menú principal">
+
             <a href="<?= html_escape(site_url('inicio')) ?>">
                 Inicio
             </a>
@@ -43,8 +53,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 </a>
             <?php endif; ?>
 
-            <a class="seleccionado"
-                href="<?= html_escape(site_url('inventario')) ?>">
+            <a
+                class="seleccionado"
+                href="<?= html_escape(site_url('inventario')) ?>"
+                aria-current="page">
                 Inventario
             </a>
 
@@ -55,10 +67,13 @@ defined('BASEPATH') or exit('No direct script access allowed');
             <?php endif; ?>
 
             <?= form_open('salir') ?>
+
             <button type="submit" class="boton-salir">
                 Cerrar sesión
             </button>
+
             <?= form_close() ?>
+
         </nav>
 
         <main class="contenido">
@@ -73,17 +88,26 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 Historial: <?= html_escape($insumo['nombre']) ?>
             </h1>
 
+            <p>
+                Total de movimientos:
+                <strong><?= (int) $total ?></strong>
+            </p>
+
             <?php
             $mensaje = $this->session
                 ->flashdata('mensaje_inventario');
             ?>
 
             <?php if ($mensaje): ?>
-                <p><?= html_escape($mensaje) ?></p>
+                <p role="status">
+                    <?= html_escape($mensaje) ?>
+                </p>
             <?php endif; ?>
 
             <div class="tabla">
+
                 <table>
+
                     <thead>
                         <tr>
                             <th>Fecha</th>
@@ -97,51 +121,147 @@ defined('BASEPATH') or exit('No direct script access allowed');
                     </thead>
 
                     <tbody>
+
                         <?php foreach ($movimientos as $movimiento): ?>
+
                             <tr>
+
                                 <td>
-                                    <?= html_escape($movimiento['fecha']) ?>
+                                    <?= html_escape(
+                                        $movimiento['fecha']
+                                    ) ?>
                                 </td>
+
                                 <td>
-                                    <?= html_escape($movimiento['tipo']) ?>
+                                    <?= html_escape(
+                                        $movimiento['tipo']
+                                    ) ?>
                                 </td>
+
                                 <td>
-                                    <?= html_escape($movimiento['cantidad']) ?>
+                                    <?= html_escape(
+                                        $movimiento['cantidad']
+                                    ) ?>
                                 </td>
+
                                 <td>
                                     <?= html_escape(
                                         $movimiento['cantidad_anterior']
                                     ) ?>
                                 </td>
+
                                 <td>
                                     <?= html_escape(
                                         $movimiento['cantidad_nueva']
                                     ) ?>
                                 </td>
+
                                 <td>
-                                    <?= html_escape($movimiento['motivo']) ?>
+                                    <?= html_escape(
+                                        $movimiento['motivo']
+                                    ) ?>
                                 </td>
+
                                 <td>
-                                    <?= html_escape($movimiento['responsable']) ?>
+                                    <?= html_escape(
+                                        $movimiento['responsable']
+                                    ) ?>
                                 </td>
+
                             </tr>
+
                         <?php endforeach; ?>
 
                         <?php if (empty($movimientos)): ?>
+
                             <tr>
                                 <td colspan="7">
                                     No hay movimientos registrados.
                                 </td>
                             </tr>
+
                         <?php endif; ?>
+
                     </tbody>
+
                 </table>
+
             </div>
 
+            <!-- Paginación del historial -->
+
+            <?php if ($paginas > 1): ?>
+
+                <nav
+                    class="paginacion-inventario"
+                    aria-label="Paginación del historial">
+
+                    <?php
+                    $ruta = 'inventario/' .
+                        (int) $insumo['id'] .
+                        '/historial';
+
+                    $inicio = max(1, $pagina - 2);
+                    $fin = min($paginas, $pagina + 2);
+                    ?>
+
+                    <?php if ($pagina > 1): ?>
+
+                        <a
+                            class="boton boton-secundario boton-compacto"
+                            href="<?= html_escape(
+                                        site_url($ruta) .
+                                            '?pagina=' . ($pagina - 1)
+                                    ) ?>">
+                            Anterior
+                        </a>
+
+                    <?php endif; ?>
+
+                    <?php for (
+                        $numero = $inicio;
+                        $numero <= $fin;
+                        $numero++
+                    ): ?>
+
+                        <a
+                            class="boton boton-secundario boton-compacto"
+                            href="<?= html_escape(
+                                        site_url($ruta) .
+                                            '?pagina=' . $numero
+                                    ) ?>"
+                            <?= $numero === $pagina
+                                ? 'aria-current="page"'
+                                : '' ?>>
+                            <?= $numero ?>
+                        </a>
+
+                    <?php endfor; ?>
+
+                    <?php if ($pagina < $paginas): ?>
+
+                        <a
+                            class="boton boton-secundario boton-compacto"
+                            href="<?= html_escape(
+                                        site_url($ruta) .
+                                            '?pagina=' . ($pagina + 1)
+                                    ) ?>">
+                            Siguiente
+                        </a>
+
+                    <?php endif; ?>
+
+                </nav>
+
+            <?php endif; ?>
+
         </main>
+
     </div>
 
-    <footer>Proyecto de gestión de negocios</footer>
+    <footer>
+        Proyecto de gestión de negocios
+    </footer>
 
 </body>
 
