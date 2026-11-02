@@ -21,6 +21,22 @@ $this->load->view('plantilla/cabecera', array(
             </a>
         </p>
     <?php endif; ?>
+
+    <a
+        class="boton boton-secundario"
+        href="<?= html_escape(
+                    site_url('inventario/sugerencias')
+                ) ?>">
+        <img
+            class="icono"
+            src="<?= html_escape(
+                        base_url('assets/iconos/alerta.svg')
+                    ) ?>"
+            alt=""
+            width="22"
+            height="22">
+        <span>Sugerencias de compra</span>
+    </a>
 </div>
 
 <?php

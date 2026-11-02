@@ -536,4 +536,15 @@ class Inventario extends Protected_Controller
 
         redirect('inventario');
     }
+
+    public function sugerencias()
+    {
+        $this->solo_metodo('GET');
+        $this->requerir_permiso('inventario.ver');
+
+        $this->load->view('inventario/sugerencias', array(
+            'usuario' => $this->usuario,
+            'insumos' => $this->insumos_model->sugerencias_compra()
+        ));
+    }
 }

@@ -180,8 +180,11 @@ class Insumo_model extends MY_Model
 
     public function crear(array $datos, $usuarioId)
     {
-        try { $datos=Validacion_negocio::insumo($datos,TRUE); }
-        catch (InvalidArgumentException $e) { return FALSE; }
+        try {
+            $datos = Validacion_negocio::insumo($datos, TRUE);
+        } catch (InvalidArgumentException $e) {
+            return FALSE;
+        }
         $empresaId = $this->empresa_id();
 
         $this->db->trans_begin();
@@ -240,8 +243,11 @@ class Insumo_model extends MY_Model
 
     public function actualizar($id, array $datos)
     {
-        try { $datos=Validacion_negocio::insumo($datos,FALSE); }
-        catch (InvalidArgumentException $e) { return FALSE; }
+        try {
+            $datos = Validacion_negocio::insumo($datos, FALSE);
+        } catch (InvalidArgumentException $e) {
+            return FALSE;
+        }
         return $this->db
             ->where('id', (int) $id)
             ->where('empresa_id', $this->empresa_id())
@@ -326,5 +332,46 @@ class Insumo_model extends MY_Model
         }
 
         return $this->db->count_all_results();
+    }
+
+    public function sugerencias_compra()
+    {
+        $consulta = $this->db
+            ->select(
+                'id, nombre, cantidad_actual, stock_minimo, unidad_medida'
+            )
+            ->from('insumos')
+            ->where('empresa_id', $this->empresa_id())
+            ->where('activo', 1)
+            ->where(
+                'cantidad_actual < stock_minimo',
+                NULL,
+                FALSE
+            )
+            ->order_by('nombre', 'ASC')
+            ->get();
+
+        if (!$consulta) {
+            show_error(
+                'No se pudieron consultar las sugerencias de compra.',
+                503
+            );
+        }
+
+        $insumos = $consulta->result_array();
+
+        foreach ($insumos as &$insumo) {
+            $actual = (float) $insumo['cantidad_actual'];
+            $minimo = (float) $insumo['stock_minimo'];
+
+            $insumo['cantidad_sugerida'] = round(
+                max(0, $minimo - $actual),
+                2
+            );
+        }
+
+        unset($insumo);
+
+        return $insumos;
     }
 }
