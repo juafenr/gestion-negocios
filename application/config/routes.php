@@ -40,3 +40,7 @@ $route['compras/(:num)/editar'] = 'compras/editar/$1';
 $route['compras/(:num)/confirmar'] = 'compras/confirmar/$1';
 $route['compras/(:num)/documento'] = 'compras/documento/$1';
 $route['compras/(:num)/exportar'] = 'compras/exportar/$1';
+
+$route['proveedores/crear'] = 'compras/proveedor_nuevo';
+$route['proveedores'] = 'proveedores/index';
+$route['proveedores/(:num)/editar'] = 'proveedores/editar/$1';
