@@ -8,6 +8,7 @@ class Pago_model extends MY_Model
         parent::__construct();
         $this->load->database();
         $this->load->library('Dinero');
+        $this->load->library('Validacion_negocio');
     }
 
     private function consultar($sql, $valores = array())
@@ -141,14 +142,18 @@ class Pago_model extends MY_Model
 
     public function separar($pedido_id, $nombre, $cantidades)
     {
+        try { $nombre = Validacion_negocio::texto($nombre, 'Nombre de cuenta', 80); }
+        catch (InvalidArgumentException $e) { return $e->getMessage(); }
         if (!is_string($nombre) || trim($nombre)==='' || mb_strlen(trim($nombre),'UTF-8')>80 || !is_array($cantidades) || count($cantidades)>500) {
             return 'Escribe un nombre de hasta 80 caracteres y selecciona los productos.';
         }
-        $seleccion = array();
+        $seleccion = array(); $vistos = array();
         foreach ($cantidades as $id=>$cantidad) {
             if (!ctype_digit((string)$id) || strlen((string)$id)>10 || (int)$id<1 || !is_string($cantidad) || !preg_match('/^[0-9]{1,3}$/D',$cantidad)) {
                 return 'Las cantidades para separar deben ser números enteros entre 0 y 999.';
             }
+            if (isset($vistos[(int)$id])) { return 'Un detalle aparece repetido.'; }
+            $vistos[(int)$id] = TRUE;
             if ((int)$cantidad>0) { $seleccion[(int)$id]=(int)$cantidad; }
         }
         if (!$seleccion) { return 'Selecciona al menos una unidad para la cuenta.'; }

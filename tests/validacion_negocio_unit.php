@@ -20,5 +20,24 @@ try {
     }
     rechaza(function() { Validacion_negocio::insumo(array('nombre'=>'Prueba','stock_minimo'=>'0','unidad_medida'=>'kg'),TRUE); },'Cantidad inicial obligatoria al crear insumo');
     rechaza(function() { Validacion_negocio::insumo(array('nombre'=>'Prueba','cantidad_actual'=>'0','stock_minimo'=>'-1','unidad_medida'=>'kg'),TRUE); },'Stock mínimo negativo rechazado');
+    foreach (array("\u{00A0}", "\u{2003}\t", "\xFF", "abc\x01") as $valor) {
+        rechaza(function() use ($valor) { Validacion_negocio::texto($valor,'Nombre',150); },'Texto vacío Unicode o codificación/control inválido rechazado');
+    }
+    foreach (array('        ', "\u{00A0}\u{00A0}\u{00A0}\u{00A0}", "abcd\0efghi", 'corta', array('secreto'), str_repeat('x',73)) as $valor) {
+        rechaza(function() use ($valor) { Validacion_negocio::password($valor); },'Contraseña inválida rechazada antes de bcrypt');
+    }
+    exige(Validacion_negocio::password(' clave válida ') === ' clave válida ', 'La contraseña válida conserva sus espacios');
+    $u=array('nombre'=>' Ana ', 'nombre_usuario'=>'ana.prueba', 'correo'=>'ana@example.test', 'rol_id'=>'1');
+    exige(Validacion_negocio::usuario($u)['nombre']==='Ana','Usuario normalizado');
+    foreach (array('nombre','nombre_usuario','correo','rol_id') as $campo) {
+        $invalido=$u;unset($invalido[$campo]);
+        rechaza(function() use ($invalido) { Validacion_negocio::usuario($invalido); },'Usuario exige '.$campo);
+    }
+    rechaza(function() { Validacion_negocio::proveedor(array('nombre'=>'Proveedor','correo'=>array('x'))); },'Proveedor rechaza correo de tipo arreglo');
+    rechaza(function() { Validacion_negocio::proveedor(array('nombre'=>'Proveedor','correo'=>'no-es-correo')); },'Proveedor exige formato de correo');
+    exige(Validacion_negocio::proveedor(array('nombre'=>'Proveedor'))['correo']==='','Contactos del proveedor opcionales');
+    rechaza(function() { Validacion_negocio::cantidades_por_id(array(1=>'1','01'=>'2'),'Recepción'); },'Recepción rechaza identificadores repetidos tras normalizar');
+    rechaza(function() { Validacion_negocio::cantidades_por_id(array(1=>array('1')),'Recepción'); },'Recepción rechaza cantidades anidadas');
+    exige(Validacion_negocio::cantidades_por_id(array(1=>'0',2=>'1.5'),'Recepción')===array(1=>'0.00',2=>'1.50'),'Recepción permite ceros y normaliza cantidades');
     echo "Validaciones completadas.\n";
 } catch (Throwable $e) { fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");exit(1); }

@@ -9,6 +9,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 define('BASEPATH',__DIR__.'/../system/');
 define('APPPATH',__DIR__.'/../application/');
 require APPPATH.'libraries/Dinero.php';
+require APPPATH.'libraries/Validacion_negocio.php';
 require APPPATH.'libraries/UsuarioAutenticado.php';
 
 // Adaptador mínimo para ejecutar las consultas del modelo fuera de HTTP.

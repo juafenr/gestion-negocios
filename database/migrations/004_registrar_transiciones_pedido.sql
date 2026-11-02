@@ -14,7 +14,7 @@ CREATE TABLE pedido_eventos (
         FOREIGN KEY (empresa_id, pedido_id)
         REFERENCES pedidos (empresa_id, id),
 
-    CONSTRAINT fk_evento_usuario
+    CONSTRAINT fk_pedido_eventos_usuario
         FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4

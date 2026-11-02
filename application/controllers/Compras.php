@@ -56,6 +56,7 @@ class Compras extends Protected_Controller
         $datos = array();
         foreach (array('proveedor_id', 'fecha', 'observaciones') as $campo) {
             $v = $this->input->post($campo);
+            if ($campo === 'observaciones' && $v === NULL) { $v = ''; }
             if (!is_string($v)) {
                 throw new InvalidArgumentException('Revisa el campo ' . $campo . '.');
             }
@@ -425,12 +426,17 @@ class Compras extends Protected_Controller
                         $error = 'Indica una cantidad válida para cada insumo seleccionado.';
                         break;
                     }
-                    $cantidad = trim($cantidad);
-                    $valores[(int) $idTexto] = $cantidad;
-                    if ($cantidad === '') { continue; }
-                    if (preg_match('/^[0-9]{1,8}(?:\.[0-9]{1,2})?$/D', $cantidad) !== 1
-                        || (float) $cantidad <= 0) {
-                        $error = 'Las cantidades deben ser mayores que cero y tener como máximo dos decimales.';
+                    try {
+                        $idNormalizado = Validacion_negocio::id($idTexto, 'Insumo');
+                        if (array_key_exists($idNormalizado, $valores)) {
+                            throw new InvalidArgumentException('Un insumo aparece repetido en la selección.');
+                        }
+                        $valores[$idNormalizado] = $cantidad;
+                        // Una casilla vacía significa que el insumo no fue seleccionado.
+                        if ($cantidad === '') { continue; }
+                        $cantidad = Validacion_negocio::decimal($cantidad, 'Cantidad solicitada', FALSE);
+                    } catch (InvalidArgumentException $e) {
+                        $error = $e->getMessage();
                         break;
                     }
                     $linea = $porId[(int) $idTexto];
@@ -528,7 +534,7 @@ class Compras extends Protected_Controller
 
         try {
             $fecha = Validacion_negocio::fecha($this->input->post('fecha'));
-            $observaciones = Validacion_negocio::texto($this->input->post('observaciones'), 'Observaciones', 1000, FALSE);
+            $observaciones = Validacion_negocio::texto($this->input->post('observaciones') ?? '', 'Observaciones', 1000, FALSE);
         } catch (InvalidArgumentException $e) {
             $this->session->set_flashdata('mensaje_compra_seleccion', $e->getMessage());
             redirect('compras/seleccionar', 'location', 303);

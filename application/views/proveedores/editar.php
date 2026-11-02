@@ -61,7 +61,7 @@ $this->load->view('plantilla/cabecera', array(
             type="<?= $campo === 'correo' ? 'email' : 'text' ?>"
             maxlength="<?= (int) $info[1] ?>"
             value="<?= html_escape(
-                        set_value($campo, $proveedor[$campo])
+                        $proveedor[$campo]
                     ) ?>"
             <?= $campo === 'nombre' ? 'required' : '' ?>>
 
