@@ -7,6 +7,7 @@ class Insumo_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Validacion_negocio');
     }
 
     public function listar($filtros = array())
@@ -162,7 +163,7 @@ class Insumo_model extends MY_Model
     public function buscar($id)
     {
         $q = $this->db
-            ->select('id, nombre, cantidad_actual, stock_minimo, unidad_medida, activo')
+            ->select('id, nombre, cantidad_actual, stock_minimo, unidad_medida, fecha_vencimiento, activo')
             ->from('insumos')
             ->where('empresa_id', $this->empresa_id())
             ->where('id', (int) $id)
@@ -179,6 +180,8 @@ class Insumo_model extends MY_Model
 
     public function crear(array $datos, $usuarioId)
     {
+        try { $datos=Validacion_negocio::insumo($datos,TRUE); }
+        catch (InvalidArgumentException $e) { return FALSE; }
         $empresaId = $this->empresa_id();
 
         $this->db->trans_begin();
@@ -237,6 +240,8 @@ class Insumo_model extends MY_Model
 
     public function actualizar($id, array $datos)
     {
+        try { $datos=Validacion_negocio::insumo($datos,FALSE); }
+        catch (InvalidArgumentException $e) { return FALSE; }
         return $this->db
             ->where('id', (int) $id)
             ->where('empresa_id', $this->empresa_id())

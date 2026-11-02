@@ -7,10 +7,13 @@ class Pedido_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Validacion_negocio');
     }
 
     public function crear($referencia, $usuario_id)
     {
+        try { $referencia=Validacion_negocio::texto($referencia,'Referencia',100); }
+        catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()),422);return 0; }
         $empresa_id = $this->empresa_id();
 
         $consulta = $this->db
@@ -93,16 +96,112 @@ class Pedido_model extends MY_Model
         return 0;
     }
 
-    public function listar()
+    private function aplicar_filtros_historial(array $filtros)
     {
+        $this->db
+            ->from('pedidos')
+            ->where('empresa_id', $this->empresa_id());
+
+        if (
+            isset($filtros['busqueda'])
+            && is_string($filtros['busqueda'])
+            && trim($filtros['busqueda']) !== ''
+        ) {
+            $busqueda = trim($filtros['busqueda']);
+
+            // Agrupar las condiciones para mantener
+            // la separación de datos por empresa.
+            $this->db
+                ->group_start()
+                ->like('referencia', $busqueda);
+
+            if (
+                ctype_digit($busqueda)
+                && strlen($busqueda) <= 10
+            ) {
+                $this->db->or_where('numero', $busqueda);
+            }
+
+            $this->db->group_end();
+        }
+
+        foreach (array('estado', 'estado_pago') as $campo) {
+            if (
+                isset($filtros[$campo])
+                && is_string($filtros[$campo])
+                && $filtros[$campo] !== ''
+            ) {
+                $this->db->where($campo, $filtros[$campo]);
+            }
+        }
+
+        if (
+            isset($filtros['desde'])
+            && is_string($filtros['desde'])
+            && $filtros['desde'] !== ''
+        ) {
+            $this->db->where(
+                'creado_en >=',
+                $filtros['desde'] . ' 00:00:00'
+            );
+        }
+
+        if (
+            isset($filtros['hasta'])
+            && is_string($filtros['hasta'])
+            && $filtros['hasta'] !== ''
+        ) {
+            $this->db->where(
+                'creado_en <=',
+                $filtros['hasta'] . ' 23:59:59'
+            );
+        }
+    }
+
+    public function contar_historial(array $filtros = array())
+    {
+        $this->aplicar_filtros_historial($filtros);
+
         $consulta = $this->db
-            ->where('empresa_id', $this->empresa_id())
-            ->order_by('id', 'DESC')
-            ->limit(50)
-            ->get('pedidos');
+            ->select('COUNT(*) AS total', FALSE)
+            ->get();
 
         if (!$consulta) {
-            show_error('No se pudieron consultar los pedidos.', 503);
+            show_error(
+                'No se pudo contar el historial de pedidos.',
+                503
+            );
+            return 0;
+        }
+
+        $fila = $consulta->row_array();
+
+        return (int) $fila['total'];
+    }
+
+    public function listar(
+        array $filtros = array(),
+        $limite = 50,
+        $offset = 0
+    ) {
+        $limite = max(1, min(100, (int) $limite));
+        $offset = max(0, (int) $offset);
+
+        $this->aplicar_filtros_historial($filtros);
+
+        $consulta = $this->db
+            ->select('pedidos.*')
+            ->order_by('creado_en', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit($limite, $offset)
+            ->get();
+
+        if (!$consulta) {
+            show_error(
+                'No se pudieron consultar los pedidos.',
+                503
+            );
+            return array();
         }
 
         return $consulta->result_array();
@@ -140,7 +239,7 @@ class Pedido_model extends MY_Model
 
         public function agregar_producto($pedido_id, $producto_id, $cantidad)
     {
-        if ($cantidad < 1 || $cantidad > 999) {
+        if (!is_int($cantidad) || $cantidad < 1 || $cantidad > 999) {
             return 'La cantidad debe estar entre 1 y 999.';
         }
 
@@ -283,7 +382,7 @@ class Pedido_model extends MY_Model
         public function modificar_detalle($pedido_id, $detalle_id, $cantidad)
     {
         // NULL significa quitar el producto del pedido.
-        if ($cantidad !== NULL && ($cantidad < 1 || $cantidad > 999)) {
+        if ($cantidad !== NULL && (!is_int($cantidad) || $cantidad < 1 || $cantidad > 999)) {
             return 'La cantidad debe estar entre 1 y 999.';
         }
 
@@ -469,6 +568,14 @@ class Pedido_model extends MY_Model
                 );
             }
 
+            // Comprobar existencias y registrar las salidas.
+            // Si algo falla, la transacción deshace todo.
+            $this->mover_inventario_pedido(
+                $pedido_id,
+                $empresa_id,
+                FALSE
+            );
+
             // "pendiente" significa pendiente de preparación.
             // El estado de pago no cambia.
             $ejecutar(
@@ -595,11 +702,23 @@ class Pedido_model extends MY_Model
                 );
             }
 
-            if ($pedido['estado_pago'] !== 'pendiente') {
+            $pago_registrado = $ejecutar(
+                'SELECT id FROM pagos WHERE empresa_id = ? AND pedido_id = ? LIMIT 1',
+                array($empresa_id, $pedido_id)
+            )->row_array();
+
+            if ($pago_registrado || $pedido['estado_pago'] !== 'pendiente') {
                 throw new InvalidArgumentException(
                     'Un pedido con pagos requiere gestionar la devolución antes de cancelarlo.'
                 );
             }
+
+            // Devolver únicamente las existencias descontadas por este pedido.
+            $this->mover_inventario_pedido(
+                $pedido_id,
+                $empresa_id,
+                TRUE
+            );
 
             // Registrar la autorización y el motivo.
             $ejecutar(
@@ -635,7 +754,7 @@ class Pedido_model extends MY_Model
             $this->db->trans_rollback();
             log_message('error', 'Fallo al cancelar el pedido.');
 
-            return 'No se pudo cancelar el pedido. Revisa la migración 004.';
+            return 'No se pudo cancelar el pedido. Revisa las migraciones y vuelve a intentarlo.';
         } finally {
             $this->db->db_debug = $debug_anterior;
         }
@@ -659,5 +778,191 @@ class Pedido_model extends MY_Model
         }
 
         return $consulta->row_array();
+    }
+    private function mover_inventario_pedido(
+        $pedido_id,
+        $empresa_id,
+        $devolver = FALSE
+    ) {
+        // Esta función se ejecuta dentro de la transacción del pedido.
+        // No inicia ni confirma una transacción propia.
+        $ci =& get_instance();
+        $ci->load->library('Autenticacion');
+        $usuario = $ci->autenticacion->usuario_actual();
+
+        $permiso = $devolver
+            ? 'pedidos.cancelar'
+            : 'pedidos.confirmar';
+
+        if (
+            !$usuario
+            || (int) $usuario->empresaId() !== (int) $empresa_id
+            || !$usuario->puede($permiso)
+        ) {
+            throw new InvalidArgumentException(
+                'No tienes permiso para realizar esta operación.'
+            );
+        }
+
+        $ejecutar = function ($sql, $valores) {
+            $resultado = $this->db->query($sql, $valores);
+
+            if ($resultado === FALSE) {
+                throw new RuntimeException(
+                    'No se pudo actualizar el inventario del pedido.'
+                );
+            }
+
+            return $resultado;
+        };
+
+        if ($devolver) {
+            // Devolver lo que realmente se descontó.
+            // No utilizar el vínculo actual del producto:
+            // podría haber cambiado después de confirmar.
+            $lineas = $ejecutar(
+                'SELECT insumo_id, cantidad
+                FROM movimientos_inventario
+                WHERE empresa_id = ?
+                AND pedido_id = ?
+                AND tipo = ?
+                ORDER BY insumo_id',
+                array($empresa_id, $pedido_id, 'salida')
+            )->result_array();
+        } else {
+            // Los productos sin insumo asociado no descuentan inventario.
+            $lineas = $ejecutar(
+                'SELECT p.insumo_id, SUM(d.cantidad) AS cantidad
+                FROM pedido_detalles d
+                JOIN productos p
+                ON p.id = d.producto_id
+                AND p.empresa_id = d.empresa_id
+                WHERE d.empresa_id = ?
+                AND d.pedido_id = ?
+                AND p.insumo_id IS NOT NULL
+                GROUP BY p.insumo_id
+                ORDER BY p.insumo_id',
+                array($empresa_id, $pedido_id)
+            )->result_array();
+        }
+
+        foreach ($lineas as $linea) {
+            $insumo_id = (int) $linea['insumo_id'];
+            $cantidad = $linea['cantidad'];
+
+            // Bloquear los insumos siempre en el mismo orden.
+            // También coordina con los movimientos manuales.
+            $insumo = $ejecutar(
+                'SELECT id, nombre, cantidad_actual, activo
+                FROM insumos
+                WHERE id = ? AND empresa_id = ?
+                FOR UPDATE',
+                array($insumo_id, $empresa_id)
+            )->row_array();
+
+            if (!$insumo) {
+                throw new InvalidArgumentException(
+                    'No se encontró un artículo del inventario del pedido.'
+                );
+            }
+
+            if (!$devolver && (int) $insumo['activo'] !== 1) {
+                throw new InvalidArgumentException(
+                    'El artículo "' . $insumo['nombre'] . '" está inactivo.'
+                );
+            }
+
+            // Evitar repetir el movimiento para este pedido e insumo.
+            $tipo = $devolver ? 'entrada' : 'salida';
+
+            $existente = $ejecutar(
+                'SELECT id
+                FROM movimientos_inventario
+                WHERE empresa_id = ?
+                AND pedido_id = ?
+                AND insumo_id = ?
+                AND tipo = ?
+                LIMIT 1',
+                array($empresa_id, $pedido_id, $insumo_id, $tipo)
+            )->row_array();
+
+            if ($existente) {
+                throw new InvalidArgumentException(
+                    'El movimiento de inventario de este pedido ya está registrado.'
+                );
+            }
+
+            if ($devolver) {
+                // Permitir la devolución aunque el insumo esté inactivo.
+                // Calcular con DECIMAL directamente en la base de datos.
+                $ejecutar(
+                    'UPDATE insumos
+                    SET cantidad_actual =
+                        cantidad_actual + CAST(? AS DECIMAL(10,2))
+                    WHERE id = ?
+                    AND empresa_id = ?
+                    AND cantidad_actual + CAST(? AS DECIMAL(10,2))
+                        <= 99999999.99',
+                    array(
+                        $cantidad,
+                        $insumo_id,
+                        $empresa_id,
+                        $cantidad
+                    )
+                );
+            } else {
+                $ejecutar(
+                    'UPDATE insumos
+                    SET cantidad_actual =
+                        cantidad_actual - CAST(? AS DECIMAL(10,2))
+                    WHERE id = ?
+                    AND empresa_id = ?
+                    AND activo = 1
+                    AND cantidad_actual >= CAST(? AS DECIMAL(10,2))',
+                    array(
+                        $cantidad,
+                        $insumo_id,
+                        $empresa_id,
+                        $cantidad
+                    )
+                );
+            }
+
+            if ($this->db->affected_rows() !== 1) {
+                $mensaje = $devolver
+                    ? 'La devolución supera la existencia máxima permitida para: '
+                    : 'No hay existencias suficientes de: ';
+
+                throw new InvalidArgumentException(
+                    $mensaje . $insumo['nombre']
+                );
+            }
+
+            $motivo = $devolver
+                ? 'Devolución por cancelación del pedido ID '
+                : 'Salida por confirmación del pedido ID ';
+
+            // Guardar la existencia anterior y la nueva sin usar float.
+            $ejecutar(
+                'INSERT INTO movimientos_inventario
+                    (empresa_id, insumo_id, usuario_id, pedido_id,
+                    tipo, cantidad, cantidad_anterior,
+                    cantidad_nueva, motivo)
+                SELECT empresa_id, id, ?, ?, ?, ?, ?,
+                        cantidad_actual, ?
+                FROM insumos
+                WHERE id = ? AND empresa_id = ?',
+                array(
+                    $usuario->id(),
+                    $pedido_id,
+                    $tipo,
+                    $cantidad,
+                    $insumo['cantidad_actual'],
+                    $motivo . (int) $pedido_id,
+                    $insumo_id,
+                    $empresa_id
+                )
+            );
+        }
     }
 }

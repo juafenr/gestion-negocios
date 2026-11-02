@@ -895,22 +895,91 @@ td[colspan] {
   }
 }
 
-/* Acciones del inventario */
+/* Acciones alineadas en una cuadrícula; cada botón conserva su etiqueta. */
 .acciones-inventario-fila {
   white-space: normal;
 }
 
-.acciones-inventario-fila .boton {
-  margin: 2px;
+.acciones-insumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 300px;
 }
 
-.form-estado-insumo {
-  display: inline-block;
+.acciones-insumo .boton {
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.acciones-insumo .accion-venta {
+  grid-column: 1 / -1;
+  background: #edf5fa;
+  border-color: #bdd1df;
+}
+
+.acciones-insumo .accion-venta:hover {
+  background: var(--crema);
+}
+
+.acciones-insumo .form-estado-insumo {
+  display: block;
   margin: 0;
 }
 
-.form-estado-insumo button {
-  width: auto;
+@media (max-width: 700px) {
+  .acciones-insumo {
+    width: 270px;
+    gap: 6px;
+  }
+}
+
+/* Estado de pago: el texto permite distinguirlo también sin ver el color. */
+.estado-pago {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.estado-pago::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pago-completo {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86c99e;
+}
+
+.pago-parcial {
+  color: #713f12;
+  background: var(--crema);
+  border-color: var(--amarillo);
+}
+
+.pago-pendiente {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #eaa0a0;
+}
+
+.pago-desconocido {
+  color: #4b5563;
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 
 /* Paginación */
