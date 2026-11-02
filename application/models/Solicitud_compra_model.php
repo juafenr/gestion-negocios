@@ -260,12 +260,24 @@ class Solicitud_compra_model extends MY_Model
                     );
                 }
 
-                $motivo = Validacion_negocio::texto(
-                    $motivo,
-                    'Motivo',
-                    1000,
-                    $nuevoEstado === 'cancelada'
-                );
+                if ($nuevoEstado === 'cancelada') {
+
+                    $motivo = Validacion_negocio::texto(
+                        $motivo,
+                        'Motivo',
+                        1000
+                    );
+
+                    if (trim($motivo) === '') {
+                        throw new InvalidArgumentException(
+                            'Debes indicar el motivo de cancelación.'
+                        );
+                    }
+                } else {
+
+                    // Enviar una solicitud no requiere motivo.
+                    $motivo = '';
+                }
 
                 $solicitud = $this->q(
                     'SELECT *
@@ -397,6 +409,327 @@ class Solicitud_compra_model extends MY_Model
             'pagina' => $pagina,
             'paginas' => $paginas,
             'total' => (int) $total['total']
+        );
+    }
+
+    public function recibir($id, $version, $clave, array $cantidades)
+    {
+        return $this->operacion(
+            'compras.confirmar',
+            function ($empresa, $usuario) use (
+                $id,
+                $version,
+                $clave,
+                $cantidades
+            ) {
+                $id = Validacion_negocio::id($id, 'Solicitud');
+                $version = Validacion_negocio::id($version, 'Versión');
+                $clave = Validacion_negocio::clave($clave);
+
+                if (empty($cantidades) || count($cantidades) > 100) {
+                    throw new InvalidArgumentException(
+                        'No se recibieron cantidades válidas.'
+                    );
+                }
+
+                // Bloquear la solicitud para serializar recepciones.
+                $solicitud = $this->q(
+                    'SELECT id, estado, version
+                 FROM solicitudes_compra
+                 WHERE empresa_id = ? AND id = ?
+                 FOR UPDATE',
+                    array($empresa, $id)
+                )->row_array();
+
+                if (!$solicitud) {
+                    throw new InvalidArgumentException(
+                        'Solicitud no encontrada.'
+                    );
+                }
+
+                // La misma clave nunca debe incrementar
+                // nuevamente las existencias.
+                $existente = $this->q(
+                    'SELECT id, solicitud_id
+                 FROM recepciones_compra
+                 WHERE empresa_id = ? AND clave = ?',
+                    array($empresa, $clave)
+                )->row_array();
+
+                if ($existente) {
+                    if ((int) $existente['solicitud_id'] !== $id) {
+                        throw new InvalidArgumentException(
+                            'La clave ya pertenece a otra recepción.'
+                        );
+                    }
+
+                    return $id;
+                }
+
+                if ($solicitud['estado'] !== 'enviada') {
+                    throw new InvalidArgumentException(
+                        'Solo se pueden recibir solicitudes enviadas.'
+                    );
+                }
+
+                if ((int) $solicitud['version'] !== $version) {
+                    throw new InvalidArgumentException(
+                        'La solicitud cambió. Recarga el formulario.'
+                    );
+                }
+
+                $lineas = $this->q(
+                    'SELECT id, insumo_id, cantidad, recibido
+                 FROM solicitud_compra_detalles
+                 WHERE empresa_id = ? AND solicitud_id = ?
+                 ORDER BY id
+                 FOR UPDATE',
+                    array($empresa, $id)
+                )->result_array();
+
+                if (!$lineas) {
+                    throw new InvalidArgumentException(
+                        'La solicitud no tiene insumos.'
+                    );
+                }
+
+                // Convertir importes decimales a centésimas
+                // para evitar errores de punto flotante.
+                $aCent = function ($valor) {
+                    $partes = explode('.', (string) $valor);
+                    return ((int) $partes[0]) * 100
+                        + (int) str_pad(
+                            $partes[1] ?? '',
+                            2,
+                            '0'
+                        );
+                };
+
+                $aDecimal = function ($valor) {
+                    return intdiv($valor, 100) . '.'
+                        . str_pad(
+                            (string) ($valor % 100),
+                            2,
+                            '0',
+                            STR_PAD_LEFT
+                        );
+                };
+
+                $lineasPorId = array();
+
+                foreach ($lineas as $linea) {
+                    $lineasPorId[(int) $linea['id']] = $linea;
+                }
+
+                $recepciones = array();
+
+                foreach ($cantidades as $detalleId => $cantidad) {
+
+                    $detalleId = Validacion_negocio::id(
+                        $detalleId,
+                        'Detalle'
+                    );
+
+                    if (!isset($lineasPorId[$detalleId])) {
+                        throw new InvalidArgumentException(
+                            'El detalle no pertenece a la solicitud.'
+                        );
+                    }
+
+                    $cantidad = Validacion_negocio::decimal(
+                        $cantidad,
+                        'Cantidad recibida',
+                        TRUE
+                    );
+
+                    $recibir = $aCent($cantidad);
+
+                    $linea = $lineasPorId[$detalleId];
+
+                    $solicitado = $aCent($linea['cantidad']);
+                    $recibido = $aCent($linea['recibido']);
+                    $pendiente = $solicitado - $recibido;
+
+                    if ($recibir > $pendiente) {
+                        throw new InvalidArgumentException(
+                            'La cantidad supera lo pendiente.'
+                        );
+                    }
+
+                    if ($recibir > 0) {
+                        $recepciones[$detalleId] = array(
+                            'linea' => $linea,
+                            'cantidad' => $recibir
+                        );
+                    }
+                }
+
+                if (!$recepciones) {
+                    throw new InvalidArgumentException(
+                        'Indica al menos una cantidad mayor que cero.'
+                    );
+                }
+
+                // Cabecera de recepción.
+                $this->q(
+                    'INSERT INTO recepciones_compra
+                 (empresa_id, solicitud_id, usuario_id, clave)
+                 VALUES (?, ?, ?, ?)',
+                    array($empresa, $id, $usuario, $clave)
+                );
+
+                $recepcionId = (int) $this->db->insert_id();
+
+                // Procesar insumos en orden estable.
+                ksort($recepciones);
+
+                foreach ($recepciones as $detalleId => $datos) {
+
+                    $linea = $datos['linea'];
+                    $cantidad = $datos['cantidad'];
+                    $insumoId = (int) $linea['insumo_id'];
+
+                    $insumo = $this->q(
+                        'SELECT id, cantidad_actual
+                     FROM insumos
+                     WHERE empresa_id = ?
+                       AND id = ?
+                       AND activo = 1
+                     FOR UPDATE',
+                        array($empresa, $insumoId)
+                    )->row_array();
+
+                    if (!$insumo) {
+                        throw new InvalidArgumentException(
+                            'Uno de los insumos ya no está activo.'
+                        );
+                    }
+
+                    $anterior = $aCent(
+                        $insumo['cantidad_actual']
+                    );
+
+                    $nuevo = $anterior + $cantidad;
+
+                    if ($nuevo > 9999999999) {
+                        throw new InvalidArgumentException(
+                            'La existencia supera el máximo permitido.'
+                        );
+                    }
+
+                    // Actualizar inventario.
+                    $this->q(
+                        'UPDATE insumos
+                     SET cantidad_actual = ?
+                     WHERE empresa_id = ? AND id = ?',
+                        array(
+                            $aDecimal($nuevo),
+                            $empresa,
+                            $insumoId
+                        )
+                    );
+
+                    // Actualizar cantidad recibida.
+                    $this->q(
+                        'UPDATE solicitud_compra_detalles
+                     SET recibido = recibido + ?
+                     WHERE empresa_id = ?
+                       AND solicitud_id = ?
+                       AND id = ?',
+                        array(
+                            $aDecimal($cantidad),
+                            $empresa,
+                            $id,
+                            $detalleId
+                        )
+                    );
+
+                    // Registrar movimiento de inventario.
+                    $this->q(
+                        'INSERT INTO movimientos_inventario
+                     (empresa_id, insumo_id, usuario_id,
+                      tipo, cantidad, cantidad_anterior,
+                      cantidad_nueva, motivo)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                        array(
+                            $empresa,
+                            $insumoId,
+                            $usuario,
+                            'entrada',
+                            $aDecimal($cantidad),
+                            $aDecimal($anterior),
+                            $aDecimal($nuevo),
+                            'Recepción de compra #' . $id
+                        )
+                    );
+
+                    $movimientoId = (int) $this->db->insert_id();
+
+                    // Relacionar recepción y movimiento.
+                    $this->q(
+                        'INSERT INTO recepcion_compra_detalles
+                     (empresa_id, recepcion_id, solicitud_id,
+                      detalle_id, cantidad, movimiento_id)
+                     VALUES (?, ?, ?, ?, ?, ?)',
+                        array(
+                            $empresa,
+                            $recepcionId,
+                            $id,
+                            $detalleId,
+                            $aDecimal($cantidad),
+                            $movimientoId
+                        )
+                    );
+                }
+
+                // Comprobar si quedan cantidades pendientes.
+                $pendientes = $this->q(
+                    'SELECT COUNT(*) AS total
+                 FROM solicitud_compra_detalles
+                 WHERE empresa_id = ?
+                   AND solicitud_id = ?
+                   AND recibido < cantidad',
+                    array($empresa, $id)
+                )->row_array();
+
+                $completa = (int) $pendientes['total'] === 0;
+
+                $nuevoEstado = $completa
+                    ? 'recibida'
+                    : 'enviada';
+
+                $this->q(
+                    'UPDATE solicitudes_compra
+                 SET estado = ?,
+                     version = version + 1,
+                     actualizado_por = ?,
+                     actualizado_en = CURRENT_TIMESTAMP
+                 WHERE empresa_id = ? AND id = ?',
+                    array($nuevoEstado, $usuario, $empresa, $id)
+                );
+
+                // Historial de la solicitud.
+                $this->q(
+                    'INSERT INTO solicitud_compra_eventos
+                 (empresa_id, solicitud_id, usuario_id,
+                  accion, estado_anterior, estado_nuevo,
+                  comentario)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    array(
+                        $empresa,
+                        $id,
+                        $usuario,
+                        $completa
+                            ? 'recepcion_total'
+                            : 'recepcion_parcial',
+                        'enviada',
+                        $nuevoEstado,
+                        'Recepción #' . $recepcionId
+                    )
+                );
+
+                return $id;
+            }
         );
     }
 }

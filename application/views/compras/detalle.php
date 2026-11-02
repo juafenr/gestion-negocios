@@ -93,6 +93,8 @@ $errorEstado = $this->session->flashdata('error_compra');
                 <tr>
                     <th>Insumo</th>
                     <th>Cantidad solicitada</th>
+                    <th>Recibido</th>
+                    <th>Pendiente</th>
                     <th>Unidad</th>
                 </tr>
             </thead>
@@ -102,12 +104,26 @@ $errorEstado = $this->session->flashdata('error_compra');
                 <?php foreach ($lineas as $l): ?>
 
                     <tr>
+                        <?php
+                        $solicitado = (float) $l['cantidad'];
+                        $recibido = (float) $l['recibido'];
+                        $pendiente = max(0, round($solicitado - $recibido, 2));
+                        ?>
+
                         <td>
                             <?= html_escape($l['insumo_nombre']) ?>
                         </td>
 
                         <td>
-                            <?= html_escape($l['cantidad']) ?>
+                            <?= number_format($solicitado, 2) ?>
+                        </td>
+
+                        <td>
+                            <?= number_format($recibido, 2) ?>
+                        </td>
+
+                        <td>
+                            <?= number_format($pendiente, 2) ?>
                         </td>
 
                         <td>
@@ -344,6 +360,36 @@ $errorEstado = $this->session->flashdata('error_compra');
         </button>
 
         <?= form_close() ?>
+
+    <?php endif; ?>
+
+    <!-- RF-59 y RF-60: Recepción de compras -->
+
+    <?php if (
+        $s['estado'] === 'enviada' &&
+        $usuario->puede('compras.confirmar')
+    ): ?>
+
+        <h2 class="subtitulo-linea">
+            Recepción de mercancía
+        </h2>
+
+        <p class="descripcion">
+            Registra una recepción total o parcial
+            de los insumos solicitados.
+        </p>
+
+        <a
+            class="boton"
+            href="<?= html_escape(
+                        site_url(
+                            'compras/' .
+                                (int) $s['id'] .
+                                '/recepcion'
+                        )
+                    ) ?>">
+            Registrar recepción
+        </a>
 
     <?php endif; ?>
 
