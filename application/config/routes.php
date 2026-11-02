@@ -47,3 +47,6 @@ $route['proveedores/(:num)/editar'] = 'proveedores/editar/$1';
 $route['proveedores/(:num)/asociar'] = 'proveedores/asociar/$1';
 $route['proveedores/(:num)/desasociar'] = 'proveedores/desasociar/$1';
 $route['proveedores/(:num)'] = 'proveedores/ver/$1';
+
+$route['compras/(:num)/estado'] = 'compras/cambiar_estado/$1';
+$route['compras/proveedor/(:num)/historial'] = 'compras/historial_proveedor/$1';

@@ -23,6 +23,17 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
         href="<?= html_escape(site_url('proveedores')) ?>">
         Volver
     </a>
+
+    <a class="boton boton-secundario"
+        href="<?= html_escape(
+                    site_url(
+                        'compras/proveedor/' .
+                            (int) $proveedor['id'] .
+                            '/historial'
+                    )
+                ) ?>">
+        Historial de compras
+    </a>
 </div>
 
 <?php if ($mensaje): ?>
