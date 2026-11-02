@@ -1,12 +1,14 @@
-<?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
+<?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <!doctype html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
     <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=5')) ?>">
 </head>
+
 <body>
     <a class="saltar-contenido" href="#contenido">Ir al contenido</a>
     <header class="cabecera">
@@ -44,8 +46,22 @@
             <?php if ($usuario->puede('compras.ver')): ?>
                 <a class="<?= $seccion === 'compras' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('compras')) ?>" <?= $seccion === 'compras' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/compras.svg')) ?>" alt="" width="22" height="22"><span>Compras</span></a>
             <?php endif; ?>
-            <?= form_open('salir' , array('class' => 'formulario-salir')) ?>
-                <button type="submit" class="boton-salir" title="Cerrar tu sesión"><img class="icono" src="<?= html_escape(base_url('assets/iconos/salir.svg')) ?>" alt="" width="22" height="22"><span>Cerrar sesión</span></button>
+            <?php if ($usuario->puede('compras.ver')): ?>
+                <a
+                    class="<?= $seccion === 'proveedores' ? 'seleccionado' : '' ?>"
+                    href="<?= html_escape(site_url('proveedores')) ?>"
+                    <?= $seccion === 'proveedores' ? 'aria-current="page"' : '' ?>>
+                    <img
+                        class="icono"
+                        src="<?= html_escape(base_url('assets/iconos/compras.svg')) ?>"
+                        alt=""
+                        width="22"
+                        height="22">
+                    <span>Proveedores</span>
+                </a>
+            <?php endif; ?>
+            <?= form_open('salir', array('class' => 'formulario-salir')) ?>
+            <button type="submit" class="boton-salir" title="Cerrar tu sesión"><img class="icono" src="<?= html_escape(base_url('assets/iconos/salir.svg')) ?>" alt="" width="22" height="22"><span>Cerrar sesión</span></button>
             <?= form_close() ?>
         </nav>
         <main id="contenido" class="contenido" tabindex="-1">
