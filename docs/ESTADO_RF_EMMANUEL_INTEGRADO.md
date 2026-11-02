@@ -1,6 +1,6 @@
 # Estado de los requisitos de Emmanuel en la rama integrada
 
-**Corte:** 1 de noviembre de 2026 (Guatemala). **Rama de trabajo:** `RBAC-implementacion-emmanuel`, con el contenido del push `upstream/main` `3f7c318` incorporado al directorio de trabajo. Los cambios siguen sin commit por indicación del usuario. Este estado describe la rama local; no afirma que el trabajo ya esté en `main` del equipo.
+**Corte:** 2 de noviembre de 2026 (Guatemala). **Rama de trabajo:** `RBAC-implementacion-emmanuel`. La integración del push `upstream/main` `3f7c318` quedó en el commit `fa0b26c` y se publicó en `backup/RBAC-implementacion-emmanuel`. Este estado describe la rama personal; el trabajo aún no está en `main` del equipo.
 
 | RF | Alcance implementado en esta rama | Verificación |
 |---|---|---|
@@ -18,7 +18,7 @@
 ## Dependencias pendientes del equipo
 
 - **Andrés — RF-49:** falta una pantalla para asignar y editar `insumos.proveedor_id`. La columna, la clave foránea y la creación mínima de proveedores ya están integradas. RF-52 y RF-53 funcionan cuando la asociación existe; su recorrido normal desde la interfaz queda pendiente de ese módulo. Los insumos sin proveedor activo no se asignan a uno inventado ni se guardan automáticamente.
-- **Integración en `main`:** los diez RF están en esta rama local sin commit. Antes de incorporarlos a la rama del equipo hay que revisar el diff y repetir el recorrido conjunto con las entregas posteriores de Andrés, Juanfer y Manuel. Los permisos de ventas y compras ya se comprobaron en la base local.
+- **Integración en `main`:** los diez RF están publicados en la rama personal. Antes de incorporarlos a la rama del equipo hay que revisar el diff y repetir el recorrido conjunto con las entregas posteriores de Andrés, Juanfer y Manuel. Los permisos de ventas y compras ya se comprobaron en la base local.
 - **Manuel — RF-57 a RF-60:** estados posteriores y recepción de compras. Dependen de los documentos creados, pero no bloquean RF-50 a RF-53.
 
 La base local actualizada informó `Sin cambios pendientes` en `tools/actualizar.php`. Las pruebas citadas pasaron con datos temporales que se eliminaron al terminar.
