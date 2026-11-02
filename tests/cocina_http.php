@@ -109,7 +109,7 @@ try {
     foreach ($db->query('SELECT id, codigo FROM roles')->fetch_all(MYSQLI_ASSOC) as $rol) {
         $roles[$rol['codigo']] = (int) $rol['id'];
     }
-    foreach (array('cajero', 'cocinero') as $codigo) {
+    foreach (array('administrador', 'cajero', 'cocinero') as $codigo) {
         if (!isset($roles[$codigo])) { throw new RuntimeException('Falta el rol '.$codigo.'.'); }
     }
 
@@ -121,7 +121,8 @@ try {
     $cuentas = array(
         array($empresaA, $roles['cajero'], 'Cajero cocina temporal', $prefijo.'-cajero@example.test'),
         array($empresaA, $roles['cocinero'], 'Cocinero temporal A', $prefijo.'-cocinero-a@example.test'),
-        array($empresaB, $roles['cocinero'], 'Cocinero temporal B', $prefijo.'-cocinero-b@example.test')
+        array($empresaB, $roles['cocinero'], 'Cocinero temporal B', $prefijo.'-cocinero-b@example.test'),
+        array($empresaA, $roles['administrador'], 'Administrador cocina temporal', $prefijo.'-admin@example.test')
     );
     foreach ($cuentas as $cuenta) {
         [$empresaId, $rolId, $nombre, $correo] = $cuenta;
@@ -129,7 +130,7 @@ try {
         $insertarUsuario->execute();
         $usuarios[] = (int) $db->insert_id;
     }
-    [$cajeroId, $cocineroAId, $cocineroBId] = $usuarios;
+    [$cajeroId, $cocineroAId, $cocineroBId, $administradorId] = $usuarios;
 
     $insertarProducto = $db->prepare(
         'INSERT INTO productos (empresa_id, sku, nombre, precio) VALUES (?, ?, ?, 25.00)'
@@ -244,6 +245,39 @@ try {
         'El detalle muestra estados, responsables y roles del historial'
     );
 
+    $numeroCancelado = $numeroA + 1;
+    $referenciaCancelada = $prefijo.' pedido cancelado';
+    $insertarPedido->bind_param('iiisss', $empresaA, $numeroCancelado, $cajeroId, $referenciaCancelada, $estado, $pago);
+    $insertarPedido->execute();
+    $pedidoCancelado = (int) $db->insert_id;
+    $pedidos[] = $pedidoCancelado;
+    $insertarDetalle->bind_param('iiis', $empresaA, $pedidoCancelado, $productos[0], $nombreA);
+    $insertarDetalle->execute();
+
+    $detalleCancelado = $cajero->pedir('pedidos/'.$pedidoCancelado);
+    comprobar(redirige_a($cajero->pedir('pedidos/'.$pedidoCancelado.'/confirmar', array(
+        'gestion_csrf' => ClienteCocina::token($detalleCancelado['body'])
+    )), 'pedidos/'.$pedidoCancelado), 'El segundo pedido se confirma');
+    $colaCancelada = $cocineroA->pedir('cocina');
+    comprobar(redirige_a($cocineroA->pedir('cocina/pedidos/'.$pedidoCancelado.'/estado', array(
+        'estado' => 'en_preparacion',
+        'gestion_csrf' => ClienteCocina::token($colaCancelada['body'])
+    )), 'cocina'), 'El segundo pedido entra en preparación');
+
+    $administrador = new ClienteCocina($baseUrl);
+    comprobar(redirige_a($administrador->login($cuentas[3][3], $password), 'inicio'), 'El administrador inicia sesión');
+    $paginaCancelacion = $administrador->pedir('pedidos/'.$pedidoCancelado);
+    $cancelado = $administrador->pedir('pedidos/cancelar/'.$pedidoCancelado, array(
+        'motivo' => 'Prueba de integración',
+        'confirmar_cancelacion' => '1',
+        'gestion_csrf' => ClienteCocina::token($paginaCancelacion['body'])
+    ));
+    comprobar(redirige_a($cancelado, 'pedidos/'.$pedidoCancelado), 'Se cancela el pedido en preparación');
+    $registroCancelado = $db->query('SELECT estado FROM pedidos WHERE id = '.$pedidoCancelado)->fetch_assoc();
+    $eventosCancelados = (int) $db->query('SELECT COUNT(*) total FROM pedido_eventos WHERE pedido_id = '.$pedidoCancelado)->fetch_assoc()['total'];
+    comprobar($registroCancelado['estado'] === 'cancelado' && $eventosCancelados === 3,
+        'La cancelación conserva la trazabilidad de confirmación y cocina');
+
     echo "\nTodas las pruebas HTTP de cocina finalizaron correctamente.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "\nFALLO: ".$error->getMessage()."\n");
@@ -253,6 +287,7 @@ try {
         if ($pedidos) {
             $ids = implode(',', array_map('intval', $pedidos));
             $db->query('DELETE FROM pedido_eventos WHERE pedido_id IN ('.$ids.')');
+            $db->query('DELETE FROM pedido_cancelaciones WHERE pedido_id IN ('.$ids.')');
             $db->query('DELETE FROM pedido_detalles WHERE pedido_id IN ('.$ids.')');
             $db->query('DELETE FROM pedidos WHERE id IN ('.$ids.')');
         }

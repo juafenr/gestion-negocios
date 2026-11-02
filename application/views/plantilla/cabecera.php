@@ -38,6 +38,9 @@
             <?php if ($usuario->puede('pedidos.actualizar_cocina')): ?>
                 <a class="<?= $seccion === 'cocina' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('cocina')) ?>" <?= $seccion === 'cocina' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/correcto.svg')) ?>" alt="" width="22" height="22"><span>Cocina</span></a>
             <?php endif; ?>
+            <?php if ($usuario->puede('ventas.ver') && $usuario->puede('pedidos.ver')): ?>
+                <a class="<?= $seccion === 'pagos' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('pagos')) ?>" <?= $seccion === 'pagos' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="" width="22" height="22"><span>Pagos</span></a>
+            <?php endif; ?>
             <?php if ($usuario->puede('usuarios.ver')): ?>
                 <a class="<?= $seccion === 'usuarios' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('usuarios')) ?>" <?= $seccion === 'usuarios' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/usuario.svg')) ?>" alt="" width="22" height="22"><span>Usuarios</span></a>
             <?php endif; ?>

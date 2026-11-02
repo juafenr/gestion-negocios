@@ -476,8 +476,7 @@ class Pedido_model extends MY_Model
             $this->db->db_debug = $debug_anterior;
         }
     }
-
-    public function confirmar($pedido_id, $usuario_id, $rol_codigo)
+        public function confirmar($pedido_id, $usuario_id, $rol_codigo)
     {
         $empresa_id = $this->empresa_id();
         $debug_anterior = $this->db->db_debug;
@@ -498,6 +497,7 @@ class Pedido_model extends MY_Model
                 throw new RuntimeException('No se pudo iniciar la operación.');
             }
 
+            // Usa el mismo bloqueo que agregar y modificar productos.
             $pedido = $ejecutar(
                 'SELECT id, estado
                  FROM pedidos
@@ -547,6 +547,16 @@ class Pedido_model extends MY_Model
                 );
             }
 
+            // Comprobar existencias y registrar las salidas.
+            // Si algo falla, la transacción deshace todo.
+            $this->mover_inventario_pedido(
+                $pedido_id,
+                $empresa_id,
+                FALSE
+            );
+
+            // "pendiente" significa pendiente de preparación.
+            // El estado de pago no cambia.
             $ejecutar(
                 'UPDATE pedidos
                  SET estado = ?,
@@ -566,14 +576,8 @@ class Pedido_model extends MY_Model
                  (empresa_id, pedido_id, usuario_id, rol_codigo,
                   estado_anterior, estado_nuevo)
                  VALUES (?, ?, ?, ?, ?, ?)',
-                array(
-                    $empresa_id,
-                    $pedido_id,
-                    $usuario_id,
-                    $rol_codigo,
-                    'borrador',
-                    'pendiente'
-                )
+                array($empresa_id, $pedido_id, $usuario_id, $rol_codigo,
+                    'borrador', 'pendiente')
             );
 
             if (!$this->db->trans_status() || !$this->db->trans_commit()) {
@@ -593,7 +597,185 @@ class Pedido_model extends MY_Model
             $this->db->db_debug = $debug_anterior;
         }
     }
+        public function cancelar($pedido_id, $motivo)
+    {
+        // Validar el motivo también en el servidor.
+        if (
+            !is_string($motivo)
+            || trim($motivo) === ''
+            || mb_strlen(trim($motivo), 'UTF-8') > 500
+        ) {
+            return 'Escribe un motivo de entre 1 y 500 caracteres.';
+        }
 
+        $motivo = trim($motivo);
+
+        // Obtener la identidad desde la sesión, no desde el formulario.
+        $ci =& get_instance();
+        $ci->load->library('Autenticacion');
+        $usuario = $ci->autenticacion->usuario_actual();
+
+        if (!$usuario || !$usuario->puede('pedidos.cancelar')) {
+            return 'No tienes permiso para cancelar pedidos.';
+        }
+
+        $empresa_id = $this->empresa_id();
+        $debug_anterior = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+
+        $ejecutar = function ($sql, $valores) {
+            $resultado = $this->db->query($sql, $valores);
+
+            if ($resultado === FALSE) {
+                throw new RuntimeException('Error de base de datos.');
+            }
+
+            return $resultado;
+        };
+
+        try {
+            if (!$this->db->trans_begin()) {
+                throw new RuntimeException('No se pudo iniciar la operación.');
+            }
+
+            // Bloquear el pedido mientras se procesa la cancelación.
+            $pedido = $ejecutar(
+                'SELECT id, estado, estado_pago
+                 FROM pedidos
+                 WHERE id = ? AND empresa_id = ?
+                 FOR UPDATE',
+                array($pedido_id, $empresa_id)
+            )->row_array();
+
+            if (!$pedido) {
+                throw new InvalidArgumentException('Pedido no encontrado.');
+            }
+
+            // Revalidar que el usuario sigue autorizado.
+            $autorizado = $ejecutar(
+                'SELECT u.id
+                 FROM usuarios u
+                 JOIN empresas e ON e.id = u.empresa_id
+                 JOIN rol_permisos rp ON rp.rol_id = u.rol_id
+                 JOIN permisos p ON p.id = rp.permiso_id
+                 WHERE u.id = ?
+                   AND u.empresa_id = ?
+                   AND u.activo = 1
+                   AND e.activa = 1
+                   AND p.codigo = ?
+                 LIMIT 1',
+                array(
+                    $usuario->id(),
+                    $empresa_id,
+                    'pedidos.cancelar'
+                )
+            )->row_array();
+
+            if (!$autorizado) {
+                throw new InvalidArgumentException(
+                    'No tienes permiso para cancelar pedidos.'
+                );
+            }
+
+            $estados_permitidos = array(
+                'borrador',
+                'pendiente',
+                'en_preparacion',
+                'listo'
+            );
+
+            if (!in_array($pedido['estado'], $estados_permitidos, TRUE)) {
+                throw new InvalidArgumentException(
+                    'Este pedido ya fue cancelado, entregado o no admite cancelación.'
+                );
+            }
+
+            $pago_registrado = $ejecutar(
+                'SELECT id FROM pagos WHERE empresa_id = ? AND pedido_id = ? LIMIT 1',
+                array($empresa_id, $pedido_id)
+            )->row_array();
+
+            if ($pago_registrado || $pedido['estado_pago'] !== 'pendiente') {
+                throw new InvalidArgumentException(
+                    'Un pedido con pagos requiere gestionar la devolución antes de cancelarlo.'
+                );
+            }
+
+            // Devolver únicamente las existencias descontadas por este pedido.
+            $this->mover_inventario_pedido(
+                $pedido_id,
+                $empresa_id,
+                TRUE
+            );
+
+            // Registrar la autorización y el motivo.
+            $ejecutar(
+                'INSERT INTO pedido_cancelaciones
+                 (pedido_id, empresa_id, usuario_id, motivo, estado_anterior)
+                 VALUES (?, ?, ?, ?, ?)',
+                array(
+                    $pedido_id,
+                    $empresa_id,
+                    $usuario->id(),
+                    $motivo,
+                    $pedido['estado']
+                )
+            );
+
+            // Conservar los productos y el total como registro histórico.
+            $ejecutar(
+                'UPDATE pedidos
+                 SET estado = ?
+                 WHERE id = ? AND empresa_id = ?',
+                array('cancelado', $pedido_id, $empresa_id)
+            );
+
+            $ejecutar(
+                'INSERT INTO pedido_eventos
+                 (empresa_id, pedido_id, usuario_id, rol_codigo,
+                  estado_anterior, estado_nuevo)
+                 VALUES (?, ?, ?, ?, ?, ?)',
+                array($empresa_id, $pedido_id, $usuario->id(), $usuario->rol(),
+                    $pedido['estado'], 'cancelado')
+            );
+
+            if (!$this->db->trans_status() || !$this->db->trans_commit()) {
+                throw new RuntimeException('No se pudo completar la operación.');
+            }
+
+            return NULL;
+        } catch (InvalidArgumentException $error) {
+            $this->db->trans_rollback();
+            return $error->getMessage();
+        } catch (Exception $error) {
+            $this->db->trans_rollback();
+            log_message('error', 'Fallo al cancelar el pedido.');
+
+            return 'No se pudo cancelar el pedido. Revisa las migraciones y vuelve a intentarlo.';
+        } finally {
+            $this->db->db_debug = $debug_anterior;
+        }
+    }
+        public function cancelacion($pedido_id)
+    {
+        $consulta = $this->db
+            ->select('c.*, u.nombre AS autorizado_por')
+            ->from('pedido_cancelaciones c')
+            ->join(
+                'usuarios u',
+                'u.id = c.usuario_id AND u.empresa_id = c.empresa_id',
+                'left'
+            )
+            ->where('c.pedido_id', (int) $pedido_id)
+            ->where('c.empresa_id', $this->empresa_id())
+            ->get();
+
+        if (!$consulta) {
+            show_error('No se pudo consultar la cancelación.', 503);
+        }
+
+        return $consulta->row_array();
+    }
     public function actualizar_estado_cocina(
         $pedido_id,
         $estado_nuevo,
@@ -701,6 +883,193 @@ class Pedido_model extends MY_Model
             return 'No se pudo actualizar el pedido. Intenta nuevamente.';
         } finally {
             $this->db->db_debug = $debug_anterior;
+        }
+    }
+
+    private function mover_inventario_pedido(
+        $pedido_id,
+        $empresa_id,
+        $devolver = FALSE
+    ) {
+        // Esta función se ejecuta dentro de la transacción del pedido.
+        // No inicia ni confirma una transacción propia.
+        $ci =& get_instance();
+        $ci->load->library('Autenticacion');
+        $usuario = $ci->autenticacion->usuario_actual();
+
+        $permiso = $devolver
+            ? 'pedidos.cancelar'
+            : 'pedidos.confirmar';
+
+        if (
+            !$usuario
+            || (int) $usuario->empresaId() !== (int) $empresa_id
+            || !$usuario->puede($permiso)
+        ) {
+            throw new InvalidArgumentException(
+                'No tienes permiso para realizar esta operación.'
+            );
+        }
+
+        $ejecutar = function ($sql, $valores) {
+            $resultado = $this->db->query($sql, $valores);
+
+            if ($resultado === FALSE) {
+                throw new RuntimeException(
+                    'No se pudo actualizar el inventario del pedido.'
+                );
+            }
+
+            return $resultado;
+        };
+
+        if ($devolver) {
+            // Devolver lo que realmente se descontó.
+            // No utilizar el vínculo actual del producto:
+            // podría haber cambiado después de confirmar.
+            $lineas = $ejecutar(
+                'SELECT insumo_id, cantidad
+                FROM movimientos_inventario
+                WHERE empresa_id = ?
+                AND pedido_id = ?
+                AND tipo = ?
+                ORDER BY insumo_id',
+                array($empresa_id, $pedido_id, 'salida')
+            )->result_array();
+        } else {
+            // Los productos sin insumo asociado no descuentan inventario.
+            $lineas = $ejecutar(
+                'SELECT p.insumo_id, SUM(d.cantidad) AS cantidad
+                FROM pedido_detalles d
+                JOIN productos p
+                ON p.id = d.producto_id
+                AND p.empresa_id = d.empresa_id
+                WHERE d.empresa_id = ?
+                AND d.pedido_id = ?
+                AND p.insumo_id IS NOT NULL
+                GROUP BY p.insumo_id
+                ORDER BY p.insumo_id',
+                array($empresa_id, $pedido_id)
+            )->result_array();
+        }
+
+        foreach ($lineas as $linea) {
+            $insumo_id = (int) $linea['insumo_id'];
+            $cantidad = $linea['cantidad'];
+
+            // Bloquear los insumos siempre en el mismo orden.
+            // También coordina con los movimientos manuales.
+            $insumo = $ejecutar(
+                'SELECT id, nombre, cantidad_actual, activo
+                FROM insumos
+                WHERE id = ? AND empresa_id = ?
+                FOR UPDATE',
+                array($insumo_id, $empresa_id)
+            )->row_array();
+
+            if (!$insumo) {
+                throw new InvalidArgumentException(
+                    'No se encontró un artículo del inventario del pedido.'
+                );
+            }
+
+            if (!$devolver && (int) $insumo['activo'] !== 1) {
+                throw new InvalidArgumentException(
+                    'El artículo "' . $insumo['nombre'] . '" está inactivo.'
+                );
+            }
+
+            // Evitar repetir el movimiento para este pedido e insumo.
+            $tipo = $devolver ? 'entrada' : 'salida';
+
+            $existente = $ejecutar(
+                'SELECT id
+                FROM movimientos_inventario
+                WHERE empresa_id = ?
+                AND pedido_id = ?
+                AND insumo_id = ?
+                AND tipo = ?
+                LIMIT 1',
+                array($empresa_id, $pedido_id, $insumo_id, $tipo)
+            )->row_array();
+
+            if ($existente) {
+                throw new InvalidArgumentException(
+                    'El movimiento de inventario de este pedido ya está registrado.'
+                );
+            }
+
+            if ($devolver) {
+                // Permitir la devolución aunque el insumo esté inactivo.
+                // Calcular con DECIMAL directamente en la base de datos.
+                $ejecutar(
+                    'UPDATE insumos
+                    SET cantidad_actual =
+                        cantidad_actual + CAST(? AS DECIMAL(10,2))
+                    WHERE id = ?
+                    AND empresa_id = ?
+                    AND cantidad_actual + CAST(? AS DECIMAL(10,2))
+                        <= 99999999.99',
+                    array(
+                        $cantidad,
+                        $insumo_id,
+                        $empresa_id,
+                        $cantidad
+                    )
+                );
+            } else {
+                $ejecutar(
+                    'UPDATE insumos
+                    SET cantidad_actual =
+                        cantidad_actual - CAST(? AS DECIMAL(10,2))
+                    WHERE id = ?
+                    AND empresa_id = ?
+                    AND activo = 1
+                    AND cantidad_actual >= CAST(? AS DECIMAL(10,2))',
+                    array(
+                        $cantidad,
+                        $insumo_id,
+                        $empresa_id,
+                        $cantidad
+                    )
+                );
+            }
+
+            if ($this->db->affected_rows() !== 1) {
+                $mensaje = $devolver
+                    ? 'La devolución supera la existencia máxima permitida para: '
+                    : 'No hay existencias suficientes de: ';
+
+                throw new InvalidArgumentException(
+                    $mensaje . $insumo['nombre']
+                );
+            }
+
+            $motivo = $devolver
+                ? 'Devolución por cancelación del pedido ID '
+                : 'Salida por confirmación del pedido ID ';
+
+            // Guardar la existencia anterior y la nueva sin usar float.
+            $ejecutar(
+                'INSERT INTO movimientos_inventario
+                    (empresa_id, insumo_id, usuario_id, pedido_id,
+                    tipo, cantidad, cantidad_anterior,
+                    cantidad_nueva, motivo)
+                SELECT empresa_id, id, ?, ?, ?, ?, ?,
+                        cantidad_actual, ?
+                FROM insumos
+                WHERE id = ? AND empresa_id = ?',
+                array(
+                    $usuario->id(),
+                    $pedido_id,
+                    $tipo,
+                    $cantidad,
+                    $insumo['cantidad_actual'],
+                    $motivo . (int) $pedido_id,
+                    $insumo_id,
+                    $empresa_id
+                )
+            );
         }
     }
 }

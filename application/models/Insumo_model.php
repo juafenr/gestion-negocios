@@ -12,17 +12,20 @@ class Insumo_model extends MY_Model
     public function listar($filtros = array())
     {
         $this->db
-            ->select('id, nombre, cantidad_actual, stock_minimo, unidad_medida, activo')
+            ->select('id, nombre, cantidad_actual, stock_minimo, unidad_medida, fecha_vencimiento, activo')
             ->from('insumos')
             ->where('empresa_id', $this->empresa_id())
-            ->where('activo', 1);
+            ->where(
+                'activo',
+                isset($filtros['activo']) &&
+                    $filtros['activo'] === 'inactivos'
+                    ? 0 : 1
+            );
 
-        // Búsqueda por nombre
         if (!empty($filtros['busqueda'])) {
             $this->db->like('nombre', $filtros['busqueda']);
         }
 
-        // Filtro por estado
         if (!empty($filtros['estado'])) {
 
             if ($filtros['estado'] === 'bajo') {
@@ -42,7 +45,6 @@ class Insumo_model extends MY_Model
             }
         }
 
-        // Filtro por unidad
         if (!empty($filtros['unidad'])) {
             $this->db->where(
                 'unidad_medida',
@@ -50,7 +52,6 @@ class Insumo_model extends MY_Model
             );
         }
 
-        // Ordenamiento
         $orden = isset($filtros['orden'])
             ? $filtros['orden']
             : 'nombre_asc';
@@ -82,7 +83,6 @@ class Insumo_model extends MY_Model
                 break;
 
             case 'stock_bajo':
-                // Priorizar insumos con stock bajo
                 $this->db->order_by(
                     '(cantidad_actual <= stock_minimo)',
                     'DESC',
@@ -95,6 +95,13 @@ class Insumo_model extends MY_Model
             default:
                 $this->db->order_by('nombre', 'ASC');
                 break;
+        }
+
+        if (isset($filtros['limite'])) {
+            $this->db->limit(
+                (int) $filtros['limite'],
+                (int) $filtros['offset']
+            );
         }
 
         $consulta = $this->db->get();
@@ -139,27 +146,138 @@ class Insumo_model extends MY_Model
         return $q->row_array() ?: NULL;
     }
 
-    public function crear(array $datos)
+    public function crear(array $datos, $usuarioId)
     {
-        return $this->db->insert('insumos', array(
-            'empresa_id' => $this->empresa_id(),
-            'nombre' => $datos['nombre'],
-            'cantidad_actual' => $datos['cantidad_actual'],
-            'stock_minimo' => $datos['stock_minimo'],
-            'unidad_medida' => $datos['unidad_medida'],
-            'activo' => 1
-        ));
+        $empresaId = $this->empresa_id();
+
+        $this->db->trans_begin();
+
+        $guardado = $this->db->insert(
+            'insumos',
+            array(
+                'empresa_id' => $empresaId,
+                'nombre' => $datos['nombre'],
+                'cantidad_actual' => $datos['cantidad_actual'],
+                'stock_minimo' => $datos['stock_minimo'],
+                'unidad_medida' => $datos['unidad_medida'],
+                'fecha_vencimiento' =>
+                $datos['fecha_vencimiento'],
+                'activo' => 1
+            )
+        );
+
+        if (!$guardado) {
+            $this->db->trans_rollback();
+            return FALSE;
+        }
+
+        $insumoId = (int) $this->db->insert_id();
+
+        if ((float) $datos['cantidad_actual'] > 0) {
+
+            $guardado = $this->db->insert(
+                'movimientos_inventario',
+                array(
+                    'empresa_id' => $empresaId,
+                    'insumo_id' => $insumoId,
+                    'usuario_id' => (int) $usuarioId,
+                    'tipo' => 'entrada',
+                    'cantidad' => $datos['cantidad_actual'],
+                    'cantidad_anterior' => 0,
+                    'cantidad_nueva' =>
+                    $datos['cantidad_actual'],
+                    'motivo' => 'Existencia inicial'
+                )
+            );
+        }
+
+        if (
+            !$guardado ||
+            $this->db->trans_status() === FALSE
+        ) {
+            $this->db->trans_rollback();
+            return FALSE;
+        }
+
+        $this->db->trans_commit();
+
+        return TRUE;
     }
 
     public function actualizar($id, array $datos)
     {
-        return $this->db->where('empresa_id', $this->empresa_id())
+        return $this->db
             ->where('id', (int) $id)
+            ->where('empresa_id', $this->empresa_id())
+            ->where('activo', 1)
             ->update('insumos', array(
                 'nombre' => $datos['nombre'],
-                'cantidad_actual' => $datos['cantidad_actual'],
                 'stock_minimo' => $datos['stock_minimo'],
-                'unidad_medida' => $datos['unidad_medida']
+                'unidad_medida' => $datos['unidad_medida'],
+                'fecha_vencimiento' =>
+                $datos['fecha_vencimiento']
             ));
+    }
+
+    public function buscar_incluyendo_inactivos($id)
+    {
+        $consulta = $this->db->from('insumos')
+            ->where('id', (int) $id)
+            ->where('empresa_id', $this->empresa_id())
+            ->limit(1)
+            ->get();
+
+        return $consulta ? ($consulta->row_array() ?: NULL) : NULL;
+    }
+
+    public function existe_nombre($nombre, $excluirId = NULL)
+    {
+        $this->db->from('insumos')
+            ->where('empresa_id', $this->empresa_id())
+            ->where('nombre', trim($nombre));
+
+        if ($excluirId !== NULL) {
+            $this->db->where('id !=', (int) $excluirId);
+        }
+
+        return $this->db->count_all_results() > 0;
+    }
+
+    public function cambiar_estado($id, $activo)
+    {
+        return $this->db->where('empresa_id', $this->empresa_id())
+            ->where('id', (int) $id)
+            ->update('insumos', array('activo' => $activo ? 1 : 0));
+    }
+
+    public function contar($filtros = array())
+    {
+        $this->db
+            ->from('insumos')
+            ->where('empresa_id', $this->empresa_id())
+            ->where(
+                'activo',
+                isset($filtros['activo']) &&
+                    $filtros['activo'] === 'inactivos'
+                    ? 0 : 1
+            );
+
+        if (!empty($filtros['busqueda'])) {
+            $this->db->like('nombre', $filtros['busqueda']);
+        }
+
+        if (!empty($filtros['unidad'])) {
+            $this->db->where('unidad_medida', $filtros['unidad']);
+        }
+
+        if (!empty($filtros['estado'])) {
+            if ($filtros['estado'] === 'bajo') {
+                $this->db->where('cantidad_actual <= stock_minimo', NULL, FALSE);
+            } elseif ($filtros['estado'] === 'normal') {
+                $this->db->where('cantidad_actual > stock_minimo', NULL, FALSE);
+            }
+        }
+
+        return $this->db->count_all_results();
     }
 }

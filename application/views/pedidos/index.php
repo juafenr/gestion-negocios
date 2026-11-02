@@ -23,7 +23,7 @@
                 <th>Referencia</th>
                 <th>Estado</th>
                 <th>Pago</th>
-                <th>Total</th>
+                <th>Consumo</th>
                 <th>Detalle</th>
             </tr>
 

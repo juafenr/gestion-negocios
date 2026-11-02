@@ -43,23 +43,38 @@
                     )
                 ) ?>">
 
-    <label for="cantidad_actual">
-        Cantidad actual
-    </label>
+    <?php if ($insumo === NULL): ?>
 
-    <input
-        id="cantidad_actual"
-        name="cantidad_actual"
-        type="number"
-        min="0"
-        step="0.01"
-        required
-        value="<?= html_escape(
-                    set_value(
-                        'cantidad_actual',
-                        $insumo['cantidad_actual'] ?? '0'
-                    )
-                ) ?>">
+        <label for="cantidad_actual">
+            Existencia inicial
+        </label>
+
+        <input
+            type="number"
+            id="cantidad_actual"
+            name="cantidad_actual"
+            min="0"
+            max="99999999.99"
+            step="0.01"
+            required
+            value="<?= html_escape(
+                        set_value('cantidad_actual', '0')
+                    ) ?>">
+
+    <?php else: ?>
+
+        <p>
+            <strong>Existencia actual:</strong>
+            <?= html_escape($insumo['cantidad_actual']) ?>
+            <?= html_escape($insumo['unidad_medida']) ?>
+        </p>
+
+        <p>
+            Para modificar la existencia utiliza
+            Registrar movimiento desde el inventario.
+        </p>
+
+    <?php endif; ?>
 
     <label for="stock_minimo">
         Stock mínimo
@@ -150,6 +165,21 @@
         </option>
 
     </select>
+
+    <label for="fecha_vencimiento">
+        Fecha de vencimiento (opcional)
+    </label>
+
+    <input
+        type="date"
+        id="fecha_vencimiento"
+        name="fecha_vencimiento"
+        value="<?= html_escape(
+                    set_value(
+                        'fecha_vencimiento',
+                        $insumo['fecha_vencimiento'] ?? ''
+                    )
+                ) ?>">
 
     <button type="submit"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="" width="22" height="22"><span>Guardar insumo</span></button>
 

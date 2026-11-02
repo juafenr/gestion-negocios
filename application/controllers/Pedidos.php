@@ -6,6 +6,7 @@ class Pedidos extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Dinero');
 
         $this->load->model(
             'Pedido_model',
@@ -110,12 +111,20 @@ class Pedidos extends Protected_Controller
 
         $this->load->model('Producto_model', 'productos_model');
 
-        $this->load->view('pedidos/detalle', array(
+         $this->load->view('pedidos/detalle', array(
             'usuario' => $this->usuario,
             'pedido' => $pedido,
             'detalles' => $this->pedidos_model->detalles($id),
             'eventos' => $this->pedidos_model->eventos($id),
-            'productos' => $this->productos_model->listar()
+            'productos' => $this->productos_model->listar(),
+
+            'cancelacion' => $this->pedidos_model->cancelacion($id),
+
+            'mensaje' => $this->session->flashdata('mensaje_pedido'),
+            'error_pedido' => $this->session->flashdata('error_pedido'),
+            'motivo_anterior' => $this->session->flashdata(
+                'motivo_cancelacion'
+            )
         ));
     }
         public function agregar($id = NULL)
@@ -188,46 +197,6 @@ class Pedidos extends Protected_Controller
         $this->procesar_cambio_detalle($id, $detalle_id, TRUE);
     }
 
-    public function confirmar($id = NULL)
-    {
-        $this->solo_metodo('POST');
-        $this->requerir_permiso('pedidos.ver');
-        $this->requerir_permiso('pedidos.confirmar');
-
-        if (
-            !is_string($id)
-            || !ctype_digit($id)
-            || strlen($id) > 10
-            || (int) $id < 1
-        ) {
-            show_404();
-            return;
-        }
-
-        if (!$this->pedidos_model->buscar($id)) {
-            show_404();
-            return;
-        }
-
-        $error = $this->pedidos_model->confirmar(
-            (int) $id,
-            $this->usuario->id(),
-            $this->usuario->rol()
-        );
-
-        if ($error !== NULL) {
-            show_error(html_escape($error), 400);
-            return;
-        }
-
-        $this->session->set_flashdata(
-            'mensaje_pedido',
-            'Pedido confirmado y enviado a cocina.'
-        );
-
-        redirect('pedidos/' . (int) $id);
-    }
-
     private function procesar_cambio_detalle($id, $detalle_id, $quitar)
     {
         $this->solo_metodo('POST');
@@ -279,6 +248,100 @@ class Pedidos extends Protected_Controller
         if ($error !== NULL) {
             show_error(html_escape($error), 400);
             return;
+        }
+
+        redirect('pedidos/' . (int) $id);
+    }
+        public function confirmar($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('pedidos.ver');
+        $this->requerir_permiso('pedidos.confirmar');
+
+        if (
+            !is_string($id)
+            || !ctype_digit($id)
+            || strlen($id) > 10
+            || (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        // Solo permite acceder a pedidos de la empresa actual.
+        if (!$this->pedidos_model->buscar($id)) {
+            show_404();
+            return;
+        }
+
+        $error = $this->pedidos_model->confirmar(
+            (int) $id,
+            $this->usuario->id(),
+            $this->usuario->rol()
+        );
+
+        if ($error !== NULL) {
+            show_error(html_escape($error), 400);
+            return;
+        }
+
+        redirect('pedidos/' . (int) $id);
+    }
+        public function cancelar($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('pedidos.ver');
+        $this->requerir_permiso('pedidos.cancelar');
+
+        // Comprobar que el identificador es válido.
+        if (
+            !is_string($id)
+            || !ctype_digit($id)
+            || strlen($id) > 10
+            || (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        // El modelo busca únicamente dentro de la empresa actual.
+        if (!$this->pedidos_model->buscar($id)) {
+            show_404();
+            return;
+        }
+
+        $motivo = $this->input->post('motivo');
+        $confirmacion = $this->input->post('confirmar_cancelacion');
+
+        if (
+            !is_string($motivo)
+            || trim($motivo) === ''
+            || mb_strlen(trim($motivo), 'UTF-8') > 500
+        ) {
+            $error = 'Escribe un motivo de entre 1 y 500 caracteres.';
+        } elseif ($confirmacion !== '1') {
+            $error = 'Marca la casilla para autorizar la cancelación.';
+        } else {
+            $error = $this->pedidos_model->cancelar(
+                (int) $id,
+                trim($motivo)
+            );
+        }
+
+        if ($error !== NULL) {
+            $this->session->set_flashdata('error_pedido', $error);
+
+            $this->session->set_flashdata(
+                'motivo_cancelacion',
+                is_string($motivo)
+                    ? mb_substr($motivo, 0, 500, 'UTF-8')
+                    : ''
+            );
+        } else {
+            $this->session->set_flashdata(
+                'mensaje_pedido',
+                'Pedido cancelado. Se registraron el motivo y la autorización.'
+            );
         }
 
         redirect('pedidos/' . (int) $id);

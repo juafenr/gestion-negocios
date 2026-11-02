@@ -1,4 +1,6 @@
--- Ejecutar después de crear pedido_eventos (migraciones 004 y 005 de esta rama).
+-- Ejecutar después de 004_registrar_transiciones_pedido.sql y
+-- 005_agregar_rol_eventos_pedido.sql. No sustituye las migraciones 004/005
+-- de cancelaciones e inventario que provienen de upstream/main.
 -- Conserva los pedidos y su historial al unificar el estado con pagos y cancelación.
 UPDATE pedidos
 SET estado = 'en_preparacion'

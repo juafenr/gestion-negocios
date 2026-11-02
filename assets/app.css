@@ -46,11 +46,17 @@ a {
   color: var(--oscuro);
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font: inherit;
 }
 
-button, a, input, select {
+button,
+a,
+input,
+select {
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -157,7 +163,8 @@ button, a, input, select {
   letter-spacing: 1px;
 }
 
-.menu a, .boton-salir {
+.menu a,
+.boton-salir {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -205,7 +212,8 @@ footer {
 }
 
 /* Iconos con etiquetas: no es necesario adivinar la acción. */
-.boton, button {
+.boton,
+button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -222,7 +230,8 @@ footer {
   cursor: pointer;
 }
 
-.boton:hover, button:hover {
+.boton:hover,
+button:hover {
   background: #f3ad00;
 }
 
@@ -239,7 +248,8 @@ footer {
   justify-content: flex-start;
 }
 
-.boton-secundario:hover, .boton-salir:hover {
+.boton-secundario:hover,
+.boton-salir:hover {
   background: var(--crema);
 }
 
@@ -266,11 +276,15 @@ footer {
 }
 
 button:disabled {
-  opacity: .6;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, [tabindex="0"]:focus-visible {
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex="0"]:focus-visible {
   outline: 3px solid var(--oscuro);
   outline-offset: 3px;
 }
@@ -382,7 +396,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* Formularios */
-input, select, textarea {
+input,
+select,
+textarea {
   max-width: 100%;
   min-height: 42px;
   padding: 9px 11px;
@@ -403,7 +419,8 @@ input::placeholder {
   font-weight: bold;
 }
 
-.formulario input, .formulario select {
+.formulario input,
+.formulario select {
   width: 100%;
 }
 
@@ -411,12 +428,14 @@ input::placeholder {
   margin-top: 24px;
 }
 
-.formulario-inventario, .formulario-pedido {
+.formulario-inventario,
+.formulario-pedido {
   max-width: 660px;
   border-top: 4px solid var(--azul);
 }
 
-.formulario-inventario h1, .formulario-pedido h1 {
+.formulario-inventario h1,
+.formulario-pedido h1 {
   font-size: 24px;
 }
 
@@ -537,7 +556,8 @@ input::placeholder {
   margin-bottom: 7px;
 }
 
-.titulo-acciones > .boton, .titulo-acciones > p {
+.titulo-acciones > .boton,
+.titulo-acciones > p {
   flex-shrink: 0;
 }
 
@@ -602,7 +622,8 @@ table {
   font-size: 14px;
 }
 
-th, td {
+th,
+td {
   padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid #e2e6eb;
@@ -645,7 +666,8 @@ td[colspan] {
   overflow-wrap: anywhere;
 }
 
-.estado, .estado-stock {
+.estado,
+.estado-stock {
   display: inline-block;
   padding: 4px 10px;
   border: 1px solid #bdd1df;
@@ -796,7 +818,8 @@ td[colspan] {
   min-width: 0;
 }
 
-.filtros-inventario button, .filtros-inventario a {
+.filtros-inventario button,
+.filtros-inventario a {
   font-size: 13px;
 }
 
@@ -913,7 +936,8 @@ td[colspan] {
   .menu-titulo {
     display: none;
   }
-  .menu a, .boton-salir {
+  .menu a,
+  .boton-salir {
     width: auto;
     min-height: 42px;
     padding: 9px 11px;
@@ -966,7 +990,8 @@ td[colspan] {
   .bienvenida-icono {
     display: none;
   }
-  .filtros-inventario input[type="search"], .filtros-inventario select {
+  .filtros-inventario input[type="search"],
+  .filtros-inventario select {
     flex: 1 1 100%;
     width: 100%;
   }
@@ -978,3 +1003,117 @@ td[colspan] {
     flex-basis: 100%;
   }
 }
+
+/* Acciones alineadas en una cuadrícula; cada botón conserva su etiqueta. */
+.acciones-inventario-fila {
+  white-space: normal;
+}
+
+.acciones-insumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 300px;
+}
+
+.acciones-insumo .boton {
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.acciones-insumo .accion-venta {
+  grid-column: 1 / -1;
+  background: #edf5fa;
+  border-color: #bdd1df;
+}
+
+.acciones-insumo .accion-venta:hover {
+  background: var(--crema);
+}
+
+.acciones-insumo .form-estado-insumo {
+  display: block;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .acciones-insumo {
+    width: 270px;
+    gap: 6px;
+  }
+}
+
+/* Estado de pago: el texto permite distinguirlo también sin ver el color. */
+.estado-pago {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.estado-pago::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pago-completo {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86c99e;
+}
+
+.pago-parcial {
+  color: #713f12;
+  background: var(--crema);
+  border-color: var(--amarillo);
+}
+
+.pago-pendiente {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #eaa0a0;
+}
+
+.pago-desconocido {
+  color: #4b5563;
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+/* Paginación */
+.paginacion-inventario {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.paginacion-inventario a[aria-current="page"] {
+  font-weight: bold;
+}
+
+/* Cobros y cuentas separadas, con la misma paleta del proyecto. */
+.resumen-pagos, .cuentas-pagos, .campos-pagos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.resumen-pagos strong { display: block; font-size: 26px; margin-top: 8px; }
+.resumen-pagos .recuadro { border-left: 4px solid var(--azul); }
+.resumen-pagos .saldo-pago { border-left-color: var(--amarillo); background: #fffef3; }
+.cuentas-pagos h3 { margin-top: 0; }
+.campos-pagos input, #nombre_cuenta, #cuenta_id { width: 100%; }
+.campos-pagos label, label[for="nombre_cuenta"], label[for="cuenta_id"] { display: block; margin-bottom: 6px; }
+.campos-pagos .descripcion { display: block; margin-top: 6px; font-size: 13px; }
+#resumen-cobro { background: var(--crema); padding: 14px; border-radius: 6px; }
+.filtros-pagos, .paginacion-pagos { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cantidad-cuenta { max-width: 110px; }
+.cuentas-pagos ul { padding-left: 20px; }
+details summary { cursor: pointer; margin-bottom: 14px; }
