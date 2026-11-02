@@ -93,16 +93,112 @@ class Pedido_model extends MY_Model
         return 0;
     }
 
-    public function listar()
+    private function aplicar_filtros_historial(array $filtros)
     {
+        $this->db
+            ->from('pedidos')
+            ->where('empresa_id', $this->empresa_id());
+
+        if (
+            isset($filtros['busqueda'])
+            && is_string($filtros['busqueda'])
+            && trim($filtros['busqueda']) !== ''
+        ) {
+            $busqueda = trim($filtros['busqueda']);
+
+            // Agrupar las condiciones para mantener
+            // la separación de datos por empresa.
+            $this->db
+                ->group_start()
+                ->like('referencia', $busqueda);
+
+            if (
+                ctype_digit($busqueda)
+                && strlen($busqueda) <= 10
+            ) {
+                $this->db->or_where('numero', $busqueda);
+            }
+
+            $this->db->group_end();
+        }
+
+        foreach (array('estado', 'estado_pago') as $campo) {
+            if (
+                isset($filtros[$campo])
+                && is_string($filtros[$campo])
+                && $filtros[$campo] !== ''
+            ) {
+                $this->db->where($campo, $filtros[$campo]);
+            }
+        }
+
+        if (
+            isset($filtros['desde'])
+            && is_string($filtros['desde'])
+            && $filtros['desde'] !== ''
+        ) {
+            $this->db->where(
+                'creado_en >=',
+                $filtros['desde'] . ' 00:00:00'
+            );
+        }
+
+        if (
+            isset($filtros['hasta'])
+            && is_string($filtros['hasta'])
+            && $filtros['hasta'] !== ''
+        ) {
+            $this->db->where(
+                'creado_en <=',
+                $filtros['hasta'] . ' 23:59:59'
+            );
+        }
+    }
+
+    public function contar_historial(array $filtros = array())
+    {
+        $this->aplicar_filtros_historial($filtros);
+
         $consulta = $this->db
-            ->where('empresa_id', $this->empresa_id())
-            ->order_by('id', 'DESC')
-            ->limit(50)
-            ->get('pedidos');
+            ->select('COUNT(*) AS total', FALSE)
+            ->get();
 
         if (!$consulta) {
-            show_error('No se pudieron consultar los pedidos.', 503);
+            show_error(
+                'No se pudo contar el historial de pedidos.',
+                503
+            );
+            return 0;
+        }
+
+        $fila = $consulta->row_array();
+
+        return (int) $fila['total'];
+    }
+
+    public function listar(
+        array $filtros = array(),
+        $limite = 50,
+        $offset = 0
+    ) {
+        $limite = max(1, min(100, (int) $limite));
+        $offset = max(0, (int) $offset);
+
+        $this->aplicar_filtros_historial($filtros);
+
+        $consulta = $this->db
+            ->select('pedidos.*')
+            ->order_by('creado_en', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit($limite, $offset)
+            ->get();
+
+        if (!$consulta) {
+            show_error(
+                'No se pudieron consultar los pedidos.',
+                503
+            );
+            return array();
         }
 
         return $consulta->result_array();
