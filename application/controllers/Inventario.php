@@ -6,6 +6,7 @@ class Inventario extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Validacion_negocio');
 
         $this->load->model('Insumo_model', 'insumos_model');
         $this->load->model('Movimientos_inventario_model', 'movimientos_model');
@@ -107,7 +108,7 @@ class Inventario extends Protected_Controller
         }
 
         $this->solo_metodo('POST');
-        $this->configurar_validacion();
+        $this->configurar_validacion(TRUE);
 
         if ($this->form_validation->run() === FALSE) {
             $this->load->view('inventario/formulario', array(
@@ -185,19 +186,31 @@ class Inventario extends Protected_Controller
         redirect('inventario');
     }
 
-    private function configurar_validacion()
+    private function configurar_validacion($nuevo = FALSE)
     {
-        $this->form_validation->set_rules('nombre', 'Nombre', 'required|max_length[150]');
-        $this->form_validation->set_rules('stock_minimo', 'Stock mínimo', 'required|numeric|greater_than_equal_to[0]');
+        foreach (array('nombre','stock_minimo','unidad_medida','fecha_vencimiento','cantidad_actual') as $campo) {
+            $valor=$this->input->post($campo);
+            if ($valor!==NULL && !is_string($valor)) { show_error('Formato inválido en '.html_escape($campo).'.',422); }
+        }
+        $this->form_validation->set_rules('nombre', 'Nombre', 'trim|required|max_length[150]');
+        $this->form_validation->set_rules('stock_minimo', 'Stock mínimo', 'required|callback_cantidad_valida');
         $this->form_validation->set_rules('unidad_medida', 'Unidad de medida', 'required|in_list[kg,g,mg,l,ml,unidad]');
         $this->form_validation->set_rules('fecha_vencimiento', 'Fecha de vencimiento', 'callback_fecha_valida');
 
-        if ($this->input->post('cantidad_actual') !== NULL) {
+        if ($nuevo) {
             $this->form_validation->set_rules(
                 'cantidad_actual',
                 'Cantidad actual',
-                'required|numeric|greater_than_equal_to[0]|less_than_equal_to[99999999.99]'
+                'required|callback_cantidad_valida'
             );
+        }
+    }
+
+    public function cantidad_valida($valor)
+    {
+        try { Validacion_negocio::decimal($valor,'Cantidad');return TRUE; }
+        catch (InvalidArgumentException $e) {
+            $this->form_validation->set_message('cantidad_valida','{field}: usa un número de 0 a 99999999.99, con hasta dos decimales.');return FALSE;
         }
     }
 
@@ -257,7 +270,9 @@ class Inventario extends Protected_Controller
 
         $tipo = $this->input->post('tipo', TRUE);
         $cantidad = $this->input->post('cantidad', TRUE);
-        $motivo = trim((string) $this->input->post('motivo', TRUE));
+        $motivo = $this->input->post('motivo');
+        if (!is_string($motivo)) { show_error('El motivo debe ser texto.',422);return; }
+        $motivo=trim($motivo);
 
         if (
             !in_array(
@@ -267,7 +282,7 @@ class Inventario extends Protected_Controller
             ) ||
             !is_string($cantidad) ||
             !preg_match(
-                '/^\d{1,8}(\.\d{1,2})?$/',
+                '/^\d{1,8}(\.\d{1,2})?$/D',
                 $cantidad
             ) ||
             ($tipo !== 'ajuste' && (float) $cantidad <= 0) ||
@@ -278,7 +293,7 @@ class Inventario extends Protected_Controller
             return;
         }
 
-        $registrado = $this->movimientos_model->registrar((int) $id, $tipo, (float) $cantidad, $motivo, $this->usuario->id());
+        $registrado = $this->movimientos_model->registrar((int) $id, $tipo, $cantidad, $motivo, $this->usuario->id());
 
         if (!$registrado) {
             show_error('No se pudo registrar el movimiento. ' . 'Verifica las existencias.', 422);

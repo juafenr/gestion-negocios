@@ -3,7 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Producto_model extends MY_Model
 {
-    public function __construct() { parent::__construct(); $this->load->database(); }
+    public function __construct() { parent::__construct(); $this->load->database(); $this->load->library('Validacion_negocio'); }
 
     public function listar()
     {
@@ -21,30 +21,11 @@ class Producto_model extends MY_Model
     }
     public function crear_desde_insumo($insumo_id, $sku, $precio)
 {
-    if (
-        !is_scalar($insumo_id)
-        || !ctype_digit((string) $insumo_id)
-        || strlen((string) $insumo_id) > 10
-        || (int) $insumo_id < 1
-    ) {
-        return 'Selecciona un artículo válido.';
-    }
-
-    if (
-        !is_string($sku)
-        || trim($sku) === ''
-        || mb_strlen(trim($sku), 'UTF-8') > 40
-    ) {
-        return 'El código debe tener entre 1 y 40 caracteres.';
-    }
-
-    // Mantener el precio como texto para guardarlo en DECIMAL.
-    if (
-        !is_string($precio)
-        || !preg_match('/^\d{1,8}(\.\d{1,2})?$/D', $precio)
-    ) {
-        return 'Escribe un precio válido, por ejemplo: 18.50.';
-    }
+    try {
+        $insumo_id=Validacion_negocio::id($insumo_id,'Insumo');
+        $sku=Validacion_negocio::texto($sku,'Código',40);
+        $precio=Validacion_negocio::decimal($precio,'Precio');
+    } catch (InvalidArgumentException $e) { return $e->getMessage(); }
 
     $empresa_id = $this->empresa_id();
     $sku = trim($sku);

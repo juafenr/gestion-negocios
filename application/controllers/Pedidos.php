@@ -45,6 +45,8 @@ class Pedidos extends Protected_Controller
 
         $this->solo_metodo('POST');
 
+        if (!is_string($this->input->post('referencia'))) { show_error('La referencia es obligatoria y debe ser texto.',422);return; }
+
         $this->form_validation->set_rules(
             'referencia',
             'Referencia',

@@ -146,8 +146,11 @@ try {
         if ($nullable['Null']==='YES') { $a->operacion('usuarios.rol_id obligatorio','ALTER TABLE usuarios MODIFY rol_id INT UNSIGNED NOT NULL'); }
     }
     $a->agregar('empresas','ultimo_numero_pedido','INT UNSIGNED NOT NULL DEFAULT 0');
+    $a->agregar('empresas','ultimo_numero_compra','INT UNSIGNED NOT NULL DEFAULT 0');
+    $a->crear('proveedores',$creaciones['proveedores']);
     $a->crear('insumos',$creaciones['insumos']);
     $a->agregar('insumos','fecha_vencimiento','DATE NULL');
+    $a->agregar('insumos','proveedor_id','INT UNSIGNED NULL');
     $a->agregar('productos','insumo_id','INT UNSIGNED NULL');
     $a->crear('pedidos',$creaciones['pedidos']);
     $a->agregar('pedidos','numero','INT UNSIGNED NULL AFTER empresa_id');
@@ -182,6 +185,10 @@ try {
     $indices('pedido_detalles',$creaciones['pedido_detalles']);
     foreach (array('pago_cuentas','pago_cuenta_detalles','pagos') as $t) { $a->crear($t,$creaciones[$t]); }
     foreach (array('pago_cuentas','pagos') as $t) { $a->agregar($t,'propina','DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0'); }
+    foreach (array('ventas','solicitudes_compra','solicitud_compra_detalles','solicitud_compra_eventos') as $t) { $a->crear($t,$creaciones[$t]); }
+    if ($a->tabla('solicitudes_compra') && $a->columna('empresas','ultimo_numero_compra') && $db->query('SELECT e.id FROM empresas e JOIN solicitudes_compra s ON s.empresa_id=e.id WHERE s.numero>e.ultimo_numero_compra LIMIT 1')->num_rows) {
+        $a->operacion('actualizar contador de compras sin reducirlo','UPDATE empresas e JOIN (SELECT empresa_id,MAX(numero) ultimo FROM solicitudes_compra GROUP BY empresa_id) s ON s.empresa_id=e.id SET e.ultimo_numero_compra=GREATEST(e.ultimo_numero_compra,s.ultimo)');
+    }
     foreach ($creaciones as $t=>$sql) {
         $indices($t,$sql);
         preg_match_all('/CONSTRAINT\\s+(\\w+)\\s+FOREIGN\\s+KEY\\s*\\(([^)]+)\\)\\s+REFERENCES\\s+(\\w+)\\s*\\(([^)]+)\\)(?:\\s+ON\\s+DELETE\\s+CASCADE)?/i',$sql,$fks,PREG_SET_ORDER);
@@ -201,7 +208,7 @@ try {
         'inicio.ver','usuarios.ver','usuarios.gestionar','productos.ver','productos.gestionar',
         'inventario.ver','inventario.gestionar','proveedores.ver','proveedores.gestionar',
         'pedidos.ver','pedidos.crear','pedidos.confirmar','pedidos.actualizar_cocina','pedidos.cancelar',
-        'ventas.ver','ventas.cobrar','reportes.ver','empresa.configurar'
+        'ventas.ver','ventas.cobrar','ventas.historial','compras.ver','compras.gestionar','compras.confirmar','compras.exportar','reportes.ver','empresa.configurar'
     );
     $cajero=array('inicio.ver','productos.ver','pedidos.ver','pedidos.crear','pedidos.confirmar','ventas.ver','ventas.cobrar');
     $cocinero=array('inicio.ver','productos.ver','pedidos.ver','pedidos.actualizar_cocina');
@@ -217,12 +224,23 @@ try {
             }
         }
     }
+    if ($a->tabla('ventas') && $a->tabla('pagos') && $a->columna('pagos','propina')) {
+        $sql=trim(file_get_contents($root.'/database/conciliar_ventas.sql'));
+        $inicio=strpos($sql,"\nFROM pedidos p");
+        if ($inicio===FALSE) { throw new RuntimeException('Archivo de conciliación no válido.'); }
+        $conteo='SELECT COUNT(*) cantidad'.substr($sql,$inicio);
+        $n=(int)$db->query($conteo)->fetch_assoc()['cantidad'];
+        if ($n>0) { $a->operacion('recuperar '.$n.' ventas de pedidos ya pagados',$sql); }
+        $sinVenta=(int)$db->query("SELECT COUNT(*) n FROM pedidos p LEFT JOIN ventas v ON v.empresa_id=p.empresa_id AND v.pedido_id=p.id WHERE p.estado_pago='pagado' AND v.id IS NULL")->fetch_assoc()['n'];
+        if (!$aplicar) { $sinVenta=max(0,$sinVenta-$n); }
+        if ($sinVenta>0) { echo "ATENCIÓN: ".$sinVenta." pedidos marcados pagados no tienen cobros consistentes para crear su venta. Revisa sus datos; no se inventaron importes ni métodos.\n"; }
+    }
     if ($aplicar) {
         echo "Actualización terminada. Ejecuta de nuevo sin --aplicar: debe indicar Sin cambios pendientes.\n";
     } elseif ($a->pendientes) {
         echo "\nHay cambios pendientes. Respalda la base, detén Apache (mantén MySQL activo) y ejecuta:\nphp tools/actualizar.php --aplicar\n";
         echo "El diagnóstico de una base antigua puede mostrar nuevas dependencias al aplicar; se comprueban antes de cada cambio.\n";
-    } else { echo "Sin cambios pendientes. Estructura compatible con las migraciones 001 a 008.\n"; }
+    } else { echo "Sin cambios pendientes. Estructura compatible con las migraciones 001 a 010.\n"; }
 } catch (Throwable $e) {
     fwrite(STDERR,"DETENIDO: ".$e->getMessage()."\nNo se eliminan datos. Si estabas aplicando cambios, algunos DDL pueden haber quedado realizados; no son una transacción global. Corrige el problema y repite el diagnóstico.\n");
     exit(1);

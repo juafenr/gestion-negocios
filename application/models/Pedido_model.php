@@ -7,10 +7,13 @@ class Pedido_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Validacion_negocio');
     }
 
     public function crear($referencia, $usuario_id)
     {
+        try { $referencia=Validacion_negocio::texto($referencia,'Referencia',100); }
+        catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()),422);return 0; }
         $empresa_id = $this->empresa_id();
 
         $consulta = $this->db
@@ -140,7 +143,7 @@ class Pedido_model extends MY_Model
 
         public function agregar_producto($pedido_id, $producto_id, $cantidad)
     {
-        if ($cantidad < 1 || $cantidad > 999) {
+        if (!is_int($cantidad) || $cantidad < 1 || $cantidad > 999) {
             return 'La cantidad debe estar entre 1 y 999.';
         }
 
@@ -283,7 +286,7 @@ class Pedido_model extends MY_Model
         public function modificar_detalle($pedido_id, $detalle_id, $cantidad)
     {
         // NULL significa quitar el producto del pedido.
-        if ($cantidad !== NULL && ($cantidad < 1 || $cantidad > 999)) {
+        if ($cantidad !== NULL && (!is_int($cantidad) || $cantidad < 1 || $cantidad > 999)) {
             return 'La cantidad debe estar entre 1 y 999.';
         }
 
