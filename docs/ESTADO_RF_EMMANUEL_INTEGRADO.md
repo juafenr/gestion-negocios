@@ -1,6 +1,6 @@
 # Estado de los requisitos de Emmanuel en la rama integrada
 
-**Corte:** 2 de noviembre de 2026 (Guatemala). **Rama de trabajo:** `RBAC-implementacion-emmanuel`. Se integró `upstream/main` hasta `521767c` conservando el trabajo personal. El estado de publicación se confirma con las referencias de Git y el pull request del equipo.
+**Corte:** 2 de noviembre de 2026 (Guatemala). **Rama de trabajo:** `RBAC-implementacion-emmanuel`. El merge commit `d386214` integra `upstream/main` hasta `521767c` conservando el trabajo personal. Se publicó en la rama personal y en `upstream/main` mediante avance normal. No se creó pull request porque el conector de GitHub rechazó esa operación (403).
 
 | RF | Alcance implementado en esta rama | Verificación |
 |---|---|---|
@@ -15,10 +15,10 @@
 | RF-52 | Agrupación automática de los insumos seleccionados por `insumos.proveedor_id`; los no asociados quedan pendientes. | `tests/compras_seleccion_http.php` crea dos grupos de proveedores distintos. |
 | RF-53 | Un borrador independiente por proveedor mediante `Solicitud_compra_model::crear_borrador()`, con claves estables por grupo y manejo de fallos parciales. | `tests/compras_seleccion_http.php` comprueba dos documentos, fallo posterior y reintento sin duplicar el primero. |
 
-## Dependencias pendientes del equipo
+## Integración con el equipo
 
 - **RF-49 disponible en el push del equipo:** la nueva pantalla de proveedores permite asociar insumos desde la interfaz. `tests/compras_seleccion_http.php` comprobó el aislamiento entre empresas y el recorrido desde esa pantalla hasta la agrupación y creación de dos borradores. Los insumos sin proveedor activo permanecen pendientes.
-- **Integración en `main`:** antes de considerar cerrados los diez RF en la rama del equipo, hay que confirmar que el pull request con la rama personal se haya fusionado y repetir allí las pruebas principales.
+- **Integración en `main`:** los diez RF están incluidos en `upstream/main` desde `d386214`. Las pruebas de integración se ejecutaron en la fuente y el recorrido HTTP completo también pasó desde la copia XAMPP sincronizada.
 - **Manuel — RF-57 a RF-60:** estados, historial y recepción de compras llegaron en el push nuevo. La prueba de integración comprueba recepción parcial, reintento idempotente, rechazo de la misma clave con otras cantidades, recepción completa y aislamiento por empresa.
 
 La base local actualizada informó `Sin cambios pendientes` en `tools/actualizar.php`. Las pruebas citadas pasaron con datos temporales que se eliminaron al terminar. La prueba HTTP también recorrió edición de proveedor, confirmación y envío del borrador, recepción parcial y final, reintento sin duplicar stock, CSRF, cantidades excesivas y acceso entre empresas. Se agregaron las tablas de recepción al esquema y al actualizador y se renumeró su migración como `013_recepciones_compra.sql`.
