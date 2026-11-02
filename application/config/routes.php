@@ -21,6 +21,7 @@ $route['inventario/exportar'] = 'inventario/exportar';
 $route['inventario/(:num)/movimiento'] = 'inventario/movimiento/$1';
 $route['inventario/(:num)/historial'] = 'inventario/historial/$1';
 $route['inventario/(:num)/estado'] = 'inventario/estado/$1';
+$route['inventario/sugerencias'] = 'inventario/sugerencias';
 $route['pagos'] = 'pagos/index';
 $route['pagos/(:num)'] = 'pagos/ver/$1';
 $route['pagos/preparar/(:num)'] = 'pagos/preparar/$1';
