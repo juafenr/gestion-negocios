@@ -69,6 +69,24 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
         </strong>
     </div>
 
+    <div class="resumen-tarjeta">
+
+        <span class="resumen-etiqueta">
+            <img
+                class="icono"
+                src="<?= html_escape(base_url('assets/iconos/alerta.svg')) ?>"
+                alt=""
+                width="22"
+                height="22">
+            Agotados
+        </span>
+
+        <strong class="resumen-agotado">
+            <?= (int) $resumen['agotados'] ?>
+        </strong>
+
+    </div>
+
 </div>
 
 
@@ -102,6 +120,13 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
             value="normal"
             <?= $filtros['estado'] === 'normal' ? 'selected' : '' ?>>
             Stock normal
+        </option>
+
+        <option
+            value="agotado"
+            <?= $filtros['estado'] === 'agotado'
+                ? 'selected' : '' ?>>
+            Agotado
         </option>
     </select>
 
@@ -226,9 +251,11 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
             <?php foreach ($insumos as $item): ?>
 
                 <?php
+
                 $cantidadActual = (float) $item['cantidad_actual'];
                 $stockMinimo = (float) $item['stock_minimo'];
-                $stockBajo = $cantidadActual <= $stockMinimo;
+                $agotado = $cantidadActual <= 0;
+                $stockBajo = !$agotado && $cantidadActual <= $stockMinimo;
 
                 $idInsumo = (int) $item['id'];
                 $activoInsumo = (int) $item['activo'] === 1;
@@ -263,6 +290,12 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                                 Inactivo
                             </span>
 
+                        <?php elseif ($agotado): ?>
+
+                            <span class="estado-stock estado-agotado">
+                                Agotado
+                            </span>
+
                         <?php elseif ($stockBajo): ?>
 
                             <span class="estado-stock estado-bajo">
@@ -283,10 +316,45 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                     <!-- Acciones -->
 
                     <td class="acciones-inventario-fila">
+<<<<<<< Updated upstream
+=======
+                        <div class="acciones-insumo" role="group" aria-label="Acciones de <?= html_escape($item['nombre']) ?>">
+                            <?php if (
+                                $activoInsumo
+                                && $usuario->puede('inventario.ver')
+                                && $usuario->puede('productos.gestionar')
+                            ): ?>
 
-                        <?php if ($puedeGestionar && $activoInsumo): ?>
+                                <a
+                                    class="boton boton-secundario boton-compacto accion-venta"
+                                    href="<?= html_escape(
+                                                site_url('inventario/vender/' . $idInsumo)
+                                            ) ?>">
+                                    <img class="icono" src="<?= html_escape(base_url('assets/iconos/productos.svg')) ?>" alt="" width="22" height="22">
+                                    <span>Habilitar para venta</span>
+                                </a>
+
+                            <?php endif; ?>
+>>>>>>> Stashed changes
+
+                            <?php if ($puedeGestionar && $activoInsumo): ?>
+
+                                <a class="boton boton-secundario boton-compacto"
+                                    href="<?= html_escape(site_url('inventario/' . $idInsumo . '/editar')) ?>">
+                                    <img class="icono" src="<?= html_escape(base_url('assets/iconos/editar.svg')) ?>" alt="" width="22" height="22">
+                                    <span>Editar</span>
+                                </a>
+
+                                <a class="boton boton-secundario boton-compacto"
+                                    href="<?= html_escape(site_url('inventario/' . $idInsumo . '/movimiento')) ?>">
+                                    <img class="icono" src="<?= html_escape(base_url('assets/iconos/movimiento.svg')) ?>" alt="" width="22" height="22">
+                                    <span>Movimiento</span>
+                                </a>
+
+                            <?php endif; ?>
 
                             <a class="boton boton-secundario boton-compacto"
+<<<<<<< Updated upstream
                                 href="<?= html_escape(site_url('inventario/' . $idInsumo . '/editar')) ?>">
                                 <img class="icono" src="<?= html_escape(base_url('assets/iconos/editar.svg')) ?>" alt="" width="22" height="22">
                                 <span>Editar</span>
@@ -303,21 +371,34 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                             href="<?= html_escape(site_url('inventario/' . $idInsumo . '/historial')) ?>">
                             <span>Historial</span>
                         </a>
+=======
+                                href="<?= html_escape(site_url('inventario/' . $idInsumo . '/historial')) ?>">
+                                <img class="icono" src="<?= html_escape(base_url('assets/iconos/historial.svg')) ?>" alt="" width="22" height="22">
+                                <span>Historial</span>
+                            </a>
+>>>>>>> Stashed changes
 
-                        <?php if ($puedeGestionar): ?>
+                            <?php if ($puedeGestionar): ?>
 
-                            <?= form_open(
-                                'inventario/' . $idInsumo . '/estado',
-                                array('class' => 'form-estado-insumo')
-                            ) ?>
+                                <?= form_open(
+                                    'inventario/' . $idInsumo . '/estado',
+                                    array('class' => 'form-estado-insumo')
+                                ) ?>
 
+<<<<<<< Updated upstream
                             <button type="submit" class="boton boton-secundario boton-compacto">
                                 <?= $activoInsumo ? 'Desactivar' : 'Reactivar' ?>
                             </button>
+=======
+                                <button type="submit" class="boton boton-secundario boton-compacto">
+                                    <img class="icono" src="<?= html_escape(base_url('assets/iconos/activar.svg')) ?>" alt="" width="22" height="22">
+                                    <span><?= $activoInsumo ? 'Desactivar' : 'Reactivar' ?></span>
+                                </button>
+>>>>>>> Stashed changes
 
-                            <?= form_close() ?>
+                                <?= form_close() ?>
 
-                        <?php endif; ?>
+                            <?php endif; ?>
 
                     </td>
 

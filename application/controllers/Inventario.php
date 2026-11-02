@@ -29,7 +29,11 @@ class Inventario extends Protected_Controller
         $activo = $this->input->get('activo', TRUE)
             === 'inactivos' ? 'inactivos' : 'activos';
 
-        if (!in_array($estado, array('', 'bajo', 'normal'), TRUE)) {
+        if (!in_array(
+            $estado,
+            array('', 'normal', 'bajo', 'agotado'),
+            TRUE
+        )) {
             $estado = '';
         }
 
@@ -399,4 +403,72 @@ class Inventario extends Protected_Controller
             )
             ->set_output($contenido);
     }
+<<<<<<< Updated upstream
+=======
+    public function vender($id = NULL)
+    {
+        $this->requerir_permiso('inventario.ver');
+        $this->requerir_permiso('productos.gestionar');
+
+        if (
+            !is_string($id)
+            || !ctype_digit($id)
+            || strlen($id) > 10
+            || (int) $id < 1
+        ) {
+            show_404();
+            return;
+        }
+
+        $insumo = $this->insumos_model->buscar($id);
+
+        if (!$insumo) {
+            show_404();
+            return;
+        }
+
+        $datos = array(
+            'usuario' => $this->usuario,
+            'insumo' => $insumo,
+            'sku' => '',
+            'precio' => '',
+            'error' => ''
+        );
+
+        if ($this->input->method(TRUE) === 'GET') {
+            $this->load->view('inventario/vender', $datos);
+            return;
+        }
+
+        $this->solo_metodo('POST');
+
+        $sku = $this->input->post('sku');
+        $precio = $this->input->post('precio');
+
+        // Conservar lo escrito si falla la validación.
+        $datos['sku'] = is_string($sku) ? $sku : '';
+        $datos['precio'] = is_string($precio) ? $precio : '';
+
+        $this->load->model('Producto_model', 'productos_model');
+
+        $error = $this->productos_model->crear_desde_insumo(
+            $id,
+            $sku,
+            $precio
+        );
+
+        if ($error !== NULL) {
+            $datos['error'] = $error;
+            $this->load->view('inventario/vender', $datos);
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'mensaje_inventario',
+            'Artículo habilitado para venta. Ya está disponible en pedidos.'
+        );
+
+        redirect('inventario');
+    }
+>>>>>>> Stashed changes
 }

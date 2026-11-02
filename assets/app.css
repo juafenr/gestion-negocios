@@ -924,3 +924,18 @@ td[colspan] {
 .paginacion-inventario a[aria-current="page"] {
   font-weight: bold;
 }
+
+/* Cobros y cuentas separadas, con la misma paleta del proyecto. */
+.resumen-pagos, .cuentas-pagos, .campos-pagos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.resumen-pagos strong { display: block; font-size: 26px; margin-top: 8px; }
+.resumen-pagos .recuadro { border-left: 4px solid var(--azul); }
+.resumen-pagos .saldo-pago { border-left-color: var(--amarillo); background: #fffef3; }
+.cuentas-pagos h3 { margin-top: 0; }
+.campos-pagos input, #nombre_cuenta, #cuenta_id { width: 100%; }
+.campos-pagos label, label[for="nombre_cuenta"], label[for="cuenta_id"] { display: block; margin-bottom: 6px; }
+.campos-pagos .descripcion { display: block; margin-top: 6px; font-size: 13px; }
+#resumen-cobro { background: var(--crema); padding: 14px; border-radius: 6px; }
+.filtros-pagos, .paginacion-pagos { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cantidad-cuenta { max-width: 110px; }
+.cuentas-pagos ul { padding-left: 20px; }
+details summary { cursor: pointer; margin-bottom: 14px; }
