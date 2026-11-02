@@ -111,7 +111,7 @@ class Pago_model extends MY_Model
 
     public function preparar($pedido_id)
     {
-        return $this->transaccion($pedido_id, function ($pedido, $empresa) {
+        return $this->transaccion($pedido_id, function ($pedido, $empresa, $usuario) {
             // Preparar dos veces no crea cuentas duplicadas.
             $actual = $this->consultar('SELECT id FROM pago_cuentas WHERE empresa_id=? AND pedido_id=? LIMIT 1', array($empresa,$pedido['id']))->row_array();
             if ($actual) { return; }
@@ -134,6 +134,7 @@ class Pago_model extends MY_Model
             $this->repartir_propina($pedido['id'], $empresa);
             if ($total === 0) {
                 $this->consultar("UPDATE pedidos SET estado_pago='pagado' WHERE empresa_id=? AND id=?", array($empresa,$pedido['id']));
+                $this->registrar_venta($pedido,$empresa,$usuario);
             }
         });
     }
@@ -252,6 +253,27 @@ class Pago_model extends MY_Model
                 array($empresa,$pedido['id'],$cuenta_id,$usuario,$clave,Dinero::decimal($montos['efectivo']),Dinero::decimal($montos['credito']),Dinero::decimal($montos['debito']),Dinero::decimal($montos['recibido']),Dinero::decimal($montos['recibido']-$montos['efectivo']),Dinero::decimal($propina_pagada),Dinero::decimal($total)));
             $estado = $abonado+$total===$total_pedido ? 'pagado' : 'parcial';
             $this->consultar('UPDATE pedidos SET estado_pago=? WHERE empresa_id=? AND id=?', array($estado,$empresa,$pedido['id']));
+            if ($estado==='pagado') { $this->registrar_venta($pedido,$empresa,$usuario); }
         });
     }
+    /** RF-33: se ejecuta bajo el bloqueo del pedido y dentro de la transacción del cobro. */
+    private function registrar_venta($pedido,$empresa,$usuario)
+    {
+        $sumas=$this->consultar('SELECT COALESCE(SUM(total),0) total,COALESCE(SUM(propina),0) propina,
+             COALESCE(SUM(efectivo),0) efectivo,COALESCE(SUM(credito),0) credito,COALESCE(SUM(debito),0) debito
+             FROM pagos WHERE empresa_id=? AND pedido_id=?',array($empresa,$pedido['id']))->row_array();
+        $consumo=Dinero::centavos($pedido['total']);$propina=Dinero::propina($consumo);
+        if (Dinero::centavos($sumas['total'])!==$consumo+$propina || Dinero::centavos($sumas['propina'])!==$propina ||
+            Dinero::centavos($sumas['efectivo'])+Dinero::centavos($sumas['credito'])+Dinero::centavos($sumas['debito'])!==$consumo+$propina) {
+            throw new RuntimeException('Los cobros no respaldan el total de la venta.');
+        }
+        // La restricción UNIQUE (empresa_id,pedido_id) evita una segunda venta.
+        // Si falla la inserción, el rollback también deshace el último pago y el cambio de estado.
+        $this->consultar('INSERT INTO ventas
+            (empresa_id,pedido_id,pedido_numero,referencia,usuario_id,subtotal,propina,total,efectivo,credito,debito,fecha,origen)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?)',
+            array($empresa,$pedido['id'],$pedido['numero'],$pedido['referencia'],$usuario,
+                Dinero::decimal($consumo),Dinero::decimal($propina),$sumas['total'],$sumas['efectivo'],$sumas['credito'],$sumas['debito'],'cobro'));
+    }
+
 }

@@ -7,6 +7,7 @@ class Movimientos_inventario_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library(array('Validacion_negocio','Dinero'));
     }
 
     public function registrar($insumoId, $tipo, $cantidad, $motivo, $usuarioId)
@@ -17,15 +18,13 @@ class Movimientos_inventario_model extends MY_Model
             return FALSE;
         }
 
-        if (!is_numeric($cantidad) || $cantidad < 0 || $cantidad > 99999999.99) {
-            return FALSE;
-        }
-
-        $cantidad = round((float) $cantidad, 2);
-
-        if ($tipo !== 'ajuste' && $cantidad <= 0) {
-            return FALSE;
-        }
+        try {
+            $insumoId=Validacion_negocio::id($insumoId,'Insumo');
+            $usuarioId=Validacion_negocio::id($usuarioId,'Usuario');
+            $motivo=Validacion_negocio::texto($motivo,'Motivo',255);
+            $cantidad=Validacion_negocio::decimal($cantidad,'Cantidad',$tipo==='ajuste');
+        } catch (InvalidArgumentException $e) { return FALSE; }
+        $unidades=Dinero::centavos($cantidad);
 
         $this->db->trans_begin();
 
@@ -41,32 +40,31 @@ class Movimientos_inventario_model extends MY_Model
             return FALSE;
         }
 
-        $anterior = (float) $insumo['cantidad_actual'];
+        $anterior = Dinero::centavos($insumo['cantidad_actual']);
 
         switch ($tipo) {
             case 'entrada':
-                $nueva = $anterior + $cantidad;
+                $nueva = $anterior + $unidades;
                 break;
 
             case 'salida':
-                $nueva = $anterior - $cantidad;
+                $nueva = $anterior - $unidades;
                 break;
 
             case 'ajuste':
-                $nueva = $cantidad;
+                $nueva = $unidades;
                 break;
         }
 
-        $nueva = round($nueva, 2);
 
-        if ($nueva < 0 || $nueva > 99999999.99) {
+        if ($nueva < 0 || $nueva > 9999999999) {
             $this->db->trans_rollback();
             return FALSE;
         }
 
         $actualizado = $this->db->where('id', (int) $insumoId)
             ->where('empresa_id', $empresaId)
-            ->update('insumos', array('cantidad_actual' => $nueva));
+            ->update('insumos', array('cantidad_actual' => Dinero::decimal($nueva)));
 
         if (!$actualizado) {
             $this->db->trans_rollback();
@@ -79,8 +77,8 @@ class Movimientos_inventario_model extends MY_Model
             'usuario_id' => (int) $usuarioId,
             'tipo' => $tipo,
             'cantidad' => $cantidad,
-            'cantidad_anterior' => $anterior,
-            'cantidad_nueva' => $nueva,
+            'cantidad_anterior' => Dinero::decimal($anterior),
+            'cantidad_nueva' => Dinero::decimal($nueva),
             'motivo' => $motivo
         ));
 

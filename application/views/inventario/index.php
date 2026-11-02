@@ -71,6 +71,9 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
 </div>
 
+<?php if ($usuario->puede('compras.gestionar') && $usuario->puede('compras.ver')): ?>
+    <p><a class="boton boton-secundario" href="<?= html_escape(site_url('compras/seleccionar')) ?>">Preparar solicitud de compra</a></p>
+<?php endif; ?>
 
 <!-- Búsqueda y filtros del inventario -->
 
@@ -315,6 +318,15 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                                 <span>Movimiento</span>
                             </a>
 
+                        <?php endif; ?>
+
+                        <?php if ($activoInsumo && $usuario->puede('compras.gestionar') && $usuario->puede('compras.ver')): ?>
+                            <?= form_open('compras/agregar', array('class' => 'form-compra-insumo')) ?>
+                                <input type="hidden" name="insumo_id" value="<?= $idInsumo ?>">
+                                <label for="compra-cantidad-<?= $idInsumo ?>">Cantidad a comprar de <?= html_escape($item['nombre']) ?></label>
+                                <input id="compra-cantidad-<?= $idInsumo ?>" name="cantidad" type="number" min="0.01" max="99999999.99" step="0.01" inputmode="decimal" required>
+                                <button type="submit" class="boton boton-secundario boton-compacto">Agregar a compra</button>
+                            <?= form_close() ?>
                         <?php endif; ?>
 
                         <a class="boton boton-secundario boton-compacto"

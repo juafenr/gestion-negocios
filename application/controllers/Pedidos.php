@@ -45,6 +45,8 @@ class Pedidos extends Protected_Controller
 
         $this->solo_metodo('POST');
 
+        if (!is_string($this->input->post('referencia'))) { show_error('La referencia es obligatoria y debe ser texto.',422);return; }
+
         $this->form_validation->set_rules(
             'referencia',
             'Referencia',
@@ -83,9 +85,141 @@ class Pedidos extends Protected_Controller
 
     private function mostrar($error = '', $referencia = '')
     {
+        $estados = array(
+            'borrador' => 'Borrador',
+            'pendiente' => 'Pendiente de preparación',
+            'en_preparacion' => 'En preparación',
+            'listo' => 'Listo',
+            'entregado' => 'Entregado',
+            'cancelado' => 'Cancelado'
+        );
+
+        $estados_pago = array(
+            'pendiente' => 'Sin pagos',
+            'parcial' => 'Pago parcial',
+            'pagado' => 'Pagado'
+        );
+
+        $filtros = array();
+
+        foreach (
+            array('busqueda', 'estado', 'estado_pago', 'desde', 'hasta')
+            as $campo
+        ) {
+            $valor = $this->input->get($campo);
+
+            if ($valor !== NULL && !is_string($valor)) {
+                show_error('Los filtros no son válidos.', 400);
+                return;
+            }
+
+            $filtros[$campo] = $valor === NULL ? '' : trim($valor);
+        }
+
+        if (mb_strlen($filtros['busqueda'], 'UTF-8') > 150) {
+            show_error(
+                'La búsqueda debe tener como máximo 150 caracteres.',
+                400
+            );
+            return;
+        }
+
+        if (
+            $filtros['estado'] !== ''
+            && !isset($estados[$filtros['estado']])
+        ) {
+            show_error('El estado del pedido no es válido.', 400);
+            return;
+        }
+
+        if (
+            $filtros['estado_pago'] !== ''
+            && !isset($estados_pago[$filtros['estado_pago']])
+        ) {
+            show_error('El estado de pago no es válido.', 400);
+            return;
+        }
+
+        foreach (array('desde', 'hasta') as $campo) {
+            $valor = $filtros[$campo];
+
+            if ($valor === '') {
+                continue;
+            }
+
+            if (!preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $valor)) {
+                show_error('Usa fechas con formato año-mes-día.', 400);
+                return;
+            }
+
+            $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
+
+            if (
+                !$fecha
+                || $fecha->format('Y-m-d') !== $valor
+                || $valor < '1000-01-01'
+            ) {
+                show_error('Selecciona una fecha válida.', 400);
+                return;
+            }
+        }
+
+        if (
+            $filtros['desde'] !== ''
+            && $filtros['hasta'] !== ''
+            && $filtros['desde'] > $filtros['hasta']
+        ) {
+            show_error(
+                'La fecha inicial no puede ser posterior a la fecha final.',
+                400
+            );
+            return;
+        }
+
+        $valor_pagina = $this->input->get('pagina');
+        $pagina = 1;
+
+        if ($valor_pagina !== NULL) {
+            if (
+                !is_string($valor_pagina)
+                || !ctype_digit($valor_pagina)
+                || strlen($valor_pagina) > 9
+                || (int) $valor_pagina < 1
+            ) {
+                show_error('El número de página no es válido.', 400);
+                return;
+            }
+
+            $pagina = (int) $valor_pagina;
+        }
+
+        $por_pagina = 20;
+
+        $total = $this->pedidos_model->contar_historial($filtros);
+
+        $paginas = max(
+            1,
+            (int) ceil($total / $por_pagina)
+        );
+
+        $pagina = min($pagina, $paginas);
+        $offset = ($pagina - 1) * $por_pagina;
+
+        $pedidos = $this->pedidos_model->listar(
+            $filtros,
+            $por_pagina,
+            $offset
+        );
+
         $this->load->view('pedidos/index', array(
             'usuario' => $this->usuario,
-            'pedidos' => $this->pedidos_model->listar(),
+            'pedidos' => $pedidos,
+            'filtros' => $filtros,
+            'estados' => $estados,
+            'estados_pago' => $estados_pago,
+            'total' => $total,
+            'pagina' => $pagina,
+            'paginas' => $paginas,
             'error' => $error,
             'referencia' => $referencia,
             'mensaje' => $this->session->flashdata('mensaje_pedido')
@@ -132,13 +266,7 @@ class Pedidos extends Protected_Controller
         $this->solo_metodo('POST');
         $this->requerir_permiso('pedidos.ver');
         $this->requerir_permiso('pedidos.crear');
-
-        if (
-            !is_string($id)
-            || !ctype_digit($id)
-            || strlen($id) > 10
-            || (int) $id < 1
-        ) {
+        if ( !is_string($id) || !ctype_digit($id) || strlen($id) > 10 || (int) $id < 1) {
             show_404();
             return;
         }

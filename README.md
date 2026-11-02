@@ -1,5 +1,8 @@
 # Gestión de negocios
 
+**Entrega actual:** [Requisitos de Juan Fernando: ventas, documentos de compra y validación](LEEME_JUAN_RF.md).
+
+
 Proyecto académico en PHP y CodeIgniter 3, con base MySQL/MariaDB compartida y datos separados por empresa.
 
 La guía de esta entrega está en **[LEEME_PAGOS.md](LEEME_PAGOS.md)**: instalación nueva, actualización de bases existentes, pagos mixtos, cuentas separadas, propina automática del 10% y pruebas.

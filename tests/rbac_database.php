@@ -31,8 +31,15 @@ try {
     $roles = array_column($db->query('SELECT codigo FROM roles ORDER BY codigo')->fetch_all(MYSQLI_ASSOC), 'codigo');
     comprobar($roles === array('administrador', 'cajero', 'cocinero'), 'Existen exactamente los tres roles del prototipo');
 
-    $totalPermisos = (int) $db->query('SELECT COUNT(*) total FROM permisos')->fetch_assoc()['total'];
-    comprobar($totalPermisos === 17, 'Existen los 17 permisos definidos');
+    $catalogo = array_column($db->query('SELECT codigo FROM permisos ORDER BY codigo')->fetch_all(MYSQLI_ASSOC), 'codigo');
+    $esperados = array('compras.confirmar', 'compras.exportar', 'compras.gestionar', 'compras.ver',
+        'empresa.configurar', 'inicio.ver', 'inventario.gestionar', 'inventario.ver',
+        'pedidos.actualizar_cocina', 'pedidos.cancelar', 'pedidos.confirmar', 'pedidos.crear',
+        'pedidos.ver', 'productos.gestionar', 'productos.ver', 'proveedores.gestionar',
+        'proveedores.ver', 'reportes.ver', 'usuarios.gestionar', 'usuarios.ver',
+        'ventas.cobrar', 'ventas.historial', 'ventas.ver');
+    comprobar($catalogo === $esperados, 'Existe el catálogo integrado de 23 permisos');
+    $totalPermisos = count($catalogo);
 
     $administrador = permisos_de($db, 'administrador');
     comprobar(count($administrador) === $totalPermisos, 'Administrador recibe todos los permisos del prototipo');

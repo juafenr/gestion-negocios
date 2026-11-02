@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=2')) ?>">
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=5')) ?>">
 </head>
 <body>
     <a class="saltar-contenido" href="#contenido">Ir al contenido</a>
@@ -44,7 +44,13 @@
             <?php if ($usuario->puede('usuarios.ver')): ?>
                 <a class="<?= $seccion === 'usuarios' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('usuarios')) ?>" <?= $seccion === 'usuarios' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/usuario.svg')) ?>" alt="" width="22" height="22"><span>Usuarios</span></a>
             <?php endif; ?>
-            <?= form_open('salir', array('class' => 'formulario-salir')) ?>
+            <?php if ($usuario->puede('ventas.historial')): ?>
+                <a class="<?= $seccion === 'ventas' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('ventas')) ?>" <?= $seccion === 'ventas' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/ventas.svg')) ?>" alt="" width="22" height="22"><span>Ventas</span></a>
+            <?php endif; ?>
+            <?php if ($usuario->puede('compras.ver')): ?>
+                <a class="<?= $seccion === 'compras' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('compras')) ?>" <?= $seccion === 'compras' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/compras.svg')) ?>" alt="" width="22" height="22"><span>Compras</span></a>
+            <?php endif; ?>
+    <?= form_open('salir', array('class' => 'formulario-salir')) ?>
                 <button type="submit" class="boton-salir" title="Cerrar tu sesión"><img class="icono" src="<?= html_escape(base_url('assets/iconos/salir.svg')) ?>" alt="" width="22" height="22"><span>Cerrar sesión</span></button>
             <?= form_close() ?>
         </nav>

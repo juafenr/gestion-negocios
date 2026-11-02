@@ -18,6 +18,14 @@
             <span class="acceso-abrir">Abrir cocina <img class="icono" src="<?= html_escape(base_url('assets/iconos/flecha.svg')) ?>" alt="" width="22" height="22"></span>
         </a>
     <?php endif; ?>
+    <?php if ($usuario->puede('ventas.historial')): ?>
+    <a class="acceso" href="<?= html_escape(site_url('ventas')) ?>"><span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/ventas.svg')) ?>" alt=""></span><h3>Ventas</h3><p>Consulta las ventas completadas y el resumen por fecha.</p><span class="acceso-abrir">Abrir ventas</span></a>
+    <?php endif; ?>
+
+    <?php if ($usuario->puede('compras.ver')): ?>
+    <a class="acceso" href="<?= html_escape(site_url('compras')) ?>"><span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/compras.svg')) ?>" alt=""></span><h3>Compras</h3><p>Prepara, revisa y exporta solicitudes para proveedores.</p><span class="acceso-abrir">Abrir compras</span></a>
+    <?php endif; ?>
+
     <?php if ($usuario->puede('ventas.ver') && $usuario->puede('pedidos.ver')): ?>
         <a class="acceso" href="<?= html_escape(site_url('pagos')) ?>">
             <span class="acceso-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="" width="22" height="22"></span>
