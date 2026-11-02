@@ -82,6 +82,7 @@ try {
     verificar($m->preparar(4)!==NULL,'Impide cobrar un cancelado');
     verificar($m->preparar(1)===NULL,'Prepara el pedido confirmado');
     verificar($m->preparar(1)===NULL && count($m->resumen(1)['cuentas'])===1,'Preparar dos veces no duplica la cuenta');
+    verificar($m->separar(1,'Duplicados',array(1=>'1','01'=>'1'))!==NULL,'Separación rechaza identificadores equivalentes duplicados');
     verificar($m->separar(1,'Juan',array(1=>'1'))===NULL,'Separa los productos de Juan');
     verificar($m->separar(1,'Ajeno',array(3=>'1'))!==NULL,'Rechaza un producto de otro pedido/empresa');
     verificar($m->separar(1,'Duplicado',array(1=>'1'))!==NULL,'Impide asignar dos veces el mismo consumo');
@@ -193,6 +194,21 @@ try {
     verificar($compra->cambiar_estado($sid,3,'enviada')['error']===NULL,'La solicitud confirmada pasa a enviada');
     $lineas=$compra->detalles($sid);
     $harinaId=(int)$lineas[0]['id'];$salId=(int)$lineas[1]['id'];
+    $estadoAntes=$compra->buscar($sid);
+    foreach (array('-1','1.001','1e2','',array('1')) as $valor) {
+        verificar($compra->recibir($sid,4,bin2hex(random_bytes(32)),array($harinaId=>$valor))['error']!==NULL,
+            'Recepción rechaza cantidad mal formada sin guardar');
+    }
+    verificar($compra->recibir($sid,4,bin2hex(random_bytes(32)),array($harinaId=>'1','0'.$harinaId=>'2'))['error']!==NULL,
+        'Recepción rechaza duplicados normalizados');
+    $db->query("UPDATE insumos SET unidad_medida='g' WHERE id=1");
+    verificar($compra->recibir($sid,4,bin2hex(random_bytes(32)),array($harinaId=>'1'))['error']!==NULL,
+        'Recepción rechaza unidad distinta a la solicitada');
+    $db->query("UPDATE insumos SET unidad_medida='kg' WHERE id=1");
+    verificar($compra->buscar($sid)===$estadoAntes
+        && $db->query('SELECT cantidad_actual FROM insumos WHERE id=1')->fetch_assoc()['cantidad_actual']==='5.00'
+        && (int)$db->query("SELECT COUNT(*) n FROM recepciones_compra WHERE solicitud_id=$sid")->fetch_assoc()['n']===0,
+        'Ninguna recepción inválida modifica cabecera, existencias o registros');
     $claveRecepcion=bin2hex(random_bytes(32));
     verificar($compra->recibir($sid,4,$claveRecepcion,array($harinaId=>'1.00'))['error']===NULL,'Recibe una parte de la solicitud');
     verificar($compra->buscar($sid)['estado']==='enviada'

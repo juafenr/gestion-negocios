@@ -50,10 +50,11 @@ class Pedidos extends Protected_Controller
         $this->form_validation->set_rules(
             'referencia',
             'Referencia',
-            'required|trim|max_length[100]'
+            'trim|required|max_length[100]'
         );
 
         if ($this->form_validation->run() === FALSE) {
+            $this->output->set_status_header(422);
 
             $this->load->view('pedidos/formulario', array(
                 'usuario' => $this->usuario
@@ -62,9 +63,8 @@ class Pedidos extends Protected_Controller
             return;
         }
 
-        $referencia = trim(
-            $this->input->post('referencia', TRUE)
-        );
+        try { $referencia = Validacion_negocio::texto($this->input->post('referencia'), 'Referencia', 100); }
+        catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()), 422); return; }
 
         $usuarioId = $this->usuario->id();
 

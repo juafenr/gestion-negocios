@@ -7,6 +7,7 @@ class Usuarios extends Protected_Controller
     {
         parent::__construct();
         $this->load->model('Usuario_model', 'usuarios_model');
+        $this->load->library('Validacion_negocio');
     }
 
     public function index()
@@ -130,24 +131,15 @@ class Usuarios extends Protected_Controller
         return (int) $id;
     }
 
-    private function validar($datos, $roles, $password, $validarCorreo)
+    private function validar(&$datos, $roles, $password, $validarCorreo)
     {
-        if ($datos['nombre'] === '' || mb_strlen($datos['nombre']) > 100) {
-            return 'El nombre es obligatorio y admite hasta 100 caracteres.';
-        }
-        if (preg_match('/^[a-z][a-z0-9._-]{2,39}$/D', $datos['nombre_usuario']) !== 1) {
-            return 'El usuario debe tener de 3 a 40 caracteres: letras minúsculas, números, punto, guion o guion bajo; empieza con una letra.';
-        }
-        if ($validarCorreo && (!filter_var($datos['correo'], FILTER_VALIDATE_EMAIL) || strlen($datos['correo']) > 190)) {
-            return 'Introduce un correo válido de hasta 190 caracteres.';
-        }
+        try {
+            $normalizados = Validacion_negocio::usuario($datos, $validarCorreo);
+            if ($validarCorreo) { Validacion_negocio::password($password); }
+            $datos = array_merge($datos, $normalizados);
+        } catch (InvalidArgumentException $e) { return $e->getMessage(); }
         $ids = array_map('intval', array_column($roles, 'id'));
-        if (!ctype_digit((string) $datos['rol_id']) || !in_array((int) $datos['rol_id'], $ids, TRUE)) {
-            return 'Selecciona un rol válido.';
-        }
-        if ($validarCorreo && (!is_string($password) || strlen($password) < 8 || strlen($password) > 72)) {
-            return 'La contraseña debe tener entre 8 y 72 bytes.';
-        }
+        if (!in_array($datos['rol_id'], $ids, TRUE)) { return 'Selecciona un rol válido.'; }
         return '';
     }
 }

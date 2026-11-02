@@ -28,3 +28,8 @@ Thumbs.db
 # Configuración privada de cada integrante
 /application/config/local.php
 /test-results/
+
+# Seguimiento personal fuera del repositorio de aplicación
+/docs/ESTADO_REQUISITOS_FUNCIONALES_MAIN.md
+/docs/ESTADO_RF_EMMANUEL_INTEGRADO.md
+/docs/REPARTO_TRABAJO_PENDIENTE_EQUIPO.md

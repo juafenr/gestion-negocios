@@ -18,17 +18,14 @@ class Inventario extends Protected_Controller
         $this->solo_metodo('GET');
         $this->requerir_permiso('inventario.ver');
 
-        $busqueda = trim(
-            (string) $this->input->get('busqueda', TRUE)
-        );
-        $busqueda = mb_substr($busqueda, 0, 150, 'UTF-8');
-
-        $estado = (string) $this->input->get('estado', TRUE);
-        $unidad = (string) $this->input->get('unidad', TRUE);
-        $orden = (string) $this->input->get('orden', TRUE);
-
-        $activo = $this->input->get('activo', TRUE)
-            === 'inactivos' ? 'inactivos' : 'activos';
+        try {
+            $f = array();
+            foreach (array('busqueda'=>150, 'estado'=>20, 'unidad'=>20, 'orden'=>30, 'activo'=>20) as $campo=>$limite) {
+                $f[$campo] = Validacion_negocio::texto($this->input->get($campo) ?? '', $campo, $limite, FALSE);
+            }
+        } catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()), 422); return; }
+        $busqueda=$f['busqueda']; $estado=$f['estado']; $unidad=$f['unidad']; $orden=$f['orden'];
+        $activo=$f['activo']==='inactivos' ? 'inactivos' : 'activos';
 
         if (!in_array(
             $estado,
@@ -115,6 +112,7 @@ class Inventario extends Protected_Controller
         $this->configurar_validacion(TRUE);
 
         if ($this->form_validation->run() === FALSE) {
+            $this->output->set_status_header(422);
             $this->load->view('inventario/formulario', array(
                 'usuario' => $this->usuario,
                 'insumo' => NULL,
@@ -168,6 +166,7 @@ class Inventario extends Protected_Controller
         $this->configurar_validacion();
 
         if ($this->form_validation->run() === FALSE) {
+            $this->output->set_status_header(422);
             $this->load->view('inventario/formulario', array(
                 'usuario' => $this->usuario,
                 'insumo' => $insumo,
@@ -198,7 +197,7 @@ class Inventario extends Protected_Controller
                 show_error('Formato inválido en ' . html_escape($campo) . '.', 422);
             }
         }
-        $this->form_validation->set_rules('nombre', 'Nombre', 'trim|required|max_length[150]');
+        $this->form_validation->set_rules('nombre', 'Nombre', 'trim|required|max_length[150]|callback_nombre_valido');
         $this->form_validation->set_rules('stock_minimo', 'Stock mínimo', 'required|callback_cantidad_valida');
         $this->form_validation->set_rules('unidad_medida', 'Unidad de medida', 'required|in_list[kg,g,mg,l,ml,unidad]');
         $this->form_validation->set_rules('fecha_vencimiento', 'Fecha de vencimiento', 'callback_fecha_valida');
@@ -234,21 +233,15 @@ class Inventario extends Protected_Controller
         );
     }
 
+    public function nombre_valido($valor)
+    {
+        try { Validacion_negocio::texto($valor, 'Nombre', 150); return TRUE; }
+        catch (InvalidArgumentException $e) { $this->form_validation->set_message('nombre_valido', $e->getMessage()); return FALSE; }
+    }
     public function fecha_valida($valor)
     {
-        if ($valor === '' || $valor === NULL) {
-            return TRUE;
-        }
-
-        $fecha = DateTime::createFromFormat('!Y-m-d', $valor);
-
-        if ($fecha && $fecha->format('Y-m-d') === $valor) {
-            return TRUE;
-        }
-
-        $this->form_validation->set_message('fecha_valida', 'La fecha de vencimiento no es válida.');
-
-        return FALSE;
+        try { Validacion_negocio::fecha($valor, 'Vencimiento', TRUE); return TRUE; }
+        catch (InvalidArgumentException $e) { $this->form_validation->set_message('fecha_valida', $e->getMessage()); return FALSE; }
     }
 
     public function movimiento($id = NULL)
@@ -525,6 +518,7 @@ class Inventario extends Protected_Controller
 
         if ($error !== NULL) {
             $datos['error'] = $error;
+            $this->output->set_status_header(422);
             $this->load->view('inventario/vender', $datos);
             return;
         }
