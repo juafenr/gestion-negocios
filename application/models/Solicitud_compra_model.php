@@ -215,13 +215,7 @@ class Solicitud_compra_model extends MY_Model
     public function crear_proveedor(array $datos)
     {
         return $this->operacion('proveedores.gestionar', function ($empresa, $usuario) use ($datos) {
-            $d = array();
-            foreach (array('nombre' => 150, 'contacto' => 100, 'telefono' => 30, 'correo' => 190, 'direccion' => 255) as $campo => $limite) {
-                $d[$campo] = Validacion_negocio::texto($datos[$campo] ?? '', ucfirst($campo), $limite, $campo === 'nombre');
-            }
-            if ($d['correo'] !== '' && !filter_var($d['correo'], FILTER_VALIDATE_EMAIL)) {
-                throw new InvalidArgumentException('Correo del proveedor no válido.');
-            }
+            $d = Validacion_negocio::proveedor($datos);
             $existe = $this->q('SELECT id FROM proveedores WHERE empresa_id=? AND nombre=?', array($empresa, $d['nombre']))->row_array();
             if ($existe) {
                 throw new InvalidArgumentException('Ya existe un proveedor con ese nombre en tu empresa.');
@@ -426,6 +420,7 @@ class Solicitud_compra_model extends MY_Model
                 $version = Validacion_negocio::id($version, 'Versión');
                 $clave = Validacion_negocio::clave($clave);
 
+                $cantidades = Validacion_negocio::cantidades_por_id($cantidades, 'Cantidad recibida');
                 if (empty($cantidades) || count($cantidades) > 100) {
                     throw new InvalidArgumentException(
                         'No se recibieron cantidades válidas.'
@@ -445,6 +440,28 @@ class Solicitud_compra_model extends MY_Model
                     throw new InvalidArgumentException(
                         'Solicitud no encontrada.'
                     );
+                }
+
+                $lineas = $this->q(
+                    'SELECT id, insumo_id, unidad_medida, cantidad, recibido
+                 FROM solicitud_compra_detalles
+                 WHERE empresa_id = ? AND solicitud_id = ?
+                 ORDER BY id
+                 FOR UPDATE',
+                    array($empresa, $id)
+                )->result_array();
+
+                if (!$lineas) {
+                    throw new InvalidArgumentException(
+                        'La solicitud no tiene insumos.'
+                    );
+                }
+
+                $idsPermitidos = array_map('intval', array_column($lineas, 'id'));
+                foreach (array_keys($cantidades) as $detalleId) {
+                    if (!in_array($detalleId, $idsPermitidos, TRUE)) {
+                        throw new InvalidArgumentException('El detalle no pertenece a la solicitud.');
+                    }
                 }
 
                 // La misma clave nunca debe incrementar
@@ -506,21 +523,6 @@ class Solicitud_compra_model extends MY_Model
                 if ((int) $solicitud['version'] !== $version) {
                     throw new InvalidArgumentException(
                         'La solicitud cambió. Recarga el formulario.'
-                    );
-                }
-
-                $lineas = $this->q(
-                    'SELECT id, insumo_id, cantidad, recibido
-                 FROM solicitud_compra_detalles
-                 WHERE empresa_id = ? AND solicitud_id = ?
-                 ORDER BY id
-                 FOR UPDATE',
-                    array($empresa, $id)
-                )->result_array();
-
-                if (!$lineas) {
-                    throw new InvalidArgumentException(
-                        'La solicitud no tiene insumos.'
                     );
                 }
 
@@ -621,7 +623,7 @@ class Solicitud_compra_model extends MY_Model
                     $insumoId = (int) $linea['insumo_id'];
 
                     $insumo = $this->q(
-                        'SELECT id, cantidad_actual
+                        'SELECT id, cantidad_actual, unidad_medida
                      FROM insumos
                      WHERE empresa_id = ?
                        AND id = ?
@@ -636,6 +638,9 @@ class Solicitud_compra_model extends MY_Model
                         );
                     }
 
+                    if ($insumo['unidad_medida'] !== $linea['unidad_medida']) {
+                        throw new InvalidArgumentException('La unidad del insumo cambió. Revisa la solicitud antes de recibir.');
+                    }
                     $anterior = $aCent(
                         $insumo['cantidad_actual']
                     );

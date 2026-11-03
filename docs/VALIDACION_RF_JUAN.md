@@ -1,6 +1,6 @@
 # RF-61 y RF-62: validación y aceptación
 
-Estado: implementación y revisión estática; ejecución PHP/MySQL y pruebas de navegador pendientes en el equipo. La coordinación transversal incluye esta matriz; no declara validados módulos que todavía no están integrados.
+Estado al 2026-11-02: reglas revisadas sobre `gestion-negocios(10).zip`, que ya incluye usuarios, cocina, proveedores, selección agrupada y recepciones. Se agregaron correcciones y aceptación automatizada HTTP. **La nueva suite no se ha ejecutado aquí por falta de PHP/MySQL; el cierre de aceptación requiere el resultado real en XAMPP.** Las pruebas previas aprobadas reportadas por el equipo se conservan como antecedente, no como evidencia de esta actualización.
 
 ## Requisitos de Juan Fernando
 
@@ -43,9 +43,43 @@ Los textos se escapan al mostrarlos; las consultas usan parámetros. Los campos 
 
 En navegador comprobar sesiones, CSRF, permisos de administrador/cajero/cocinero, empresas A/B, rutas de exportación y formularios con POST manipulado. Abrir dos pestañas del mismo borrador: guardar una, intentar guardar/confirmar la otra; debe pedir revisar la versión actual. Con dos cajeros sobre el mismo saldo, el bloqueo del pedido y la restricción única deben permitir solo una venta y rechazar el exceso de cobro.
 
-## Trabajo de validación pendiente tras integrar otras ramas
+## Cobertura transversal actualizada
 
-- Andrés: aplicar las reglas al alta general/edición/disponibilidad de productos, proveedor completo y asociación con insumos. Probar que un producto no disponible se rechaza en POST del pedido y auditar precios.
-- Emmanuel: validar registro/roles de usuarios, las transiciones de cocina y la creación agrupada. Probar cantidades incompletas, insumos sin proveedor y reintentos de grupos.
-- Manuel: validar recepción total/parcial, saldos por recibir, estados e idempotencia de movimientos.
-- Juan Fernando coordina el recorrido integrado final y actualiza esta matriz con resultados reales. No marcar RF-61/62 como verificados de extremo a extremo hasta probar esas incorporaciones.
+| Módulo | Casos automatizados de RF-61/RF-62 | Evidencia prevista |
+| --- | --- | --- |
+| Login y acceso | Campos vacíos/anidados, sesión requerida, CSRF sin token, restricciones por rol. | `validaciones_http.php` |
+| Usuarios | Campos obligatorios, arreglos, contraseña solo espacios/larga, correo inválido, rol inexistente, duplicados, alta válida y edición inválida. Nulos en contraseña se comprueban en la regla unitaria; CI limpia caracteres de control al recibir HTTP. | Unitarias + HTTP |
+| Proveedores | Alta/edición con arreglos en cada campo, nombre vacío, correo inválido, contactos opcionales, asociación de insumo ajeno. | HTTP |
+| Inventario | Campos faltantes/anidados; negativos, notación científica, coma, precisión y desbordamiento; fechas inválidas; existencia cero; movimiento con motivo vacío o salida excesiva. | Unitarias + HTTP |
+| Productos disponibles en esta versión | Código obligatorio, precio no negativo y precio cero al habilitar un insumo. | HTTP |
+| Pedidos | Referencia vacía, espacios o arreglo; cantidades negativas/cero/fraccionarias/excesivas; producto ajeno; creación y confirmación válidas. | HTTP |
+| Cocina | Estado anidado, salto de transición rechazado sin cambios; transición válida. | HTTP |
+| Pagos | Métodos omitidos/anidados/negativos/con precisión excesiva, recibido insuficiente, cobro superior al saldo, pago válido y repetido. | Unitarias, modelos y HTTP |
+| Ventas | Fechas imposibles/rango invertido; venta única al completar cobro. | Modelos + HTTP |
+| Documentos de compra | Campos faltantes, cantidades inválidas, proveedor/insumo ajeno, líneas duplicadas, versión desactualizada, revisión obligatoria. | Modelos + HTTP |
+| Compras agrupadas | Negativos, arreglos, insumo ajeno, identificadores equivalentes duplicados; fecha inválida; generación válida y reintento. | HTTP |
+| Estados y recepciones | Motivo de cancelación obligatorio; versión, cantidades inválidas/cero/exceso, duplicados, unidad distinta; recepción parcial/final y repetida sin duplicar stock. | Modelos + HTTP |
+
+Las solicitudes inválidas se prueban comparando todos los registros de negocio antes y después; no basta con que la página muestre un mensaje. Los intentos de autenticación se excluyen de esa comparación porque son un registro de seguridad.
+
+## Ejecutar y registrar aceptación
+
+```powershell
+& "C:\xampp\php\php.exe" tests\ejecutar_validaciones.php
+```
+
+Ver `LEEME_VALIDACIONES_RF61_RF62.md`. El ejecutor utiliza bases y una copia temporal; no cambia la base real. La ejecución HTTP no necesita Apache, pero sí MySQL.
+
+| Evidencia | Estado de esta entrega | Responsable/fecha/resultado real |
+| --- | --- | --- |
+| Revisión estática de archivos y referencias | Realizada al preparar el ZIP; no sustituye PHP | 2026-11-02 |
+| Sintaxis PHP y reglas unitarias | Pendiente de ejecutar en XAMPP | Completar con el registro |
+| Integración de pagos/ventas/documentos/recepción | Suite ampliada; pendiente de ejecutar esta versión | Completar con el registro |
+| Aceptación HTTP integrada | Suite preparada; pendiente de ejecutar | Adjuntar `test-results/validaciones-http.json` |
+| Revisión visual de mensajes y navegación | Pendiente en navegador | Completar nombre y fecha |
+
+**Criterio de cierre:** ejecutor en `APROBADO`, reporte sin fallos y revisión visual de los flujos utilizados. Si una prueba falla, corregir y repetir antes de marcar RF-61/RF-62 como aceptados. No se han inventado fechas ni resultados de pruebas.
+
+## Límites y trabajo futuro
+
+El módulo de productos de este ZIP permite consulta y alta desde un insumo; no incluye alta/edición general/disponibilidad. No se crea esa función dentro de esta corrección de Juanfer. Cuando su responsable la integre, debe validar sus nuevos formularios con las reglas compartidas y ampliar/volver a ejecutar la aceptación. Lo mismo aplica a cualquier función nueva de otras ramas.
