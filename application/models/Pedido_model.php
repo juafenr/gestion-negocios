@@ -315,7 +315,7 @@ class Pedido_model extends MY_Model
         return $consulta->result_array();
     }
 
-        public function agregar_producto($pedido_id, $producto_id, $cantidad)
+    public function agregar_producto($pedido_id, $producto_id, $cantidad)
     {
         if (!is_int($cantidad) || $cantidad < 1 || $cantidad > 999) {
             return 'La cantidad debe estar entre 1 y 999.';
@@ -361,9 +361,10 @@ class Pedido_model extends MY_Model
             }
 
             $producto = $ejecutar(
-                'SELECT id, nombre, precio
-                 FROM productos
-                 WHERE id = ? AND empresa_id = ?',
+                'SELECT id, nombre, precio, disponible, insumo_id
+                FROM productos
+                WHERE id = ? AND empresa_id = ?
+                FOR UPDATE',
                 array($producto_id, $empresa_id)
             )->row_array();
 
@@ -371,6 +372,29 @@ class Pedido_model extends MY_Model
                 throw new InvalidArgumentException(
                     'El producto no está disponible para tu empresa.'
                 );
+            }
+
+            if ((int) $producto['disponible'] !== 1) {
+                throw new InvalidArgumentException(
+                    'El producto está marcado como no disponible.'
+                );
+            }
+
+            // Si está asociado al inventario, el insumo debe seguir activo.
+            if ($producto['insumo_id'] !== NULL) {
+                $insumo = $ejecutar(
+                    'SELECT id, activo
+                    FROM insumos
+                    WHERE id = ? AND empresa_id = ?
+                    FOR UPDATE',
+                    array($producto['insumo_id'], $empresa_id)
+                )->row_array();
+
+                if (!$insumo || (int) $insumo['activo'] !== 1) {
+                    throw new InvalidArgumentException(
+                        'El artículo de inventario asociado no está disponible.'
+                    );
+                }
             }
 
             $detalle = $ejecutar(
@@ -457,7 +481,7 @@ class Pedido_model extends MY_Model
         }
     }
 
-        public function modificar_detalle($pedido_id, $detalle_id, $cantidad)
+    public function modificar_detalle($pedido_id, $detalle_id, $cantidad)
     {
         // NULL significa quitar el producto del pedido.
         if ($cantidad !== NULL && (!is_int($cantidad) || $cantidad < 1 || $cantidad > 999)) {
@@ -575,7 +599,7 @@ class Pedido_model extends MY_Model
             $this->db->db_debug = $debug_anterior;
         }
     }
-        public function confirmar($pedido_id, $usuario_id, $rol_codigo)
+    public function confirmar($pedido_id, $usuario_id, $rol_codigo)
     {
         $empresa_id = $this->empresa_id();
         $debug_anterior = $this->db->db_debug;
@@ -644,6 +668,40 @@ class Pedido_model extends MY_Model
                 throw new InvalidArgumentException(
                     'El total supera el límite permitido.'
                 );
+            }
+
+            // Revisar nuevamente la disponibilidad:
+            // un producto pudo deshabilitarse después de agregarlo.
+            $lineas = $ejecutar(
+                'SELECT producto_id
+                FROM pedido_detalles
+                WHERE pedido_id = ? AND empresa_id = ?
+                ORDER BY producto_id',
+                array($pedido_id, $empresa_id)
+            )->result_array();
+
+            foreach ($lineas as $linea) {
+                $producto_actual = $ejecutar(
+                    'SELECT id, nombre, disponible
+                    FROM productos
+                    WHERE id = ? AND empresa_id = ?
+                    FOR UPDATE',
+                    array($linea['producto_id'], $empresa_id)
+                )->row_array();
+
+                if (!$producto_actual) {
+                    throw new InvalidArgumentException(
+                        'Uno de los productos del pedido ya no está disponible para tu empresa.'
+                    );
+                }
+
+                if ((int) $producto_actual['disponible'] !== 1) {
+                    throw new InvalidArgumentException(
+                        'No puedes confirmar: el producto "'
+                        . $producto_actual['nombre']
+                        . '" está marcado como no disponible. Quítalo del pedido para continuar.'
+                    );
+                }
             }
 
             // Comprobar existencias y registrar las salidas.
