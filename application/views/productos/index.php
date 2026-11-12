@@ -39,9 +39,11 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
     <?php endif; ?>
 </div>
 
+<?php if (!empty($mensaje_producto)): ?><p class="recuadro aviso" role="status"><?= html_escape($mensaje_producto) ?></p><?php endif; ?>
 <?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'productos', 'filtro_campos'=>array(
-'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre o código','ejemplo'=>'Ej. Cuaderno o A-001')
-), 'filtro_valores'=>array('busqueda'=>$busqueda), 'filtro_extras'=>array())); ?>
+'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre, código o descripción','ejemplo'=>'Ej. Cuaderno o A-001'),
+'disponibilidad'=>array('etiqueta'=>'Disponibilidad','opciones'=>array(''=>'Todos los productos','1'=>'Disponible','0'=>'No disponible'))
+), 'filtro_valores'=>array('busqueda'=>$busqueda,'disponibilidad'=>$disponibilidad), 'filtro_extras'=>array())); ?>
 <?php $this->load->view('plantilla/resultados', array('resultado_total'=>$total, 'resultado_mostrados'=>count($productos), 'resultado_pagina'=>$pagina)); ?>
 
 
@@ -138,12 +140,12 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
 
             <?php if (empty($productos)): ?>
                 <tr>
-                    <td colspan="4"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>$busqueda!==''?'No hay productos que coincidan con la búsqueda.':'Todavía no hay productos registrados.','vacio_descripcion'=>'Los productos disponibles en tu empresa aparecerán en este listado.','vacio_url'=>$busqueda!==''?site_url('productos'):NULL,'vacio_accion'=>'Limpiar filtros')); ?></td>
+                    <td colspan="6"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>$hay_filtros?'No hay productos que coincidan con la búsqueda.':'Todavía no hay productos registrados.','vacio_descripcion'=>'Revisa la búsqueda y la disponibilidad seleccionada.','vacio_url'=>$hay_filtros?site_url('productos'):NULL,'vacio_accion'=>'Limpiar filtros')); ?></td>
                 </tr>
             <?php endif; ?>
         </tbody>
     </table>
 </div>
 
-<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'productos','parametros_paginacion'=>array('busqueda'=>$busqueda),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
+<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'productos','parametros_paginacion'=>array('busqueda'=>$busqueda,'disponibilidad'=>$disponibilidad),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
 <?php $this->load->view('plantilla/pie'); ?>

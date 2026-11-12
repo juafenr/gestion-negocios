@@ -89,17 +89,21 @@ class Producto_model extends MY_Model
         return $consulta->result_array();
     }
   
-  public function paginar($busqueda, $pagina)
+    public function paginar($busqueda, $pagina, $disponibilidad = '')
     {
         $busqueda = Validacion_negocio::texto($busqueda, 'Búsqueda', 150, FALSE);
+        if (!in_array($disponibilidad, array('', '0', '1'), TRUE)) {
+            throw new InvalidArgumentException('Selecciona una disponibilidad válida.');
+        }
         $empresa = $this->empresa_id();
         // Agrupar los OR impide que una coincidencia por código omita la empresa.
-        $filtrar = function () use ($empresa, $busqueda) {
+        $filtrar = function () use ($empresa, $busqueda, $disponibilidad) {
             $this->db->from('productos')->where('empresa_id', $empresa);
             if ($busqueda !== '') {
                 $this->db->group_start()->like('nombre', $busqueda)
-                    ->or_like('sku', $busqueda)->group_end();
+                    ->or_like('sku', $busqueda)->or_like('descripcion', $busqueda)->group_end();
             }
+            if ($disponibilidad !== '') { $this->db->where('disponible', (int) $disponibilidad); }
         };
         $filtrar();
         $conteo = $this->db->select('COUNT(*) AS cantidad', FALSE)->get();
@@ -108,12 +112,12 @@ class Producto_model extends MY_Model
         $paginas = max(1, (int) ceil($total / 25));
         $pagina = max(1, min((int) $pagina, $paginas));
         $filtrar();
-        $consulta = $this->db->select('id, nombre, sku, precio')
+        $consulta = $this->db->select('id, nombre, sku, precio, descripcion, disponible, insumo_id')
             ->order_by('nombre', 'ASC')->order_by('id', 'ASC')
             ->limit(25, ($pagina - 1) * 25)->get();
         if (!$consulta) { throw new RuntimeException('No se pudieron consultar los productos.'); }
         return array('productos'=>$consulta->result_array(), 'total'=>$total,
-            'pagina'=>$pagina, 'paginas'=>$paginas, 'busqueda'=>$busqueda);
+            'pagina'=>$pagina, 'paginas'=>$paginas, 'busqueda'=>$busqueda, 'disponibilidad'=>$disponibilidad);
     }
 
     public function buscar($id)

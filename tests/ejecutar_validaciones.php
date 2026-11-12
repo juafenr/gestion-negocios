@@ -16,6 +16,8 @@ function ejecutar_validacion($argumentos,$nombre,$log,$root) {
 }
 try {
     foreach (array('application/libraries/Validacion_negocio.php',
+        'application/controllers/Productos.php','application/models/Producto_model.php',
+        'application/views/productos/index.php','application/views/productos/formulario.php','application/views/productos/detalle.php',
         'application/controllers/Usuarios.php','application/controllers/Proveedores.php','application/controllers/Inventario.php','application/controllers/Pedidos.php','application/controllers/Compras.php',
         'application/models/Usuario_model.php','application/models/Proveedor_model.php','application/models/Solicitud_compra_model.php','application/models/Pago_model.php',
         'application/views/proveedores/editar.php','tests/validacion_negocio_unit.php','tests/rf_juan_integracion.php','tests/validaciones_http.php') as $archivo) {
