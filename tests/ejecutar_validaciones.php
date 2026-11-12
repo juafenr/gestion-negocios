@@ -28,5 +28,5 @@ try {
     }
     echo "\nAPROBADO: sintaxis, reglas, integración de modelos y aceptación HTTP.\n";
     echo "Evidencias: test-results/validaciones-ejecucion.log y test-results/validaciones-http.json\n";
-    echo "Registra la fecha y este resultado en docs/VALIDACION_RF_JUAN.md.\n";
+    echo "Conserva el registro de test-results como evidencia de la validación.\n";
 } catch (Throwable $e) { fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");exit(1); }

@@ -24,7 +24,7 @@ class Pagos extends Protected_Controller
             $pedidos = $this->pagos_model->listar($estado,$pagina);
         } catch (Throwable $e) {
             log_message('error', 'Consulta de pagos: '.$e->getMessage());
-            show_error('No se pudo abrir pagos. Ejecuta la actualización de la base de datos indicada en LEEME_PAGOS.md.',503);
+            show_error('No se pudo abrir pagos. Revisa la sección de actualización de la base de datos en README.md.',503);
             return;
         }
         $siguiente = count($pedidos)>30;
