@@ -351,6 +351,63 @@ try {
         && ClienteValidacion::campo($r['body'],'motivo')==='Revisión de existencias' && huella()===$antes,'Movimiento rechazado conserva lo escrito y no cambia el inventario');
     $r=$a->pedir('inventario/1/historial');
     exigir($r['status']===200 && strpos($r['body'],'id="menu-principal"')!==FALSE && strpos($r['body'],'formularios.js')!==FALSE,'El historial de inventario usa la plantilla uniforme');
+    // Regresión del merge: integrar catálogo, filtros, auditoría y pedidos.
+    $q=$db->prepare('INSERT INTO productos (empresa_id,sku,nombre,descripcion,precio,disponible) VALUES (?, ?, ?, ?, ?, 0)');
+    foreach(array(array(1,'Catálogo privado A','20.00'),array(2,'Catálogo privado B','999.00')) as $v) {
+        $sku='CAT-MERGE';$descripcion='texto común prueba merge <script>alert(1)</script>';
+        $q->bind_param('issss',$v[0],$sku,$v[1],$descripcion,$v[2]);$q->execute();
+        if($v[0]===1){$catalogo_a=$db->insert_id;}
+    }
+    $db->query("UPDATE productos SET disponible=0 WHERE empresa_id=1 AND sku LIKE 'busqueda-%'");
+    $r=$a->pedir('productos?busqueda=busqueda-&disponibilidad=0');
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===25 && strpos($r['body'],'No disponible')!==FALSE,'Catálogo paginado devuelve descripción y disponibilidad sin errores PHP');
+    exigir(strpos($r['body'],'disponibilidad=0&amp;pagina=2')!==FALSE,'La paginación conserva el filtro de no disponibles');
+    $r=$a->pedir('productos?busqueda=busqueda-&disponibilidad=0&pagina=2');
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===1,'Segunda página del catálogo filtrado');
+    $r=$a->pedir('productos?busqueda='.rawurlencode('texto común prueba merge'));
+    exigir($r['status']===200 && strpos($r['body'],'Catálogo privado A')!==FALSE && strpos($r['body'],'Catálogo privado B')===FALSE && strpos($r['body'],'&lt;script&gt;')!==FALSE,'Búsqueda por descripción aislada por empresa y escapada contra XSS');
+    $r=$a->pedir('productos?busqueda=busqueda-&disponibilidad=1');
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===0 && strpos($r['body'],'colspan="6"')!==FALSE,'Filtro de disponibles y estado vacío cubren las seis columnas');
+    exigir($a->pedir('productos?disponibilidad[]=0')['status']===422,'Disponibilidad rechaza arreglos');
+    exigir($a->pedir('productos?disponibilidad=2')['status']===422,'Disponibilidad rechaza opciones desconocidas');
+    $form=$a->pedir('productos/crear');
+    exigir($form['status']===200 && strpos($form['body'],'formulario-ui')!==FALSE && strpos($form['body'],'Cancelar')!==FALSE,'El formulario integrado mantiene el diseño y las acciones comunes');
+    $producto=array('nombre'=>'Producto del merge','sku'=>'NUEVO-MERGE','descripcion'=>'Descripción conservada','precio'=>'12.50','disponible'=>'1');
+    $r=$a->post('productos/crear',$producto,'productos/crear');
+    exigir($r['status']===303,'Crear producto desde el catálogo');
+    $nuevo_producto=(int)fila("SELECT id FROM productos WHERE empresa_id=1 AND sku='NUEVO-MERGE'")['id'];
+    $pantalla=$a->seguir($r);
+    exigir(strpos($pantalla['body'],'Producto creado correctamente.')!==FALSE,'La lista muestra la confirmación de producto creado');
+    $r=$a->post('pedidos/crear',array('referencia'=>'Pedido de precio histórico'));
+    exigir(in_array($r['status'],array(302,303),TRUE),'Crear borrador para comprobar el catálogo integrado');
+    $pedido_catalogo=(int)fila("SELECT id FROM pedidos WHERE referencia='Pedido de precio histórico'")['id'];
+    $r=$a->post('pedidos/agregar/'.$pedido_catalogo,array('producto_id'=>(string)$nuevo_producto,'cantidad'=>'1'));
+    exigir(in_array($r['status'],array(302,303),TRUE),'El producto nuevo puede agregarse a pedidos');
+    $producto['precio']='14.75';$r=$a->post('productos/editar/'.$nuevo_producto,$producto,'productos/editar/'.$nuevo_producto);
+    exigir($r['status']===303 && fila('SELECT precio FROM productos WHERE id='.$nuevo_producto)['precio']==='14.75','Editar producto y actualizar el precio');
+    $cambio=fila('SELECT * FROM producto_precio_historial WHERE producto_id='.$nuevo_producto);
+    exigir($cambio['precio_anterior']==='12.50' && $cambio['precio_nuevo']==='14.75' && (int)$cambio['usuario_id']===1,'El cambio de precio registra importes y responsable reales');
+    exigir(fila('SELECT precio_unitario FROM pedido_detalles WHERE pedido_id='.$pedido_catalogo)['precio_unitario']==='12.50','Cambiar el catálogo conserva el precio de pedidos anteriores');
+    $a->post('productos/editar/'.$nuevo_producto,$producto,'productos/editar/'.$nuevo_producto);
+    exigir((int)fila('SELECT COUNT(*) n FROM producto_precio_historial WHERE producto_id='.$nuevo_producto)['n']===1,'Repetir el mismo precio no duplica la auditoría');
+    $mal=$producto;$mal['precio']='-1';$antes=huella();$r=$a->post('productos/editar/'.$nuevo_producto,$mal,'productos/editar/'.$nuevo_producto);
+    exigir($r['status']===422 && ClienteValidacion::campo($r['body'],'nombre')===$producto['nombre'] && huella()===$antes,'Precio inválido devuelve 422, conserva el formulario y no altera datos');
+    $mal=$producto;$mal['sku']='CAT-MERGE';$a->invalido('productos/editar/'.$nuevo_producto,$mal,'El catálogo rechaza códigos duplicados','productos/editar/'.$nuevo_producto);
+    $antes=huella();$r=$caja->post('productos/crear',$producto);
+    exigir($r['status']===403 && huella()===$antes,'El cajero no puede crear productos');
+    exigir($b->pedir('productos/editar/'.$nuevo_producto)['status']===404,'Otra empresa no puede abrir la edición del producto');
+    $r=$b->post('productos/editar/'.$nuevo_producto,$producto);
+    exigir($r['status']===404 && huella()===$antes,'Otra empresa no puede modificar el producto');
+    $r=$a->pedir('productos/'.$nuevo_producto);
+    exigir($r['status']===200 && strpos($r['body'],'14.75')!==FALSE && strpos($r['body'],'12.50')!==FALSE,'El detalle y el historial de precios se renderizan correctamente');
+    $r=$caja->pedir('productos/'.$nuevo_producto);
+    exigir($r['status']===200 && strpos($r['body'],'Historial de precios')===FALSE,'Un rol sin gestión no recibe el historial de precios');
+    $a->invalido('pedidos/agregar/'.$pedido_catalogo,array('producto_id'=>(string)$catalogo_a,'cantidad'=>'1'),'Pedidos rechaza un producto no disponible');
+    $producto['disponible']='0';$a->post('productos/editar/'.$nuevo_producto,$producto,'productos/editar/'.$nuevo_producto);
+    $a->invalido('pedidos/'.$pedido_catalogo.'/confirmar',array(),'Confirmar revalida la disponibilidad del catálogo');
+    $producto['disponible']='1';$a->post('productos/editar/'.$nuevo_producto,$producto,'productos/editar/'.$nuevo_producto);
+    $r=$a->post('pedidos/'.$pedido_catalogo.'/confirmar',array());
+    exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT estado FROM pedidos WHERE id='.$pedido_catalogo)['estado']==='pendiente','Reactivar el producto permite confirmar el pedido conservando su precio');
     $reporte['resultado']='APROBADO';echo "\nAPROBADO: $pasadas comprobaciones HTTP y de persistencia.\n";
 } catch (Throwable $e) {
     $codigo=1;$reporte['error']=$e->getMessage();fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");

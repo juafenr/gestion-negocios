@@ -16,10 +16,11 @@ class Productos extends Protected_Controller
         $this->solo_metodo('GET');
         $this->requerir_permiso('productos.ver');
         $busqueda = $this->input->get('busqueda') ?? '';
+        $disponibilidad = $this->input->get('disponibilidad') ?? '';
         $pagina = $this->input->get('pagina');
         $pagina = is_string($pagina) && ctype_digit($pagina) && strlen($pagina) <= 10 ? (int) $pagina : 1;
         try {
-            $datos = $this->productos_model->paginar($busqueda, $pagina);
+            $datos = $this->productos_model->paginar($busqueda, $pagina, $disponibilidad);
         } catch (InvalidArgumentException $e) {
             show_error(html_escape($e->getMessage()), 422);
             return;
@@ -28,6 +29,7 @@ class Productos extends Protected_Controller
             return;
         }
         $datos['usuario'] = $this->usuario;
+        $datos['mensaje_producto'] = $this->session->flashdata('mensaje_producto');
         $this->load->view('productos/index', $datos);
     }
 
@@ -231,6 +233,7 @@ class Productos extends Protected_Controller
         $titulo,
         $error = ''
     ) {
+        if ($error !== '') { $this->output->set_status_header(422); }
         $this->load->view('productos/formulario', array(
             'usuario' => $this->usuario,
             'producto' => $producto,
