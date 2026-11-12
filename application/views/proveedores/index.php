@@ -62,46 +62,14 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
 
 <!-- Búsqueda de proveedores -->
 
-<form
-    action="<?= html_escape(site_url('proveedores')) ?>"
-    method="get"
-    class="filtros-inventario">
-
-    <input
-        type="search"
-        id="busqueda"
-        name="busqueda"
-        maxlength="150"
-        placeholder="Buscar proveedor..."
-        aria-label="Buscar proveedor"
-        value="<?= html_escape($busqueda) ?>">
-
-    <button type="submit">
-
-        <img
-            class="icono"
-            src="<?= html_escape(
-                        base_url('assets/iconos/buscar.svg')
-                    ) ?>"
-            alt=""
-            width="22"
-            height="22">
-
-        <span>Buscar</span>
-
-    </button>
-
-    <a
-        class="boton boton-secundario limpiar-filtros"
-        href="<?= html_escape(site_url('proveedores')) ?>">
-        <span>Limpiar</span>
-    </a>
-
-</form>
+<?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'proveedores', 'filtro_campos'=>array(
+'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre del proveedor','ejemplo'=>'Ej. Distribuidora del Centro')
+), 'filtro_valores'=>array('busqueda'=>$busqueda), 'filtro_extras'=>array())); ?>
 
 
 <!-- Listado de proveedores -->
 
+<?php $this->load->view('plantilla/resultados', array('resultado_total'=>count($proveedores), 'resultado_mostrados'=>count($proveedores), 'resultado_pagina'=>NULL)); ?>
 <div
     class="tabla"
     role="region"
@@ -262,20 +230,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
 
                 <tr>
 
-                    <td colspan="6">
-
-                        <?php if ($busqueda !== ''): ?>
-
-                            No se encontraron proveedores que coincidan
-                            con la búsqueda.
-
-                        <?php else: ?>
-
-                            Todavía no hay proveedores registrados.
-
-                        <?php endif; ?>
-
-                    </td>
+                    <td colspan="6"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>$busqueda!==''?'No se encontraron proveedores que coincidan con la búsqueda.':'Todavía no hay proveedores registrados.','vacio_descripcion'=>'Prueba otro nombre o registra los datos de tu proveedor.','vacio_url'=>$busqueda!==''?site_url('proveedores'):($usuario->puede('proveedores.gestionar')?site_url('compras/proveedor_nuevo'):NULL),'vacio_accion'=>$busqueda!==''?'Limpiar filtros':'Registrar proveedor')); ?></td>
 
                 </tr>
 

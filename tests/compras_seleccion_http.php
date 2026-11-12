@@ -247,7 +247,7 @@ try {
         'contacto' => '', 'telefono' => '', 'correo' => '', 'direccion' => '',
         'gestion_csrf' => ClienteCompras::token($edicionProveedor['body'])
     ));
-    comprobar_compra($duplicadoProveedor['status'] === 200
+    comprobar_compra($duplicadoProveedor['status'] === 422
         && str_contains($duplicadoProveedor['body'], 'Ya existe otro proveedor')
         && $db->query('SELECT nombre FROM proveedores WHERE id='.$proveedores[0])->fetch_assoc()['nombre'] === $nombreEditado,
         'Rechaza el nombre duplicado sin alterar el proveedor');

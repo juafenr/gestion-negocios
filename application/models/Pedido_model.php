@@ -211,6 +211,7 @@ class Pedido_model extends MY_Model
     {
         $consulta = $this->db
             ->select('id, numero, referencia, estado, confirmado_en')
+            ->select('GREATEST(0, TIMESTAMPDIFF(MINUTE, confirmado_en, CURRENT_TIMESTAMP)) AS minutos_desde_confirmacion', FALSE)
             ->where('empresa_id', $this->empresa_id())
             ->where_in('estado', array('pendiente', 'en_preparacion', 'listo'))
             ->order_by('confirmado_en', 'ASC')

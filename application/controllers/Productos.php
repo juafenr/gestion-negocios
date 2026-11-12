@@ -15,47 +15,20 @@ class Productos extends Protected_Controller
     {
         $this->solo_metodo('GET');
         $this->requerir_permiso('productos.ver');
-
-        $busqueda = $this->input->get('busqueda');
-        $disponibilidad = $this->input->get('disponibilidad');
-
-        if ($busqueda === NULL) {
-            $busqueda = '';
-        }
-
-        if ($disponibilidad === NULL) {
-            $disponibilidad = '';
-        }
-
-        if (
-            !is_string($busqueda)
-            || mb_strlen($busqueda, 'UTF-8') > 150
-        ) {
-            show_error('La búsqueda no es válida.', 400);
+        $busqueda = $this->input->get('busqueda') ?? '';
+        $pagina = $this->input->get('pagina');
+        $pagina = is_string($pagina) && ctype_digit($pagina) && strlen($pagina) <= 10 ? (int) $pagina : 1;
+        try {
+            $datos = $this->productos_model->paginar($busqueda, $pagina);
+        } catch (InvalidArgumentException $e) {
+            show_error(html_escape($e->getMessage()), 422);
+            return;
+        } catch (RuntimeException $e) {
+            show_error('No se pudieron consultar los productos. Intenta nuevamente.', 503);
             return;
         }
-
-        if (!in_array(
-            $disponibilidad,
-            array('', '0', '1'),
-            TRUE
-        )) {
-            show_error('El filtro de disponibilidad no es válido.', 400);
-            return;
-        }
-
-        $busqueda = trim($busqueda);
-
-        $this->load->view('productos/index', array(
-            'usuario' => $this->usuario,
-            'productos' => $this->productos_model->listar_catalogo(
-                $busqueda,
-                $disponibilidad
-            ),
-            'busqueda' => $busqueda,
-            'disponibilidad' => $disponibilidad,
-            'mensaje' => $this->session->flashdata('mensaje_producto')
-        ));
+        $datos['usuario'] = $this->usuario;
+        $this->load->view('productos/index', $datos);
     }
 
     public function ver($id = NULL)

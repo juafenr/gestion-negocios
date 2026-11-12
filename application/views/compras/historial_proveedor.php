@@ -79,30 +79,5 @@ $this->load->view('plantilla/cabecera', array(
     </table>
 </div>
 
-<?php if ($paginas > 1): ?>
-
-    <nav class="paginacion-inventario"
-        aria-label="Paginación del historial">
-
-        <?php for ($i = 1; $i <= $paginas; $i++): ?>
-
-            <a class="boton boton-secundario boton-compacto"
-                href="<?= html_escape(
-                            site_url(
-                                'compras/proveedor/' .
-                                    (int) $proveedor['id'] .
-                                    '/historial'
-                            ) . '?pagina=' . $i
-                        ) ?>"
-                <?= $i === $pagina
-                    ? 'aria-current="page"' : '' ?>>
-                <?= $i ?>
-            </a>
-
-        <?php endfor; ?>
-
-    </nav>
-
-<?php endif; ?>
-
+<?php $this->load->view('plantilla/paginacion',array('ruta_paginacion'=>'compras/proveedor/'.(int)$proveedor['id'].'/historial','parametros_paginacion'=>array(),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
 <?php $this->load->view('plantilla/pie'); ?>

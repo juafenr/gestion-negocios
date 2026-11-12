@@ -89,6 +89,7 @@ class Inventario extends Protected_Controller
             'insumos' => $this->insumos_model->listar($filtros),
             'filtros' => $filtros,
             'resumen' => $this->insumos_model->resumen(),
+            'total' => $total,
             'pagina' => $pagina,
             'paginas' => $paginas
         ));
@@ -247,70 +248,38 @@ class Inventario extends Protected_Controller
     public function movimiento($id = NULL)
     {
         $this->requerir_permiso('inventario.gestionar');
-
-        if (!is_string($id) || !ctype_digit($id) || strlen($id) > 10) {
-            show_404();
-            return;
-        }
-
+        if (!is_string($id) || !ctype_digit($id) || strlen($id)>10) { show_404(); return; }
         $insumo = $this->insumos_model->buscar($id);
-
-        if (!$insumo) {
-            show_404();
-            return;
+        if (!$insumo) { show_404(); return; }
+        $entrada = array('tipo'=>'entrada','cantidad'=>'','motivo'=>'');
+        $error = '';
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->solo_metodo('POST');
+            $tipo = $this->input->post('tipo');
+            $cantidad = $this->input->post('cantidad');
+            $motivo = $this->input->post('motivo');
+            foreach (array('tipo'=>$tipo,'cantidad'=>$cantidad,'motivo'=>$motivo) as $campo=>$valor) {
+                $entrada[$campo] = is_string($valor) ? $valor : '';
+            }
+            if (!is_string($motivo)) { $error = 'El motivo debe ser texto.'; }
+            else {
+                $motivo = trim($motivo);
+                if (!in_array($tipo,array('entrada','salida','ajuste'),TRUE)
+                    || !is_string($cantidad) || !preg_match('/^\d{1,8}(\.\d{1,2})?$/D',$cantidad)
+                    || ($tipo!=='ajuste' && (float)$cantidad<=0) || $motivo==='' || mb_strlen($motivo,'UTF-8')>255) {
+                    $error = 'Revisa el tipo, la cantidad y el motivo del movimiento.';
+                } elseif (!$this->movimientos_model->registrar((int)$id,$tipo,$cantidad,$motivo,$this->usuario->id())) {
+                    $error = 'No se pudo registrar el movimiento. Verifica las existencias y la cantidad indicada.';
+                } else {
+                    $this->session->set_flashdata('mensaje_inventario','Movimiento registrado correctamente.');
+                    redirect('inventario/'.$id.'/historial');
+                    return;
+                }
+            }
+            $this->output->set_status_header(422);
         }
-
-        if ($this->input->method(TRUE) === 'GET') {
-            $this->load->view('inventario/movimiento', array(
-                'usuario' => $this->usuario,
-                'insumo' => $insumo
-            ));
-            return;
-        }
-
-        $this->solo_metodo('POST');
-
-        $tipo = $this->input->post('tipo', TRUE);
-        $cantidad = $this->input->post('cantidad', TRUE);
-        $motivo = $this->input->post('motivo');
-        if (!is_string($motivo)) {
-            show_error('El motivo debe ser texto.', 422);
-            return;
-        }
-        $motivo = trim($motivo);
-
-        if (
-            !in_array(
-                $tipo,
-                array('entrada', 'salida', 'ajuste'),
-                TRUE
-            ) ||
-            !is_string($cantidad) ||
-            !preg_match(
-                '/^\d{1,8}(\.\d{1,2})?$/D',
-                $cantidad
-            ) ||
-            ($tipo !== 'ajuste' && (float) $cantidad <= 0) ||
-            $motivo === '' ||
-            mb_strlen($motivo, 'UTF-8') > 255
-        ) {
-            show_error('Datos del movimiento inválidos.', 422);
-            return;
-        }
-
-        $registrado = $this->movimientos_model->registrar((int) $id, $tipo, $cantidad, $motivo, $this->usuario->id());
-
-        if (!$registrado) {
-            show_error('No se pudo registrar el movimiento. ' . 'Verifica las existencias.', 422);
-            return;
-        }
-
-        $this->session->set_flashdata(
-            'mensaje_inventario',
-            'Movimiento registrado correctamente.'
-        );
-
-        redirect('inventario/' . $id . '/historial');
+        $this->load->view('inventario/movimiento',array('usuario'=>$this->usuario,'insumo'=>$insumo,
+            'entrada'=>$entrada,'error_movimiento'=>$error));
     }
 
     public function historial($id = NULL)

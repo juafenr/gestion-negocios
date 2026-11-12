@@ -1,42 +1,10 @@
-<?php $this->load->view('plantilla/cabecera', array('titulo' => 'Pedidos', 'seccion' => 'pedidos', 'usuario' => $usuario)); ?>
-
-<p>
-    <a class="boton boton-secundario" href="<?= html_escape(site_url('pedidos')) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/volver.svg')) ?>" alt="" width="22" height="22"><span>Volver a pedidos</span></a>
-</p>
-
-<section class="recuadro formulario formulario-pedido">
-
-    <h1>Nuevo pedido</h1><p class="descripcion">Indica una mesa, un cliente o una referencia. Después podrás agregar los productos.</p>
-
-    <?php if (validation_errors()): ?>
-
-        <div class="error" role="alert">
-            <?= validation_errors() ?>
-        </div>
-
-    <?php endif; ?>
-
-    <?= form_open('pedidos/crear') ?>
-
-    <label for="referencia">
-        Referencia del pedido
-    </label>
-
-    <input
-        id="referencia"
-        name="referencia"
-        type="text"
-        maxlength="100"
-        required
-        placeholder="Ej. Mesa 5, Cliente López, Orden 123"
-        value="<?= html_escape(
-                    set_value('referencia')
-                ) ?>">
-
-    <button type="submit"><img class="icono" src="<?= html_escape(base_url('assets/iconos/agregar.svg')) ?>" alt="" width="22" height="22"><span>Crear pedido</span></button>
-
-    <?= form_close() ?>
-
-</section>
-
+<?php $this->load->view('plantilla/cabecera',array('titulo'=>'Nuevo pedido','seccion'=>'pedidos','usuario'=>$usuario)); ?>
+<p><a class="boton boton-secundario" href="<?= html_escape(site_url('pedidos')) ?>">← Volver a pedidos</a></p>
+<div class="encabezado-formulario"><p class="sobretitulo">PEDIDOS</p><h1>Nuevo pedido</h1><p class="descripcion">Primero identifica el pedido. Después podrás agregar los productos y confirmarlo.</p></div>
+<section class="recuadro panel-formulario">
+<?php if (validation_errors()): ?><div class="error" role="alert"><?= validation_errors() ?></div><?php endif; ?>
+<?= form_open('pedidos/crear',array('class'=>'formulario-ui','data-ui-form'=>'')) ?>
+<div class="campo"><label for="referencia">Referencia del pedido <span aria-hidden="true">*</span></label><input id="referencia" name="referencia" maxlength="100" required placeholder="Ej. Mesa 5, Cliente López u Orden 123" value="<?= html_escape(set_value('referencia')) ?>" aria-describedby="ayuda-referencia"><p id="ayuda-referencia" class="ayuda-campo">Usa una referencia que el equipo pueda reconocer fácilmente.</p></div>
+<div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('pedidos')) ?>">Cancelar</a><button type="submit">Crear pedido</button></div>
+<?= form_close() ?></section>
 <?php $this->load->view('plantilla/pie'); ?>

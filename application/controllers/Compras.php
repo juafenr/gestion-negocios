@@ -30,7 +30,17 @@ class Compras extends Protected_Controller
     {
         $this->solo_metodo('GET');
         $p = $this->input->get('pagina');
-        $datos = $this->compras_model->listar(is_string($p) && ctype_digit($p) ? (int)$p : 1);
+        try {
+            $filtros = array(
+                'busqueda'=>Validacion_negocio::texto($this->input->get('busqueda') ?? '', 'Búsqueda',150,FALSE),
+                'estado'=>Validacion_negocio::texto($this->input->get('estado') ?? '', 'Estado',20,FALSE)
+            );
+            if (!in_array($filtros['estado'],array('','borrador','confirmada','enviada','recibida','cancelada'),TRUE)) {
+                throw new InvalidArgumentException('Selecciona un estado válido para las compras.');
+            }
+            $datos = $this->compras_model->listar(is_string($p) && ctype_digit($p) && strlen($p)<=10 ? (int)$p : 1, $filtros);
+        } catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()),422); return; }
+        $datos['filtros'] = $filtros;
         $datos['usuario'] = $this->usuario;
         $datos['mensaje'] = $this->session->flashdata('mensaje_compra');
         $datos['creadas'] = $this->session->flashdata('compras_creadas');

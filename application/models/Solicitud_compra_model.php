@@ -61,14 +61,21 @@ class Solicitud_compra_model extends MY_Model
     {
         return $this->q('SELECT id,nombre,unidad_medida,proveedor_id FROM insumos WHERE empresa_id=? AND activo=1 ORDER BY nombre', array($this->empresa_id()))->result_array();
     }
-    public function listar($pagina)
+    public function listar($pagina, array $filtros = array())
     {
         $empresa = $this->empresa_id();
-        $n = $this->q('SELECT COUNT(*) cantidad FROM solicitudes_compra WHERE empresa_id=?', array($empresa))->row_array();
+        $where = ' WHERE empresa_id=?'; $valores = array($empresa);
+        if (($filtros['busqueda'] ?? '') !== '') {
+            $where .= " AND (proveedor_nombre LIKE ? ESCAPE '!' OR CAST(numero AS CHAR) LIKE ? ESCAPE '!')";
+            $texto = '%'.$this->db->escape_like_str($filtros['busqueda']).'%';
+            $valores[] = $texto; $valores[] = $texto;
+        }
+        if (($filtros['estado'] ?? '') !== '') { $where .= ' AND estado=?'; $valores[] = $filtros['estado']; }
+        $n = $this->q('SELECT COUNT(*) cantidad FROM solicitudes_compra'.$where, $valores)->row_array();
         $paginas = max(1, (int)ceil((int)$n['cantidad'] / 25));
         $pagina = max(1, min((int)$pagina, $paginas));
-        $filas = $this->q('SELECT * FROM solicitudes_compra WHERE empresa_id=? ORDER BY numero DESC LIMIT 25 OFFSET ?', array($empresa, ($pagina - 1) * 25))->result_array();
-        return array('solicitudes' => $filas, 'pagina' => $pagina, 'paginas' => $paginas);
+        $filas = $this->q('SELECT * FROM solicitudes_compra'.$where.' ORDER BY numero DESC LIMIT 25 OFFSET ?', array_merge($valores,array(($pagina-1)*25)))->result_array();
+        return array('solicitudes'=>$filas,'pagina'=>$pagina,'paginas'=>$paginas,'total'=>(int)$n['cantidad']);
     }
     public function buscar($id)
     {

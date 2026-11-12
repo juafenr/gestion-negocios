@@ -14,9 +14,20 @@ class Usuarios extends Protected_Controller
     {
         $this->solo_metodo('GET');
         $this->requerir_permiso('usuarios.ver');
+        try {
+            $filtros = array();
+            foreach (array('busqueda'=>150,'estado'=>20,'rol'=>20) as $campo=>$limite) {
+                $filtros[$campo] = Validacion_negocio::texto($this->input->get($campo) ?? '', $campo, $limite, FALSE);
+            }
+            if (!in_array($filtros['estado'],array('','activos','inactivos'),TRUE)
+                || !in_array($filtros['rol'],array('','administrador','cajero','cocinero'),TRUE)) {
+                throw new InvalidArgumentException('Selecciona filtros válidos para los usuarios.');
+            }
+        } catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()),422); return; }
         $this->load->view('usuarios/index', array(
             'usuario' => $this->usuario,
-            'usuarios' => $this->usuarios_model->listar_empresa()
+            'usuarios' => $this->usuarios_model->listar_empresa($filtros),
+            'filtros' => $filtros
         ));
     }
 

@@ -39,86 +39,13 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
     <?php endif; ?>
 </div>
 
-<?php if (!empty($mensaje)): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+<?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'productos', 'filtro_campos'=>array(
+'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre o código','ejemplo'=>'Ej. Cuaderno o A-001')
+), 'filtro_valores'=>array('busqueda'=>$busqueda), 'filtro_extras'=>array())); ?>
+<?php $this->load->view('plantilla/resultados', array('resultado_total'=>$total, 'resultado_mostrados'=>count($productos), 'resultado_pagina'=>$pagina)); ?>
 
-<section class="recuadro">
-    <h2>Buscar productos</h2>
 
-    <form
-        action="<?= html_escape(site_url('productos')) ?>"
-        method="get"
-        class="formulario">
-
-        <label for="busqueda">
-            Nombre, código o descripción
-        </label>
-
-        <input
-            type="search"
-            id="busqueda"
-            name="busqueda"
-            maxlength="150"
-            placeholder="Escribe el producto que buscas"
-            value="<?= html_escape($busqueda) ?>">
-
-        <label for="disponibilidad">Disponibilidad del producto</label>
-
-        <select id="disponibilidad" name="disponibilidad">
-            <option
-                value=""
-                <?= $disponibilidad === '' ? 'selected' : '' ?>>
-                Todos
-            </option>
-
-            <option
-                value="1"
-                <?= $disponibilidad === '1' ? 'selected' : '' ?>>
-                Disponibles
-            </option>
-
-            <option
-                value="0"
-                <?= $disponibilidad === '0' ? 'selected' : '' ?>>
-                No disponibles
-            </option>
-        </select>
-
-        <button type="submit">
-            <img
-                class="icono"
-                src="<?= html_escape(
-                    base_url('assets/iconos/buscar.svg')
-                ) ?>"
-                alt=""
-                width="22"
-                height="22">
-            <span>Filtrar</span>
-        </button>
-
-        <a
-            class="boton boton-secundario"
-            href="<?= html_escape(site_url('productos')) ?>">
-            Limpiar filtros
-        </a>
-    </form>
-</section>
-
-<p role="status">
-    <strong><?= count($productos) ?></strong>
-    <?= count($productos) === 1
-        ? 'producto encontrado.'
-        : 'productos encontrados.' ?>
-</p>
-
-<div
-    class="tabla"
-    role="region"
-    aria-label="Catálogo de productos"
-    tabindex="0">
+<div class="tabla">
 
     <table>
         <thead>
@@ -211,15 +138,12 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
 
             <?php if (empty($productos)): ?>
                 <tr>
-                    <td colspan="6">
-                        <?= $hay_filtros
-                            ? 'No se encontraron productos con esos filtros.'
-                            : 'Todavía no hay productos registrados.' ?>
-                    </td>
+                    <td colspan="4"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>$busqueda!==''?'No hay productos que coincidan con la búsqueda.':'Todavía no hay productos registrados.','vacio_descripcion'=>'Los productos disponibles en tu empresa aparecerán en este listado.','vacio_url'=>$busqueda!==''?site_url('productos'):NULL,'vacio_accion'=>'Limpiar filtros')); ?></td>
                 </tr>
             <?php endif; ?>
         </tbody>
     </table>
 </div>
 
+<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'productos','parametros_paginacion'=>array('busqueda'=>$busqueda),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
 <?php $this->load->view('plantilla/pie'); ?>

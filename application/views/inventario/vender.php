@@ -20,7 +20,7 @@ $this->load->view('plantilla/cabecera', array(
     </a>
 </p>
 
-<section class="recuadro formulario-inventario">
+<section class="recuadro panel-formulario">
 
     <h1>Habilitar artículo para venta</h1>
 
@@ -48,10 +48,10 @@ $this->load->view('plantilla/cabecera', array(
 
     <?= form_open(
         'inventario/vender/' . (int) $insumo['id'],
-        array('class' => 'formulario')
+        array('class'=>'formulario-ui','data-ui-form'=>'')
     ) ?>
 
-    <label for="sku">Código del producto</label>
+    <div class="campos-formulario"><div class="campo"><label for="sku">Código del producto</label>
 
     <input
         type="text"
@@ -62,7 +62,7 @@ $this->load->view('plantilla/cabecera', array(
         required
         value="<?= html_escape($sku) ?>">
 
-    <label for="precio">
+    </div><div class="campo"><label for="precio">
         Precio de venta en Q por
         <?= html_escape($insumo['unidad_medida']) ?>
     </label>
@@ -78,13 +78,13 @@ $this->load->view('plantilla/cabecera', array(
         required
         value="<?= html_escape($precio) ?>">
 
-    <p>
+    </div></div><p class="ayuda-campo">
         Actualmente, los pedidos admiten cantidades enteras.
         Por ejemplo, si la unidad es kg, una cantidad de 2
         representa 2 kg.
     </p>
 
-    <button type="submit">
+    <div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('inventario')) ?>">Cancelar</a><button type="submit">
         <img
             class="icono"
             src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>"
@@ -92,7 +92,7 @@ $this->load->view('plantilla/cabecera', array(
             width="22"
             height="22">
         <span>Habilitar para venta</span>
-    </button>
+    </button></div>
 
     <?= form_close() ?>
 

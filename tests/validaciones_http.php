@@ -193,9 +193,9 @@ try {
     $r=$a->post('inventario/crear',$insumo);exigir(in_array($r['status'],array(302,303),TRUE) && fila("SELECT cantidad_actual FROM insumos WHERE nombre='Nuevo insumo'")['cantidad_actual']==='0.00','Inventario acepta cero inicial');
     $a->invalido('inventario/1/movimiento',array('tipo'=>'salida','cantidad'=>'11','motivo'=>'Prueba'),'Movimiento no deja existencia negativa');
     $a->invalido('inventario/1/movimiento',array('tipo'=>'entrada','cantidad'=>'1','motivo'=>' '),'Movimiento exige motivo');
-    $a->invalido('inventario/2/vender',array('sku'=>'SAL','precio'=>'-1'),'Producto rechaza precio negativo');
-    $a->invalido('inventario/2/vender',array('sku'=>'','precio'=>'1'),'Producto exige código');
-    $r=$a->post('inventario/2/vender',array('sku'=>'SAL','precio'=>'0'));exigir(in_array($r['status'],array(302,303),TRUE) && fila("SELECT precio FROM productos WHERE sku='SAL'")['precio']==='0.00','Producto admite precio cero');
+    $a->invalido('inventario/vender/2',array('sku'=>'SAL','precio'=>'-1'),'Producto rechaza precio negativo');
+    $a->invalido('inventario/vender/2',array('sku'=>'','precio'=>'1'),'Producto exige código');
+    $r=$a->post('inventario/vender/2',array('sku'=>'SAL','precio'=>'0'));exigir(in_array($r['status'],array(302,303),TRUE) && fila("SELECT precio FROM productos WHERE sku='SAL'")['precio']==='0.00','Producto admite precio cero');
 
     foreach (array('', '   ', array('Mesa')) as $ref) { $a->invalido('pedidos/crear',array('referencia'=>$ref),'Pedido exige referencia válida'); }
     $r=$a->post('pedidos/crear',array('referencia'=>'Pedido aceptación'));exigir(in_array($r['status'],array(302,303),TRUE),'Crear pedido válido');
@@ -257,6 +257,100 @@ try {
     $pantalla=$a->seguir($r);exigir(huella()===$antes && strpos($pantalla['body'],'no es válida')!==FALSE,'Generación agrupada rechaza fecha imposible');
     $r=$a->post('compras/generar',array('fecha'=>'2026-11-02','observaciones'=>''));exigir($r['status']===303 && (int)fila('SELECT COUNT(*) n FROM solicitudes_compra')['n']===2,'Generación agrupada válida');
     $antes=huella();$a->post('compras/generar',array('fecha'=>'2026-11-02','observaciones'=>''));exigir(huella()===$antes,'Reintento de generación no duplica documentos');
+    // Inicio, catálogo y cocina: lecturas reales con paginación, permisos y dos empresas.
+    for ($i=1;$i<=26;$i++) {
+        $q=$db->prepare('INSERT INTO productos (empresa_id,sku,nombre,precio) VALUES (1,?,?,10)');
+        $sku='busqueda-'.str_pad((string)$i,2,'0',STR_PAD_LEFT);$nombre='Producto paginado '.$sku;
+        $q->bind_param('ss',$sku,$nombre);$q->execute();
+    }
+    $db->query("INSERT INTO productos (empresa_id,sku,nombre,precio) VALUES (2,'busqueda-ajena','Producto ajeno exclusivo',999)");
+    $q=$db->prepare('INSERT INTO productos (empresa_id,sku,nombre,precio) VALUES (1,?,?,10)');
+    $sku='literal';$nombre='Especial %_ <script>alert(1)</script>';$q->bind_param('ss',$sku,$nombre);$q->execute();
+    $antes=huella();
+    $r=$a->pedir('productos?busqueda=busqueda-');
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===25 && strpos($r['body'],'Página 1 de 2')!==FALSE,'Catálogo limita la primera página a 25 productos');
+    exigir(strpos($r['body'],'Producto ajeno exclusivo')===FALSE,'Búsqueda por código mantiene el aislamiento por empresa');
+    exigir(strpos($r['body'],'busqueda=busqueda-')!==FALSE,'Paginación conserva la búsqueda');
+    $r=$a->pedir('productos?busqueda=busqueda-&pagina=9999999999');
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===1 && strpos($r['body'],'Página 2 de 2')!==FALSE,'Página fuera de rango muestra la última página válida');
+    $r=$a->pedir('productos?busqueda=busqueda-&pagina=-1');
+    exigir($r['status']===200 && strpos($r['body'],'Página 1 de 2')!==FALSE,'Página negativa vuelve a la primera página');
+    $r=$a->pedir('productos?busqueda='.rawurlencode('%_'));
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===1 && strpos($r['body'],'&lt;script&gt;')!==FALSE && strpos($r['body'],'<script>')===FALSE,'Búsqueda literal de comodines y nombres escapados contra XSS');
+    $r=$a->pedir('productos?busqueda='.rawurlencode("' OR 1=1 --"));
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===0,'La búsqueda no interpreta SQL');
+    exigir($a->pedir('productos?busqueda[]=x')['status']===422,'Búsqueda rechaza arreglos');
+    exigir($a->pedir('productos?busqueda='.str_repeat('a',151))['status']===422,'Búsqueda limita la longitud');
+    $r=$b->pedir('productos?busqueda=busqueda-');
+    exigir($r['status']===200 && substr_count($r['body'],'Ver detalle')===1 && strpos($r['body'],'Producto paginado')===FALSE,'Empresa B solo encuentra su catálogo');
+    exigir(huella()===$antes,'Consultar el catálogo no modifica datos');
+
+    $db->query("INSERT INTO pedidos (empresa_id,numero,usuario_id,referencia,estado,estado_pago,total,confirmado_en)
+        VALUES (1,1001,1,'Cocina de prueba','pendiente','pendiente',100,DATE_SUB(NOW(),INTERVAL 12 MINUTE)),
+               (1,1002,1,'Venta de hoy','entregado','pagado',100,NOW()),
+               (2,1001,2,'Venta ajena','entregado','pagado',999,NOW())");
+    $ayer=(new DateTimeImmutable('yesterday'))->format('Y-m-d');
+    $q=$db->prepare('UPDATE ventas SET fecha=?');$q->bind_param('s',$ayer);$q->execute();
+    $hoy=date('Y-m-d H:i:s');
+    foreach (array(array(1,1002,1,'100.00','10.00','110.00'),array(2,1001,2,'999.00','99.90','1098.90')) as $v) {
+        $q=$db->prepare('INSERT INTO ventas (empresa_id,pedido_id,pedido_numero,referencia,usuario_id,subtotal,propina,total,efectivo,credito,debito,fecha)
+            SELECT empresa_id,id,numero,referencia,?,?,?,?,?,0,0,? FROM pedidos WHERE empresa_id=? AND numero=?');
+        $q->bind_param('isssssii',$v[2],$v[3],$v[4],$v[5],$v[5],$hoy,$v[0],$v[1]);$q->execute();
+    }
+    $r=$a->pedir('inicio');
+    exigir($r['status']===200 && strpos($r['body'],'Resumen de tu empresa')!==FALSE && strpos($r['body'],'Q 100.00')!==FALSE && strpos($r['body'],'Q 999.00')===FALSE,'Inicio muestra ventas propias sin mezclar empresas ni propina');
+    exigir(strpos($r['body'],'El resumen no está disponible')===FALSE,'Las consultas de inicio se completan correctamente');
+    exigir(substr_count($r['body'],'<circle cx=')===7 && strpos($r['body'],'Ver importes por día')!==FALSE,'La gráfica incluye siete días y una tabla con los importes exactos');
+    $r=$b->pedir('inicio');
+    exigir($r['status']===200 && strpos($r['body'],'Q 999.00')!==FALSE && strpos($r['body'],'Q 100.00')===FALSE,'Resumen de empresa B aislado');
+    $r=$caja->pedir('inicio');
+    exigir($r['status']===200 && strpos($r['body'],'Pedidos por cobrar')!==FALSE && strpos($r['body'],'Ventas de hoy sin propina')===FALSE,'Cajero consulta pendientes sin acceder al historial de ventas');
+    $r=$cocina->pedir('inicio');
+    exigir($r['status']===200 && strpos($r['body'],'Pedidos en cocina')!==FALSE && strpos($r['body'],'Pedidos por cobrar')===FALSE && strpos($r['body'],'Insumos por reponer')===FALSE,'Cocinero solo recibe indicadores autorizados');
+    exigir(strpos($r['body'],'grafico-ventas')===FALSE,'La gráfica financiera no se envía a un rol sin acceso a ventas');
+    $r=$cocina->pedir('cocina');
+    exigir($r['status']===200 && strpos($r['body'],'Actualizar pedidos')!==FALSE && preg_match('/Tiempo desde la confirmación:<\/strong>\s+12 min/u',$r['body']),'Cocina muestra actualización manual y minutos desde confirmación');
+    $r=$invitado->pedir('productos');
+    exigir(in_array($r['status'],array(302,303,307),TRUE),'Catálogo exige autenticación');
+    // Filtros compartidos: usuarios y compras, con datos de dos empresas.
+    $db->query("INSERT INTO usuarios (empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash,activo)
+        SELECT 1,id,'Cuenta de soporte','soporte_inactivo','soporte@prueba.test','sin_login',0 FROM roles WHERE codigo='cajero'");
+    $db->query("INSERT INTO usuarios (empresa_id,rol_id,nombre,nombre_usuario,correo,password_hash,activo)
+        SELECT 2,id,'Cuenta de soporte ajena','soporte_ajeno','soporte-b@prueba.test','sin_login',0 FROM roles WHERE codigo='cajero'");
+    $antes=huella();$r=$a->pedir('usuarios?busqueda=soporte');
+    exigir($r['status']===200 && strpos($r['body'],'<td>soporte_inactivo</td>')!==FALSE && strpos($r['body'],'soporte_ajeno')===FALSE,'Búsqueda de usuarios aislada por empresa');
+    $r=$a->pedir('usuarios?estado=inactivos&rol=cajero');
+    exigir($r['status']===200 && strpos($r['body'],'<td>soporte_inactivo</td>')!==FALSE && strpos($r['body'],'<td>admin_a</td>')===FALSE,'Filtros de estado y rol se combinan');
+    exigir(strpos($r['body'],'Quitar filtro')!==FALSE && strpos($r['body'],'rol=cajero')!==FALSE,'Los filtros activos permiten quitar un criterio conservando los demás');
+    exigir($a->pedir('usuarios?busqueda[]=x')['status']===422,'Búsqueda de usuarios rechaza arreglos');
+    exigir($a->pedir('usuarios?rol=inexistente')['status']===422,'Filtro de rol valida sus opciones');
+    exigir($caja->pedir('usuarios?busqueda=soporte')['status']===403,'Los filtros no omiten los permisos de usuarios');
+    exigir(huella()===$antes,'Filtrar usuarios no cambia los datos');
+    for($i=1;$i<=26;$i++) {
+        $q=$db->prepare("INSERT INTO solicitudes_compra (empresa_id,numero,proveedor_id,proveedor_nombre,fecha,clave,creado_por,actualizado_por)
+            VALUES (1,?,1,'Verificación proveedor',?,?,1,1)");
+        $numero=20000+$i;$fecha=date('Y-m-d');$clave=bin2hex(random_bytes(32));$q->bind_param('iss',$numero,$fecha,$clave);$q->execute();
+    }
+    $q=$db->prepare("INSERT INTO solicitudes_compra (empresa_id,numero,proveedor_id,proveedor_nombre,fecha,clave,creado_por,actualizado_por)
+        VALUES (2,20001,2,'Verificación proveedor',?,?,2,2)");
+    $clave=bin2hex(random_bytes(32));$q->bind_param('ss',$fecha,$clave);$q->execute();$solicitud_b=$db->insert_id;
+    $antes=huella();$ruta='compras?busqueda='.rawurlencode('Verificación proveedor').'&estado=borrador';
+    $r=$a->pedir($ruta);
+    exigir($r['status']===200 && substr_count($r['body'],'>Revisar</a>')===25 && strpos($r['body'],'Página 1 de 2')!==FALSE,'Compras filtra y pagina 25 resultados de la empresa');
+    exigir(strpos($r['body'],'estado=borrador&amp;pagina=2')!==FALSE,'La paginación de compras conserva los filtros');
+    $r=$a->pedir($ruta.'&pagina=99999');
+    exigir($r['status']===200 && substr_count($r['body'],'>Revisar</a>')===1 && strpos($r['body'],'Página 2 de 2')!==FALSE,'Compras ajusta una página fuera de rango al resultado filtrado');
+    $r=$b->pedir($ruta);
+    exigir($r['status']===200 && substr_count($r['body'],'>Revisar</a>')===1 && strpos($r['body'],'compras/'.$solicitud_b)!==FALSE,'Empresa B solo obtiene sus solicitudes filtradas');
+    $r=$a->pedir('compras?busqueda='.rawurlencode("%_' OR 1=1 --"));
+    exigir($r['status']===200 && substr_count($r['body'],'>Revisar</a>')===0,'Compras trata comodines y SQL como texto de búsqueda');
+    exigir($a->pedir('compras?estado[]=borrador')['status']===422,'Estado de compra rechaza arreglos');
+    exigir(huella()===$antes,'Filtrar compras no modifica datos');
+    $antes=huella();$r=$a->post('inventario/1/movimiento',array('tipo'=>'salida','cantidad'=>'99999999.99','motivo'=>'Revisión de existencias'),'inventario/1/movimiento');
+    exigir($r['status']===422 && ClienteValidacion::campo($r['body'],'cantidad')==='99999999.99'
+        && ClienteValidacion::campo($r['body'],'motivo')==='Revisión de existencias' && huella()===$antes,'Movimiento rechazado conserva lo escrito y no cambia el inventario');
+    $r=$a->pedir('inventario/1/historial');
+    exigir($r['status']===200 && strpos($r['body'],'id="menu-principal"')!==FALSE && strpos($r['body'],'formularios.js')!==FALSE,'El historial de inventario usa la plantilla uniforme');
     $reporte['resultado']='APROBADO';echo "\nAPROBADO: $pasadas comprobaciones HTTP y de persistencia.\n";
 } catch (Throwable $e) {
     $codigo=1;$reporte['error']=$e->getMessage();fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");

@@ -19,6 +19,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
         </p>
     </div>
 
+    <div class="acciones-cabecera">
     <a class="boton boton-secundario"
         href="<?= html_escape(site_url('proveedores')) ?>">
         Volver
@@ -34,6 +35,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
                 ) ?>">
         Historial de compras
     </a>
+    </div>
 </div>
 
 <?php if ($mensaje): ?>
