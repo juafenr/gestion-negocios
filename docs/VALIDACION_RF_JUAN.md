@@ -1,6 +1,21 @@
 # RF-61 y RF-62: validación y aceptación
 
-Estado al 2026-11-02: reglas revisadas sobre `gestion-negocios(10).zip`, que ya incluye usuarios, cocina, proveedores, selección agrupada y recepciones. Se agregaron correcciones y aceptación automatizada HTTP. **La nueva suite no se ha ejecutado aquí por falta de PHP/MySQL; el cierre de aceptación requiere el resultado real en XAMPP.** Las pruebas previas aprobadas reportadas por el equipo se conservan como antecedente, no como evidencia de esta actualización.
+## Verificación local del 12 de noviembre de 2026
+
+En `upstream/main` `80bd32b`, la suite `php tests/ejecutar_validaciones.php` terminó con
+`APROBADO: sintaxis, reglas, integración de modelos y aceptación HTTP` usando PHP 8.2.12
+y MariaDB 10.4.32 de XAMPP. La suite creó y eliminó sus bases temporales. El registro local
+está en `test-results/validaciones-ejecucion.log` y los casos en
+`test-results/validaciones-http.json` (archivos ignorados por Git).
+
+La base local de demostración `gestion_rbac_visual_demo` recibió la migración del catálogo
+tras un respaldo SQL; el diagnóstico posterior indicó `Sin cambios pendientes`. Una
+revisión visual local del catálogo comprobó alta, edición, filtros, mensajes de error y
+el historial de precios. También aprobaron `tests/cocina_http.php` y
+`tests/compras_seleccion_http.php` desde la copia de XAMPP, con limpieza de sus datos
+temporales. Sigue correspondiendo al equipo validar la experiencia con usuarios finales.
+
+Estado histórico al 2026-11-02: reglas revisadas sobre `gestion-negocios(10).zip`, que ya incluía usuarios, cocina, proveedores, selección agrupada y recepciones. La suite todavía no se había ejecutado por falta de PHP/MySQL en ese entorno. Las pruebas previas del equipo se conservan como antecedente; la verificación local posterior se documenta arriba.
 
 ## Requisitos de Juan Fernando
 
