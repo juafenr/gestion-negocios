@@ -12,9 +12,20 @@ class Productos extends Protected_Controller
     {
         $this->solo_metodo('GET');
         $this->requerir_permiso('productos.ver');
-        $this->load->view('productos/index', array(
-            'usuario' => $this->usuario, 'productos' => $this->productos_model->listar()
-        ));
+        $busqueda = $this->input->get('busqueda') ?? '';
+        $pagina = $this->input->get('pagina');
+        $pagina = is_string($pagina) && ctype_digit($pagina) && strlen($pagina) <= 10 ? (int) $pagina : 1;
+        try {
+            $datos = $this->productos_model->paginar($busqueda, $pagina);
+        } catch (InvalidArgumentException $e) {
+            show_error(html_escape($e->getMessage()), 422);
+            return;
+        } catch (RuntimeException $e) {
+            show_error('No se pudieron consultar los productos. Intenta nuevamente.', 503);
+            return;
+        }
+        $datos['usuario'] = $this->usuario;
+        $this->load->view('productos/index', $datos);
     }
     public function ver($id = NULL)
     {

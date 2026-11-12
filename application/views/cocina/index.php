@@ -7,6 +7,9 @@
     ordenados del más antiguo al más reciente.
 </p>
 
+<p><a class="boton boton-secundario" href="<?= html_escape(site_url('cocina')) ?>">Actualizar pedidos</a></p>
+<p class="nota">Actualiza la lista para consultar nuevos pedidos y el tiempo transcurrido desde su confirmación.</p>
+
 <?php if ($mensaje = $this->session->flashdata('mensaje_cocina')): ?>
     <div class="aviso" role="status">
         <?= html_escape($mensaje) ?>
@@ -34,6 +37,9 @@
                 </p>
 
                 <h3>Productos</h3>
+                <?php if ($pedido['minutos_desde_confirmacion'] !== NULL): ?>
+                <p><strong>Tiempo desde la confirmación:</strong> <?= (int) $pedido['minutos_desde_confirmacion'] ?> min</p>
+                <?php endif; ?>
                 <ul class="productos-cocina">
                     <?php foreach ($pedido['detalles'] as $detalle): ?>
                         <li>

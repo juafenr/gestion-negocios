@@ -12,6 +12,33 @@ class Producto_model extends MY_Model
         if (!$q) { show_error('No se pudieron consultar los productos.', 503); }
         return $q->result_array();
     }
+    public function paginar($busqueda, $pagina)
+    {
+        $busqueda = Validacion_negocio::texto($busqueda, 'Búsqueda', 150, FALSE);
+        $empresa = $this->empresa_id();
+        // Agrupar los OR impide que una coincidencia por código omita la empresa.
+        $filtrar = function () use ($empresa, $busqueda) {
+            $this->db->from('productos')->where('empresa_id', $empresa);
+            if ($busqueda !== '') {
+                $this->db->group_start()->like('nombre', $busqueda)
+                    ->or_like('sku', $busqueda)->group_end();
+            }
+        };
+        $filtrar();
+        $conteo = $this->db->select('COUNT(*) AS cantidad', FALSE)->get();
+        if (!$conteo) { throw new RuntimeException('No se pudieron consultar los productos.'); }
+        $total = (int) $conteo->row_array()['cantidad'];
+        $paginas = max(1, (int) ceil($total / 25));
+        $pagina = max(1, min((int) $pagina, $paginas));
+        $filtrar();
+        $consulta = $this->db->select('id, nombre, sku, precio')
+            ->order_by('nombre', 'ASC')->order_by('id', 'ASC')
+            ->limit(25, ($pagina - 1) * 25)->get();
+        if (!$consulta) { throw new RuntimeException('No se pudieron consultar los productos.'); }
+        return array('productos'=>$consulta->result_array(), 'total'=>$total,
+            'pagina'=>$pagina, 'paginas'=>$paginas, 'busqueda'=>$busqueda);
+    }
+
     public function buscar($id)
     {
         $q = $this->db->select('id, nombre, sku, precio')->from('productos')

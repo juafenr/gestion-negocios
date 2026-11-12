@@ -9,6 +9,33 @@
     </div>
     <span class="bienvenida-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/negocio.svg')) ?>" alt="" width="22" height="22"></span>
 </section>
+<?php if ($aviso_resumen !== ''): ?>
+    <p class="aviso" role="status"><?= html_escape($aviso_resumen) ?></p>
+<?php endif; ?>
+<?php if ($resumen): ?>
+<section aria-labelledby="titulo-resumen">
+    <h2 id="titulo-resumen">Resumen de tu empresa</h2>
+    <div class="resumen-pagos">
+        <?php if (isset($resumen['ventas'])): ?>
+        <div class="recuadro">
+            <span>Ventas de hoy sin propina</span>
+            <strong><?= negocio_moneda($resumen['ventas']['consumo']) ?></strong>
+            <p><?= (int) $resumen['ventas']['cantidad'] ?> pedidos pagados · Propinas: <?= negocio_moneda($resumen['ventas']['propina']) ?></p>
+            <a href="<?= html_escape(site_url('ventas').'?'.http_build_query(array('desde'=>date('Y-m-d'), 'hasta'=>date('Y-m-d')))) ?>">Consultar ventas de hoy</a>
+        </div>
+        <?php endif; ?>
+        <?php if (isset($resumen['cocina'])): ?>
+        <div class="recuadro"><span>Pedidos en cocina</span><strong><?= $resumen['cocina'] ?></strong><p>Pendientes, en preparación o listos.</p><a href="<?= html_escape(site_url('cocina')) ?>">Consultar cocina</a></div>
+        <?php endif; ?>
+        <?php if (isset($resumen['por_cobrar'])): ?>
+        <div class="recuadro"><span>Pedidos por cobrar</span><strong><?= $resumen['por_cobrar'] ?></strong><p>Confirmados con pago pendiente o parcial.</p><a href="<?= html_escape(site_url('pagos')) ?>">Consultar pagos</a></div>
+        <?php endif; ?>
+        <?php if (isset($resumen['reponer'])): ?>
+        <div class="recuadro"><span>Insumos por reponer</span><strong><?= $resumen['reponer'] ?></strong><p>Activos, agotados o en el mínimo de existencias.</p><a href="<?= html_escape(site_url('inventario')) ?>">Revisar inventario</a></div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
 <h2>Accesos rápidos</h2>
 <div class="accesos">
     <?php if ($usuario->puede('pedidos.actualizar_cocina')): ?>
