@@ -32,6 +32,19 @@ class Inicio_model extends MY_Model
                  FROM ventas WHERE empresa_id=? AND fecha>=? AND fecha<?',
                 array($empresa, $hoy->format('Y-m-d'), $hoy->modify('+1 day')->format('Y-m-d'))
             );
+            $inicio = $hoy->modify('-6 days');
+            $consulta = $this->db->query(
+                'SELECT DATE(fecha) dia, COALESCE(SUM(subtotal),0) consumo
+                 FROM ventas WHERE empresa_id=? AND fecha>=? AND fecha<? GROUP BY DATE(fecha)',
+                array($empresa, $inicio->format('Y-m-d'), $hoy->modify('+1 day')->format('Y-m-d'))
+            );
+            if (!$consulta) { throw new RuntimeException('No se pudo consultar la actividad semanal.'); }
+            $por_dia = array_column($consulta->result_array(), 'consumo', 'dia');
+            $resumen['ultimos_dias'] = array();
+            for ($i = 0; $i < 7; $i++) {
+                $dia = $inicio->modify('+'.$i.' days')->format('Y-m-d');
+                $resumen['ultimos_dias'][] = array('dia'=>$dia, 'consumo'=>$por_dia[$dia] ?? '0.00');
+            }
         }
         if ($usuario->puede('pedidos.actualizar_cocina')) {
             $fila = $this->consultar(

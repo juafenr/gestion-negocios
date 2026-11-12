@@ -54,7 +54,7 @@ $error = $this->session->flashdata('error_compra');
     </p>
 
     <?= form_open(
-        'compras/' . (int) $solicitud['id'] . '/recepcion'
+        'compras/' . (int) $solicitud['id'] . '/recepcion', array('class'=>'formulario-ui','data-ui-form'=>'')
     ) ?>
 
     <input
@@ -151,9 +151,9 @@ $error = $this->session->flashdata('error_compra');
         de la cantidad pendiente.
     </p>
 
-    <button type="submit">
+    <div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('compras/'.(int)$solicitud['id'])) ?>">Cancelar</a><button type="submit">
         Registrar recepción
-    </button>
+    </button></div>
 
     <?= form_close() ?>
 

@@ -64,104 +64,15 @@ foreach ($filtros as $valor) {
     </div>
 <?php endif; ?>
 
-<section class="recuadro">
-    <h2>Buscar pedidos</h2>
+<?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'pedidos', 'filtro_campos'=>array(
+'busqueda'=>array('tipo'=>'search','etiqueta'=>'Referencia o número','ejemplo'=>'Ej. Mesa 4 o 4'),
+'estado'=>array('etiqueta'=>'Estado del pedido','opciones'=>array(''=>'Todos los estados')+$estados),
+'estado_pago'=>array('etiqueta'=>'Estado de pago','opciones'=>array(''=>'Todos los estados de pago')+$estados_pago),
+'desde'=>array('tipo'=>'date','etiqueta'=>'Creado desde'),'hasta'=>array('tipo'=>'date','etiqueta'=>'Creado hasta')
+), 'filtro_valores'=>$filtros, 'filtro_extras'=>array())); ?>
 
-    <form
-        action="<?= html_escape(site_url('pedidos')) ?>"
-        method="get"
-        class="formulario">
+<?php $this->load->view('plantilla/resultados', array('resultado_total'=>$total, 'resultado_mostrados'=>count($pedidos), 'resultado_pagina'=>$pagina)); ?>
 
-        <label for="busqueda">Referencia o número de pedido</label>
-
-        <input
-            type="search"
-            id="busqueda"
-            name="busqueda"
-            maxlength="150"
-            placeholder="Ejemplo: Mesa 4 o 4"
-            value="<?= html_escape($filtros['busqueda']) ?>">
-
-        <label for="estado">Estado del pedido</label>
-
-        <select id="estado" name="estado">
-            <option value="">Todos los estados</option>
-
-            <?php foreach ($estados as $valor => $etiqueta): ?>
-                <option
-                    value="<?= html_escape($valor) ?>"
-                    <?= $filtros['estado'] === $valor
-                        ? 'selected'
-                        : '' ?>>
-                    <?= html_escape($etiqueta) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-
-        <label for="estado_pago">Estado de pago</label>
-
-        <select id="estado_pago" name="estado_pago">
-            <option value="">Todos los estados de pago</option>
-
-            <?php foreach ($estados_pago as $valor => $etiqueta): ?>
-                <option
-                    value="<?= html_escape($valor) ?>"
-                    <?= $filtros['estado_pago'] === $valor
-                        ? 'selected'
-                        : '' ?>>
-                    <?= html_escape($etiqueta) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-
-        <label for="desde">Creado desde</label>
-
-        <input
-            type="date"
-            id="desde"
-            name="desde"
-            min="1000-01-01"
-            max="9999-12-31"
-            value="<?= html_escape($filtros['desde']) ?>">
-
-        <label for="hasta">Creado hasta</label>
-
-        <input
-            type="date"
-            id="hasta"
-            name="hasta"
-            min="1000-01-01"
-            max="9999-12-31"
-            value="<?= html_escape($filtros['hasta']) ?>">
-
-        <button type="submit">
-            <img
-                class="icono"
-                src="<?= html_escape(
-                    base_url('assets/iconos/buscar.svg')
-                ) ?>"
-                alt=""
-                width="22"
-                height="22">
-            <span>Filtrar</span>
-        </button>
-
-        <a
-            class="boton boton-secundario"
-            href="<?= html_escape(site_url('pedidos')) ?>">
-            Limpiar filtros
-        </a>
-    </form>
-</section>
-
-<p role="status">
-    <strong><?= (int) $total ?></strong>
-    <?= (int) $total === 1
-        ? 'pedido encontrado.'
-        : 'pedidos encontrados.' ?>
-
-    Página <?= (int) $pagina ?> de <?= (int) $paginas ?>.
-</p>
 
 <div
     class="tabla"
@@ -243,70 +154,13 @@ foreach ($filtros as $valor) {
 
             <?php if (empty($pedidos)): ?>
                 <tr>
-                    <td colspan="7">
-                        <?= $hay_filtros
-                            ? 'No se encontraron pedidos con esos filtros.'
-                            : 'No hay pedidos registrados.' ?>
-                    </td>
+                    <td colspan="7"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>$hay_filtros?'No se encontraron pedidos con esos filtros.':'Todavía no hay pedidos registrados.','vacio_descripcion'=>'Revisa la referencia, las fechas y los estados seleccionados.','vacio_url'=>$hay_filtros?site_url('pedidos'):($usuario->puede('pedidos.crear')?site_url('pedidos/crear'):NULL),'vacio_accion'=>$hay_filtros?'Limpiar filtros':'Nuevo pedido')); ?></td>
                 </tr>
             <?php endif; ?>
         </tbody>
     </table>
 </div>
 
-<?php if ($paginas > 1): ?>
-    <?php
-    $primera_visible = max(1, $pagina - 2);
-    $ultima_visible = min($paginas, $pagina + 2);
-    ?>
-
-    <nav
-        class="paginacion-inventario"
-        aria-label="Páginas del historial de pedidos">
-
-        <?php if ($pagina > 1): ?>
-            <a
-                class="boton boton-secundario boton-compacto"
-                href="<?= html_escape($url_pagina(1)) ?>">
-                Primera
-            </a>
-
-            <a
-                class="boton boton-secundario boton-compacto"
-                href="<?= html_escape($url_pagina($pagina - 1)) ?>">
-                Anterior
-            </a>
-        <?php endif; ?>
-
-        <?php for ($i = $primera_visible; $i <= $ultima_visible; $i++): ?>
-            <?php if ($i === (int) $pagina): ?>
-                <span class="boton boton-compacto" aria-current="page">
-                    <?= (int) $i ?>
-                </span>
-            <?php else: ?>
-                <a
-                    class="boton boton-secundario boton-compacto"
-                    href="<?= html_escape($url_pagina($i)) ?>"
-                    aria-label="Ir a la página <?= (int) $i ?>">
-                    <?= (int) $i ?>
-                </a>
-            <?php endif; ?>
-        <?php endfor; ?>
-
-        <?php if ($pagina < $paginas): ?>
-            <a
-                class="boton boton-secundario boton-compacto"
-                href="<?= html_escape($url_pagina($pagina + 1)) ?>">
-                Siguiente
-            </a>
-
-            <a
-                class="boton boton-secundario boton-compacto"
-                href="<?= html_escape($url_pagina($paginas)) ?>">
-                Última
-            </a>
-        <?php endif; ?>
-    </nav>
-<?php endif; ?>
+<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'pedidos','parametros_paginacion'=>$filtros,'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
 
 <?php $this->load->view('plantilla/pie'); ?>

@@ -6,12 +6,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=5')) ?>">
+    <meta name="theme-color" content="#ce530c">
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-botones')) ?>">
+    <script src="<?= html_escape(base_url('assets/interfaz.js?v=20261112')) ?>" defer></script>
+    <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112')) ?>" defer></script>
 </head>
 
 <body>
     <a class="saltar-contenido" href="#contenido">Ir al contenido</a>
     <header class="cabecera">
+        <button id="abrir-menu" class="abrir-menu boton-secundario" type="button" aria-label="Abrir menú principal" aria-controls="menu-principal" aria-expanded="false" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <div class="marca">
             <span class="marca-icono"><img class="icono" src="<?= html_escape(base_url('assets/iconos/negocio.svg')) ?>" alt="" width="22" height="22"></span>
             <div>
@@ -19,13 +25,14 @@
                 <p>Gestión de negocios</p>
             </div>
         </div>
-        <div class="cuenta">
+        <div class="contexto-pagina"><span>Espacio de trabajo /</span><strong><?= html_escape($titulo) ?></strong></div>
+        <div class="cuenta" aria-label="<?= html_escape($usuario->nombre().' · '.$usuario->rolNombre()) ?>">
             <img class="icono" src="<?= html_escape(base_url('assets/iconos/usuario.svg')) ?>" alt="" width="22" height="22">
             <div><strong><?= html_escape($usuario->nombre()) ?></strong><span><?= html_escape($usuario->rolNombre()) ?></span></div>
         </div>
     </header>
     <div class="estructura">
-        <nav class="menu" aria-label="Menú principal">
+        <nav id="menu-principal" class="menu" aria-label="Menú principal">
             <p class="menu-titulo">MENÚ PRINCIPAL</p>
             <a class="<?= $seccion === 'inicio' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('inicio')) ?>" <?= $seccion === 'inicio' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/inicio.svg')) ?>" alt="" width="22" height="22"><span>Inicio</span></a>
             <?php if ($usuario->puede('productos.ver')): ?>
@@ -70,4 +77,5 @@
             <button type="submit" class="boton-salir" title="Cerrar tu sesión"><img class="icono" src="<?= html_escape(base_url('assets/iconos/salir.svg')) ?>" alt="" width="22" height="22"><span>Cerrar sesión</span></button>
             <?= form_close() ?>
         </nav>
+        <button id="velo-menu" class="velo-menu" type="button" aria-label="Cerrar menú principal" tabindex="-1" hidden></button>
         <main id="contenido" class="contenido" tabindex="-1">

@@ -2,15 +2,10 @@
 <p class="sobretitulo">CONTROL DE COBROS</p>
 <h1>Pagos</h1>
 <p class="descripcion">Cobra pedidos confirmados y consulta sus saldos en quetzales.</p>
-<form action="<?= html_escape(site_url('pagos')) ?>" method="get" class="recuadro filtros-pagos">
-    <label for="estado">Estado de pago</label>
-    <select id="estado" name="estado">
-        <?php foreach (array('todos'=>'Todos','pendiente'=>'Pendiente','parcial'=>'Pago parcial','pagado'=>'Pagado') as $valor=>$etiqueta): ?>
-            <option value="<?= $valor ?>" <?= $estado===$valor ? 'selected' : '' ?>><?= $etiqueta ?></option>
-        <?php endforeach; ?>
-    </select>
-    <button type="submit">Filtrar</button>
-</form>
+<?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'pagos', 'filtro_campos'=>array(
+'estado'=>array('etiqueta'=>'Estado de pago','defecto'=>'todos','opciones'=>array('todos'=>'Todos los estados','pendiente'=>'Sin pagos','parcial'=>'Pago parcial','pagado'=>'Pagado'))
+), 'filtro_valores'=>array('estado'=>$estado), 'filtro_extras'=>array())); ?>
+<?php $this->load->view('plantilla/resultados', array('resultado_total'=>NULL, 'resultado_mostrados'=>count($pedidos), 'resultado_pagina'=>$pagina)); ?>
 <div class="tabla"><table>
 <thead><tr><th>Pedido</th><th>Referencia</th><th>Preparación</th><th>Consumo</th><th>Propina 10%</th><th>Total a pagar</th><th>Pagado</th><th>Saldo</th><th>Estado de pago</th><th>Acción</th></tr></thead>
 <tbody>
@@ -35,11 +30,7 @@ foreach ($pedidos as $pedido):
     <td><a class="boton boton-secundario boton-compacto" href="<?= html_escape(site_url('pagos/'.(int)$pedido['id'])) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="">Ver cuentas</a></td>
 </tr>
 <?php endforeach; ?>
-<?php if (!$pedidos): ?><tr><td colspan="10">No hay pedidos confirmados con ese estado de pago.</td></tr><?php endif; ?>
+<?php if (!$pedidos): ?><tr><td colspan="10"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>'No hay pedidos confirmados con ese estado de pago.','vacio_descripcion'=>'Selecciona otro estado para consultar los cobros disponibles.','vacio_url'=>$estado!=='todos'?site_url('pagos'):NULL,'vacio_accion'=>'Limpiar filtros')); ?></td></tr><?php endif; ?>
 </tbody></table></div>
-<p class="paginacion-pagos">
-<?php if ($pagina>1): ?><a class="boton boton-secundario" href="<?= html_escape(site_url('pagos').'?estado='.$estado.'&pagina='.($pagina-1)) ?>">Anterior</a><?php endif; ?>
-<span>Página <?= (int)$pagina ?></span>
-<?php if ($siguiente): ?><a class="boton boton-secundario" href="<?= html_escape(site_url('pagos').'?estado='.$estado.'&pagina='.($pagina+1)) ?>">Siguiente</a><?php endif; ?>
-</p>
+<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'pagos','parametros_paginacion'=>array('estado'=>$estado),'pagina_actual'=>$pagina,'cantidad_paginas'=>NULL,'hay_siguiente'=>$siguiente)); ?>
 <?php $this->load->view('plantilla/pie'); ?>

@@ -1,268 +1,117 @@
-<?php
-defined('BASEPATH') or exit('No direct script access allowed');
+<?php $this->load->view('plantilla/cabecera',array('titulo'=>'Historial de inventario','seccion'=>'inventario','usuario'=>$usuario)); ?>
 
-/** @var UsuarioAutenticado $usuario */
-/** @var array $insumo */
-/** @var array $movimientos */
-/** @var int $pagina */
-/** @var int $paginas */
-/** @var int $total */
+
+<p>
+    <a class="boton boton-secundario" href="<?= html_escape(site_url('inventario')) ?>">
+        Volver al inventario
+    </a>
+</p>
+
+<h1>
+    Historial: <?= html_escape($insumo['nombre']) ?>
+</h1>
+
+<p>
+    Total de movimientos:
+    <strong><?= (int) $total ?></strong>
+</p>
+
+<?php
+$mensaje = $this->session
+    ->flashdata('mensaje_inventario');
 ?>
 
-<!doctype html>
-<html lang="es">
+<?php if ($mensaje): ?>
+    <p role="status">
+        <?= html_escape($mensaje) ?>
+    </p>
+<?php endif; ?>
 
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1">
-    <title>Historial de inventario</title>
+<div class="tabla">
 
-    <link
-        rel="stylesheet"
-        href="<?= html_escape(base_url('assets/app.css')) ?>">
-</head>
+    <table>
 
-<body>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Cantidad</th>
+                <th>Anterior</th>
+                <th>Nueva</th>
+                <th>Motivo</th>
+                <th>Responsable</th>
+            </tr>
+        </thead>
 
-    <header class="cabecera">
-        <div>
-            <strong>
-                <?= html_escape($usuario->empresaNombre()) ?>
-            </strong>
-            <p>Gestión de negocios</p>
-        </div>
+        <tbody>
 
-        <span>
-            <?= html_escape($usuario->nombre()) ?>
-        </span>
-    </header>
+            <?php foreach ($movimientos as $movimiento): ?>
 
-    <div class="estructura">
+                <tr>
 
-        <nav class="menu" aria-label="Menú principal">
+                    <td>
+                        <?= html_escape(
+                            $movimiento['fecha']
+                        ) ?>
+                    </td>
 
-            <a href="<?= html_escape(site_url('inicio')) ?>">
-                Inicio
-            </a>
+                    <td>
+                        <?= html_escape(
+                            $movimiento['tipo']
+                        ) ?>
+                    </td>
 
-            <?php if ($usuario->puede('productos.ver')): ?>
-                <a href="<?= html_escape(site_url('productos')) ?>">
-                    Productos de prueba
-                </a>
-            <?php endif; ?>
+                    <td>
+                        <?= html_escape(
+                            $movimiento['cantidad']
+                        ) ?>
+                    </td>
 
-            <a
-                class="seleccionado"
-                href="<?= html_escape(site_url('inventario')) ?>"
-                aria-current="page">
-                Inventario
-            </a>
+                    <td>
+                        <?= html_escape(
+                            $movimiento['cantidad_anterior']
+                        ) ?>
+                    </td>
 
-            <?php if ($usuario->puede('pedidos.ver')): ?>
-                <a href="<?= html_escape(site_url('pedidos')) ?>">
-                    Pedidos
-                </a>
-            <?php endif; ?>
+                    <td>
+                        <?= html_escape(
+                            $movimiento['cantidad_nueva']
+                        ) ?>
+                    </td>
 
-            <?= form_open('salir') ?>
+                    <td>
+                        <?= html_escape(
+                            $movimiento['motivo']
+                        ) ?>
+                    </td>
 
-            <button type="submit" class="boton-salir">
-                Cerrar sesión
-            </button>
+                    <td>
+                        <?= html_escape(
+                            $movimiento['responsable']
+                        ) ?>
+                    </td>
 
-            <?= form_close() ?>
+                </tr>
 
-        </nav>
+            <?php endforeach; ?>
 
-        <main class="contenido">
+            <?php if (empty($movimientos)): ?>
 
-            <p>
-                <a href="<?= html_escape(site_url('inventario')) ?>">
-                    Volver al inventario
-                </a>
-            </p>
-
-            <h1>
-                Historial: <?= html_escape($insumo['nombre']) ?>
-            </h1>
-
-            <p>
-                Total de movimientos:
-                <strong><?= (int) $total ?></strong>
-            </p>
-
-            <?php
-            $mensaje = $this->session
-                ->flashdata('mensaje_inventario');
-            ?>
-
-            <?php if ($mensaje): ?>
-                <p role="status">
-                    <?= html_escape($mensaje) ?>
-                </p>
-            <?php endif; ?>
-
-            <div class="tabla">
-
-                <table>
-
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Tipo</th>
-                            <th>Cantidad</th>
-                            <th>Anterior</th>
-                            <th>Nueva</th>
-                            <th>Motivo</th>
-                            <th>Responsable</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        <?php foreach ($movimientos as $movimiento): ?>
-
-                            <tr>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['fecha']
-                                    ) ?>
-                                </td>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['tipo']
-                                    ) ?>
-                                </td>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['cantidad']
-                                    ) ?>
-                                </td>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['cantidad_anterior']
-                                    ) ?>
-                                </td>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['cantidad_nueva']
-                                    ) ?>
-                                </td>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['motivo']
-                                    ) ?>
-                                </td>
-
-                                <td>
-                                    <?= html_escape(
-                                        $movimiento['responsable']
-                                    ) ?>
-                                </td>
-
-                            </tr>
-
-                        <?php endforeach; ?>
-
-                        <?php if (empty($movimientos)): ?>
-
-                            <tr>
-                                <td colspan="7">
-                                    No hay movimientos registrados.
-                                </td>
-                            </tr>
-
-                        <?php endif; ?>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <!-- Paginación del historial -->
-
-            <?php if ($paginas > 1): ?>
-
-                <nav
-                    class="paginacion-inventario"
-                    aria-label="Paginación del historial">
-
-                    <?php
-                    $ruta = 'inventario/' .
-                        (int) $insumo['id'] .
-                        '/historial';
-
-                    $inicio = max(1, $pagina - 2);
-                    $fin = min($paginas, $pagina + 2);
-                    ?>
-
-                    <?php if ($pagina > 1): ?>
-
-                        <a
-                            class="boton boton-secundario boton-compacto"
-                            href="<?= html_escape(
-                                        site_url($ruta) .
-                                            '?pagina=' . ($pagina - 1)
-                                    ) ?>">
-                            Anterior
-                        </a>
-
-                    <?php endif; ?>
-
-                    <?php for (
-                        $numero = $inicio;
-                        $numero <= $fin;
-                        $numero++
-                    ): ?>
-
-                        <a
-                            class="boton boton-secundario boton-compacto"
-                            href="<?= html_escape(
-                                        site_url($ruta) .
-                                            '?pagina=' . $numero
-                                    ) ?>"
-                            <?= $numero === $pagina
-                                ? 'aria-current="page"'
-                                : '' ?>>
-                            <?= $numero ?>
-                        </a>
-
-                    <?php endfor; ?>
-
-                    <?php if ($pagina < $paginas): ?>
-
-                        <a
-                            class="boton boton-secundario boton-compacto"
-                            href="<?= html_escape(
-                                        site_url($ruta) .
-                                            '?pagina=' . ($pagina + 1)
-                                    ) ?>">
-                            Siguiente
-                        </a>
-
-                    <?php endif; ?>
-
-                </nav>
+                <tr>
+                    <td colspan="7">
+                        No hay movimientos registrados.
+                    </td>
+                </tr>
 
             <?php endif; ?>
 
-        </main>
+        </tbody>
 
-    </div>
+    </table>
 
-    <footer>
-        Proyecto de gestión de negocios
-    </footer>
+</div>
 
-</body>
+<!-- Paginación del historial -->
 
-</html>
+<?php $this->load->view('plantilla/paginacion',array('ruta_paginacion'=>'inventario/'.(int)$insumo['id'].'/historial','parametros_paginacion'=>array(),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
+<?php $this->load->view('plantilla/pie'); ?>

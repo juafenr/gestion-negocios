@@ -4,13 +4,11 @@
 
 <p class="descripcion">Consulta los productos disponibles en el catálogo de tu empresa y sus precios.</p>
 
-<form method="get" action="<?= html_escape(site_url('productos')) ?>" class="recuadro filtros-pagos" role="search">
-    <label for="busqueda-productos">Nombre o código</label>
-    <input id="busqueda-productos" name="busqueda" type="search" maxlength="150" value="<?= html_escape($busqueda) ?>">
-    <button type="submit">Buscar</button>
-    <?php if ($busqueda !== ''): ?><a class="boton boton-secundario" href="<?= html_escape(site_url('productos')) ?>">Limpiar búsqueda</a><?php endif; ?>
-</form>
-<p role="status"><?= (int) $total ?> <?= $total === 1 ? 'producto encontrado' : 'productos encontrados' ?><?= $busqueda !== '' ? ' para «'.html_escape($busqueda).'»' : '' ?>.</p>
+<?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'productos', 'filtro_campos'=>array(
+'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre o código','ejemplo'=>'Ej. Cuaderno o A-001')
+), 'filtro_valores'=>array('busqueda'=>$busqueda), 'filtro_extras'=>array())); ?>
+<?php $this->load->view('plantilla/resultados', array('resultado_total'=>$total, 'resultado_mostrados'=>count($productos), 'resultado_pagina'=>$pagina)); ?>
+
 
 <div class="tabla">
 
@@ -60,9 +58,7 @@
             <?php if (empty($productos)): ?>
 
                 <tr>
-                    <td colspan="4">
-                        <?= $busqueda !== '' ? 'No hay productos que coincidan con la búsqueda.' : 'Todavía no hay productos registrados.' ?>
-                    </td>
+                    <td colspan="4"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>$busqueda!==''?'No hay productos que coincidan con la búsqueda.':'Todavía no hay productos registrados.','vacio_descripcion'=>'Los productos disponibles en tu empresa aparecerán en este listado.','vacio_url'=>$busqueda!==''?site_url('productos'):NULL,'vacio_accion'=>'Limpiar filtros')); ?></td>
                 </tr>
 
             <?php endif; ?>
@@ -73,13 +69,5 @@
 
 </div>
 
-<nav class="paginacion-pagos" aria-label="Paginación de productos">
-    <?php if ($pagina > 1): ?>
-        <a class="boton boton-secundario" rel="prev" href="<?= html_escape(site_url('productos').'?'.http_build_query(array('busqueda'=>$busqueda, 'pagina'=>$pagina-1))) ?>">Anterior</a>
-    <?php endif; ?>
-    <span>Página <?= (int) $pagina ?> de <?= (int) $paginas ?></span>
-    <?php if ($pagina < $paginas): ?>
-        <a class="boton boton-secundario" rel="next" href="<?= html_escape(site_url('productos').'?'.http_build_query(array('busqueda'=>$busqueda, 'pagina'=>$pagina+1))) ?>">Siguiente</a>
-    <?php endif; ?>
-</nav>
+<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'productos','parametros_paginacion'=>array('busqueda'=>$busqueda),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
 <?php $this->load->view('plantilla/pie'); ?>

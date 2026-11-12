@@ -40,11 +40,18 @@ class Usuario_model extends MY_Model
     public function activo_por_id($id) { return $this->buscar('u.id', (int) $id); }
 
     /** Usuarios visibles para el administrador autenticado, siempre de su empresa. */
-    public function listar_empresa()
+    public function listar_empresa(array $filtros = array())
     {
-        $q = $this->db->select('u.id, u.nombre, u.nombre_usuario, u.correo, u.activo, r.codigo AS rol_codigo, r.nombre AS rol_nombre')
+        $this->db->select('u.id, u.nombre, u.nombre_usuario, u.correo, u.activo, r.codigo AS rol_codigo, r.nombre AS rol_nombre')
             ->from('usuarios u')->join('roles r', 'r.id = u.rol_id')
-            ->where('u.empresa_id', $this->empresa_id())->order_by('u.nombre')->get();
+            ->where('u.empresa_id', $this->empresa_id());
+        if (($filtros['busqueda'] ?? '') !== '') {
+            $this->db->group_start()->like('u.nombre',$filtros['busqueda'])
+                ->or_like('u.nombre_usuario',$filtros['busqueda'])->or_like('u.correo',$filtros['busqueda'])->group_end();
+        }
+        if (($filtros['estado'] ?? '') !== '') { $this->db->where('u.activo',$filtros['estado']==='activos' ? 1 : 0); }
+        if (($filtros['rol'] ?? '') !== '') { $this->db->where('r.codigo',$filtros['rol']); }
+        $q = $this->db->order_by('u.nombre')->order_by('u.id')->get();
         if ($q === FALSE) { show_error('No se pudieron consultar los usuarios.', 503); }
         return $q->result_array();
     }

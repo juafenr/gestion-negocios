@@ -56,7 +56,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <p>Escribe su nombre y cuántas unidades de cada producto pagará. Puedes repetir este paso para varias personas; lo que no asignes queda en la cuenta general. La propina se reparte proporcionalmente al consumo; el redondeo puede ajustar un centavo entre cuentas.</p>
 <?php if ($lineas_generales): ?>
 <?= form_open('pagos/separar/'.(int)$pedido['id']) ?>
-<p><label for="nombre_cuenta">Nombre de la cuenta</label><input type="text" name="nombre" id="nombre_cuenta" maxlength="80" placeholder="Ejemplo: Juan" required></p>
+<p class="campo"><label for="nombre_cuenta">Nombre de la cuenta</label><input type="text" name="nombre" id="nombre_cuenta" maxlength="80" placeholder="Ejemplo: Juan" required></p>
 <div class="tabla"><table><thead><tr><th>Producto</th><th>Precio por unidad</th><th>Unidades restantes</th><th>Unidades para esta persona</th></tr></thead><tbody>
 <?php foreach ($lineas_generales as $d): ?>
 <tr><td><?= html_escape($d['producto_nombre']) ?></td><td><?= Dinero::mostrar(Dinero::centavos($d['precio_unitario'])) ?></td><td><?= (int)$d['cantidad'] ?></td><td><input class="cantidad-cuenta" type="number" name="cantidades[<?= (int)$d['detalle_id'] ?>]" value="0" min="0" max="<?= (int)$d['cantidad'] ?>" step="1" required aria-label="Unidades de <?= html_escape($d['producto_nombre']) ?>"></td></tr>
@@ -68,7 +68,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <details><summary>Volver a organizar las cuentas</summary>
 <p>Esto quita la distribución actual. Los productos del pedido se conservan. Solo está disponible antes del primer pago.</p>
 <?= form_open('pagos/reiniciar/'.(int)$pedido['id']) ?>
-<p><label><input type="checkbox" name="confirmar" value="1" required> Quiero quitar esta distribución.</label></p>
+<p class="campo"><label><input type="checkbox" name="confirmar" value="1" required> Quiero quitar esta distribución.</label></p>
 <button type="submit" class="boton-secundario">Reiniciar distribución</button><?= form_close() ?>
 </details>
 </section>
@@ -78,23 +78,23 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <h2>Registrar pago</h2>
 <p>Indica cuánto se aplica por cada método. Para un pago mixto, completa más de uno. Puedes abonar una parte del saldo. Los abonos cubren primero el consumo y después la propina de la cuenta.</p>
 <p class="aviso">Revisa la distribución antes de cobrar: después del primer pago no podrás cambiar las cuentas.</p>
-<?= form_open('pagos/registrar/'.(int)$pedido['id'],array('id'=>'formulario-pago')) ?>
+<?= form_open('pagos/registrar/'.(int)$pedido['id'],array('id'=>'formulario-pago','class'=>'formulario-ui','data-ui-form'=>'')) ?>
 <input type="hidden" name="clave" value="<?= html_escape($clave) ?>">
-<p><label for="cuenta_id">Cuenta que paga</label><select name="cuenta_id" id="cuenta_id" required>
+<p class="campo"><label for="cuenta_id">Cuenta que paga</label><select name="cuenta_id" id="cuenta_id" required>
 <?php foreach ($cuentas as $cuenta): $restante=Dinero::centavos($cuenta['total'])+Dinero::centavos($cuenta['propina'])-Dinero::centavos($cuenta['abonado']); if ($restante<=0) { continue; } ?>
 <option value="<?= (int)$cuenta['id'] ?>" data-saldo="<?= $restante ?>"><?= html_escape($cuenta['nombre']) ?> — saldo <?= Dinero::mostrar($restante) ?></option>
 <?php endforeach; ?>
 </select></p>
-<div class="campos-pagos">
-<p><label for="efectivo">Efectivo aplicado (Q)</label><input type="number" id="efectivo" name="efectivo" min="0" max="9999999999.99" step="0.01" value="0.00" required></p>
-<p><label for="credito">Tarjeta de crédito (Q)</label><input type="number" id="credito" name="credito" min="0" max="9999999999.99" step="0.01" value="0.00" required></p>
-<p><label for="debito">Tarjeta de débito (Q)</label><input type="number" id="debito" name="debito" min="0" max="9999999999.99" step="0.01" value="0.00" required></p>
-<p><label for="recibido">Efectivo recibido (Q)</label><input type="number" id="recibido" name="recibido" min="0" max="9999999999.99" step="0.01" value="0.00" required><span class="descripcion">Lo que entrega el cliente en billetes o monedas.</span></p>
+<div class="campos-formulario">
+<p class="campo"><label for="efectivo">Efectivo aplicado (Q)</label><input type="number" id="efectivo" name="efectivo" min="0" max="9999999999.99" step="0.01" value="0.00" required></p>
+<p class="campo"><label for="credito">Tarjeta de crédito (Q)</label><input type="number" id="credito" name="credito" min="0" max="9999999999.99" step="0.01" value="0.00" required></p>
+<p class="campo"><label for="debito">Tarjeta de débito (Q)</label><input type="number" id="debito" name="debito" min="0" max="9999999999.99" step="0.01" value="0.00" required></p>
+<p class="campo"><label for="recibido">Efectivo recibido (Q)</label><input type="number" id="recibido" name="recibido" min="0" max="9999999999.99" step="0.01" value="0.00" required><span class="descripcion">Lo que entrega el cliente en billetes o monedas.</span></p>
 </div>
 <p id="resumen-cobro" role="status" aria-live="polite">El cambio se calcula con el efectivo recibido menos el efectivo aplicado.</p>
 <p class="descripcion">Ejemplo: consumo Q 100 + propina Q 10 = Q 110. Efectivo aplicado Q 40, tarjeta Q 70 y efectivo recibido Q 50: cambio Q 10.</p>
 <p class="descripcion">Este registro no procesa tarjetas. No ingreses números de tarjeta, PIN ni códigos de seguridad.</p>
-<button type="submit" id="registrar-pago"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="">Registrar pago</button>
+<div class="acciones-formulario"><button type="submit" id="registrar-pago"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="">Registrar pago</button></div>
 <?= form_close() ?>
 </section>
 <script src="<?= html_escape(base_url('assets/pagos.js')) ?>" defer></script>

@@ -13,15 +13,7 @@ $this->load->view('plantilla/cabecera', array(
         <p class="descripcion">Consulta tus insumos y revisa lo que necesita reposición.</p>
     </div>
 
-    <?php if ($usuario->puede('inventario.gestionar')): ?>
-        <p>
-            <a class="boton" href="<?= html_escape(site_url('inventario/crear')) ?>">
-                <img class="icono" src="<?= html_escape(base_url('assets/iconos/agregar.svg')) ?>" alt="" width="22" height="22">
-                <span>Nuevo insumo</span>
-            </a>
-        </p>
-    <?php endif; ?>
-
+    <div class="acciones-cabecera">
     <a
         class="boton boton-secundario"
         href="<?= html_escape(
@@ -37,6 +29,13 @@ $this->load->view('plantilla/cabecera', array(
             height="22">
         <span>Sugerencias de compra</span>
     </a>
+    <?php if ($usuario->puede('inventario.gestionar')): ?>
+        <a class="boton" href="<?= html_escape(site_url('inventario/crear')) ?>">
+            <img class="icono" src="<?= html_escape(base_url('assets/iconos/agregar.svg')) ?>" alt="" width="22" height="22">
+            <span>Nuevo insumo</span>
+        </a>
+    <?php endif; ?>
+    </div>
 </div>
 
 <?php
@@ -111,144 +110,18 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
 <!-- Búsqueda y filtros del inventario -->
 
-<form action="<?= html_escape(site_url('inventario')) ?>" method="get" class="filtros-inventario">
-
-    <input
-        type="search"
-        id="busqueda"
-        name="busqueda"
-        maxlength="150"
-        placeholder="Buscar insumo..."
-        aria-label="Buscar insumo"
-        value="<?= html_escape($filtros['busqueda']) ?>">
-
-    <select
-        id="estado"
-        name="estado"
-        aria-label="Filtrar por estado">
-
-        <option value="">Todos los estados</option>
-
-        <option
-            value="bajo"
-            <?= $filtros['estado'] === 'bajo' ? 'selected' : '' ?>>
-            Stock bajo
-        </option>
-
-        <option
-            value="normal"
-            <?= $filtros['estado'] === 'normal' ? 'selected' : '' ?>>
-            Stock normal
-        </option>
-
-        <option
-            value="agotado"
-            <?= $filtros['estado'] === 'agotado'
-                ? 'selected' : '' ?>>
-            Agotado
-        </option>
-    </select>
-
-    <select
-        id="unidad"
-        name="unidad"
-        aria-label="Filtrar por unidad">
-
-        <option value="">Todas las unidades</option>
-
-        <?php
-        $unidades = array(
-            'unidad' => 'Unidad',
-            'kg' => 'Kilogramos',
-            'g' => 'Gramos',
-            'mg' => 'Miligramos',
-            'l' => 'Litros',
-            'ml' => 'Mililitros'
-        );
-        ?>
-
-        <?php foreach ($unidades as $valor => $nombre): ?>
-            <option
-                value="<?= html_escape($valor) ?>"
-                <?= $filtros['unidad'] === $valor ? 'selected' : '' ?>>
-                <?= html_escape($nombre) ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-
-    <select
-        id="orden"
-        name="orden"
-        aria-label="Ordenar inventario">
-
-        <option value="nombre_asc" <?= $filtros['orden'] === 'nombre_asc' ? 'selected' : '' ?>>
-            Nombre A-Z
-        </option>
-
-        <option value="nombre_desc" <?= $filtros['orden'] === 'nombre_desc' ? 'selected' : '' ?>>
-            Nombre Z-A
-        </option>
-
-        <option value="cantidad_asc" <?= $filtros['orden'] === 'cantidad_asc' ? 'selected' : '' ?>>
-            Menor cantidad
-        </option>
-
-        <option value="cantidad_desc" <?= $filtros['orden'] === 'cantidad_desc' ? 'selected' : '' ?>>
-            Mayor cantidad
-        </option>
-
-        <option value="minimo_asc" <?= $filtros['orden'] === 'minimo_asc' ? 'selected' : '' ?>>
-            Menor stock mínimo
-        </option>
-
-        <option value="minimo_desc" <?= $filtros['orden'] === 'minimo_desc' ? 'selected' : '' ?>>
-            Mayor stock mínimo
-        </option>
-
-        <option value="stock_bajo" <?= $filtros['orden'] === 'stock_bajo' ? 'selected' : '' ?>>
-            Stock bajo primero
-        </option>
-    </select>
-
-    <select
-        name="activo"
-        aria-label="Estado del insumo">
-
-        <option
-            value="activos"
-            <?= ($filtros['activo'] ?? 'activos') === 'activos' ? 'selected' : '' ?>>
-            Insumos activos
-        </option>
-
-        <option
-            value="inactivos"
-            <?= ($filtros['activo'] ?? 'activos') === 'inactivos' ? 'selected' : '' ?>>
-            Insumos inactivos
-        </option>
-    </select>
-
-    <button type="submit">
-        <img class="icono" src="<?= html_escape(base_url('assets/iconos/buscar.svg')) ?>" alt="" width="22" height="22">
-        <span>Filtrar</span>
-    </button>
-
-    <a class="boton boton-secundario limpiar-filtros"
-        href="<?= html_escape(site_url('inventario')) ?>">
-        <img class="icono" src="<?= html_escape(base_url('assets/iconos/limpiar.svg')) ?>" alt="" width="22" height="22">
-        <span>Limpiar</span>
-    </a>
-
-    <a class="boton boton-secundario limpiar-filtros"
-        href="<?= html_escape(site_url('inventario/exportar')) ?>">
-        <img class="icono" src="<?= html_escape(base_url('assets/iconos/inventario.svg')) ?>" alt="" width="22" height="22">
-        <span>Exportar CSV</span>
-    </a>
-
-</form>
+<?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'inventario', 'filtro_campos'=>array(
+'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre del insumo','ejemplo'=>'Ej. Harina'),
+'estado'=>array('etiqueta'=>'Existencias','opciones'=>array(''=>'Todos los estados','normal'=>'Stock normal','bajo'=>'Stock bajo','agotado'=>'Agotado')),
+'unidad'=>array('etiqueta'=>'Unidad de medida','opciones'=>array(''=>'Todas las unidades','unidad'=>'Unidad','kg'=>'Kilogramos','g'=>'Gramos','mg'=>'Miligramos','l'=>'Litros','ml'=>'Mililitros')),
+'orden'=>array('etiqueta'=>'Ordenar por','defecto'=>'nombre_asc','opciones'=>array('nombre_asc'=>'Nombre A-Z','nombre_desc'=>'Nombre Z-A','cantidad_asc'=>'Menor cantidad','cantidad_desc'=>'Mayor cantidad','minimo_asc'=>'Menor stock mínimo','minimo_desc'=>'Mayor stock mínimo','stock_bajo'=>'Stock bajo primero')),
+'activo'=>array('etiqueta'=>'Disponibilidad','defecto'=>'activos','opciones'=>array('activos'=>'Insumos activos','inactivos'=>'Insumos inactivos'))
+), 'filtro_valores'=>$filtros, 'filtro_extras'=>array(array('ruta'=>'inventario/exportar','etiqueta'=>'Exportar activos en CSV','ayuda'=>'Descarga todos los insumos activos, sin aplicar estos filtros.')))); ?>
 
 
 <!-- Tabla de inventario -->
 
+<?php $this->load->view('plantilla/resultados', array('resultado_total'=>$total, 'resultado_mostrados'=>count($insumos), 'resultado_pagina'=>$pagina)); ?>
 <div class="tabla" role="region" aria-label="Listado de insumos" tabindex="0">
 
     <table class="tabla-inventario">
@@ -337,7 +210,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
                     <!-- Acciones -->
 
-                    <td class="acciones-inventario-fila">
+                    <td class="acciones-inventario-fila"><details class="acciones-desplegables"><summary aria-label="Acciones de <?= html_escape($item['nombre']) ?>">Acciones <span aria-hidden="true">⌄</span></summary>
 
                         <div
                             class="acciones-insumo"
@@ -472,7 +345,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
                         </div>
 
-                    </td>
+                    </details></td>
 
 
 
@@ -508,28 +381,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
             <?php if (empty($insumos)): ?>
 
                 <tr>
-                    <td colspan="7">
-
-                        <?php if (
-                            $filtros['busqueda'] !== '' ||
-                            $filtros['estado'] !== '' ||
-                            $filtros['unidad'] !== ''
-                        ): ?>
-
-                            No se encontraron insumos que coincidan
-                            con los filtros seleccionados.
-
-                        <?php elseif (($filtros['activo'] ?? 'activos') === 'inactivos'): ?>
-
-                            No hay insumos inactivos registrados.
-
-                        <?php else: ?>
-
-                            Todavía no hay insumos registrados.
-
-                        <?php endif; ?>
-
-                    </td>
+                    <td colspan="7"><?php $this->load->view('plantilla/vacio',array('vacio_titulo'=>'No se encontraron insumos para mostrar.','vacio_descripcion'=>'Prueba otra búsqueda o revisa los filtros de existencias y disponibilidad.','vacio_url'=>site_url('inventario'),'vacio_accion'=>'Limpiar filtros')); ?></td>
                 </tr>
 
             <?php endif; ?>
@@ -543,67 +395,6 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
 <!-- Paginación -->
 
-<?php if (isset($paginas, $pagina) && $paginas > 1): ?>
-
-    <?php
-    $parametros = array(
-        'busqueda' => $filtros['busqueda'] ?? '',
-        'estado' => $filtros['estado'] ?? '',
-        'unidad' => $filtros['unidad'] ?? '',
-        'orden' => $filtros['orden'] ?? 'nombre_asc',
-        'activo' => $filtros['activo'] ?? 'activos'
-    );
-    ?>
-
-    <nav class="paginacion-inventario" aria-label="Paginación del inventario">
-
-        <?php if ($pagina > 1): ?>
-
-            <?php
-            $anterior = $parametros;
-            $anterior['pagina'] = $pagina - 1;
-            ?>
-
-            <a class="boton boton-secundario boton-compacto"
-                href="<?= html_escape(site_url('inventario') . '?' . http_build_query($anterior)) ?>">
-                Anterior
-            </a>
-
-        <?php endif; ?>
-
-
-        <?php for ($i = 1; $i <= $paginas; $i++): ?>
-
-            <?php
-            $parametros['pagina'] = $i;
-            ?>
-
-            <a class="boton boton-secundario boton-compacto"
-                href="<?= html_escape(site_url('inventario') . '?' . http_build_query($parametros)) ?>"
-                <?= $i === $pagina ? 'aria-current="page"' : '' ?>>
-                <?= $i ?>
-            </a>
-
-        <?php endfor; ?>
-
-
-        <?php if ($pagina < $paginas): ?>
-
-            <?php
-            $siguiente = $parametros;
-            $siguiente['pagina'] = $pagina + 1;
-            ?>
-
-            <a class="boton boton-secundario boton-compacto"
-                href="<?= html_escape(site_url('inventario') . '?' . http_build_query($siguiente)) ?>">
-                Siguiente
-            </a>
-
-        <?php endif; ?>
-
-    </nav>
-
-<?php endif; ?>
-
+<?php $this->load->view('plantilla/paginacion', array('ruta_paginacion'=>'inventario','parametros_paginacion'=>array_intersect_key($filtros,array_flip(array('busqueda','estado','unidad','orden','activo'))),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
 
 <?php $this->load->view('plantilla/pie'); ?>
