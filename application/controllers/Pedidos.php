@@ -84,6 +84,48 @@ class Pedidos extends Protected_Controller
         redirect('pedidos/' . $pedidoId);
     }
 
+    public function rapido()
+    {
+        $this->requerir_permiso('pedidos.ver');
+        $this->requerir_permiso('pedidos.crear');
+        $this->requerir_permiso('pedidos.confirmar');
+        $this->requerir_permiso('ventas.cobrar');
+        $this->load->model('Producto_model', 'productos_model');
+        $error = '';
+        if ($this->input->method(TRUE) === 'POST') {
+            $producto = $this->input->post('producto_id');
+            $cantidad = $this->input->post('cantidad');
+            $referencia = $this->input->post('referencia');
+            if (!is_string($producto) || !ctype_digit($producto) || strlen($producto)>10 || (int)$producto<1
+                || !is_string($cantidad) || !preg_match('/^[1-9][0-9]{0,2}$/D', $cantidad)
+                || (int)$cantidad>999 || !is_string($referencia)) {
+                $error = 'Selecciona un producto, una cantidad válida y una referencia.';
+            } else {
+                $referencia = trim($referencia) === '' ? 'Mostrador' : $referencia;
+                try { $referencia = Validacion_negocio::texto($referencia, 'Referencia', 100); }
+                catch (InvalidArgumentException $e) { $error = $e->getMessage(); }
+                if ($error === '') {
+                    $pedido = $this->pedidos_model->crear($referencia, $this->usuario->id());
+                    if ($pedido) {
+                        $error = $this->pedidos_model->agregar_producto($pedido, (int)$producto, (int)$cantidad) ?? '';
+                        if ($error === '') { $error = $this->pedidos_model->confirmar($pedido, $this->usuario->id(), $this->usuario->rol()) ?? ''; }
+                        if ($error === '') {
+                            $this->load->model('Pago_model', 'pagos_model');
+                            $error = $this->pagos_model->preparar($pedido) ?? '';
+                        }
+                        if ($error === '') { redirect('pagos/'.$pedido, 'location', 303); return; }
+                        $this->session->set_flashdata('error_pedido', 'Pedido rápido incompleto: '.$error.' Revisa el borrador o pedido antes de continuar.');
+                        redirect('pedidos/'.$pedido, 'location', 303);
+                        return;
+                    }
+                    $error = 'No se pudo crear el pedido.';
+                }
+            }
+            $this->output->set_status_header(422);
+        } else { $this->solo_metodo('GET'); }
+        $this->load->view('pedidos/rapido', array('usuario'=>$this->usuario,'productos'=>$this->productos_model->listar(),'error'=>$error));
+    }
+
     private function mostrar($error = '', $referencia = '')
     {
         $estados = array(

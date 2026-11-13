@@ -131,8 +131,8 @@ class Pago_model extends MY_Model
             foreach ($detalles as $d) {
                 $this->consultar('INSERT INTO pago_cuenta_detalles (empresa_id,pedido_id,cuenta_id,detalle_id,cantidad) VALUES (?,?,?,?,?)', array($empresa,$pedido['id'],$cuenta,$d['id'],$d['cantidad']));
             }
-            Dinero::decimal($total + Dinero::propina($total));
-            $this->repartir_propina($pedido['id'], $empresa);
+            Dinero::decimal($total + Dinero::propina($total, (int)$pedido['propina_porcentaje']));
+            $this->repartir_propina($pedido['id'], $empresa, (int)$pedido['propina_porcentaje']);
             if ($total === 0) {
                 $this->consultar("UPDATE pedidos SET estado_pago='pagado' WHERE empresa_id=? AND id=?", array($empresa,$pedido['id']));
                 $this->registrar_venta($pedido,$empresa,$usuario);
@@ -187,16 +187,16 @@ class Pago_model extends MY_Model
                 }
             }
             $this->consultar('UPDATE pago_cuentas SET total=? WHERE id=? AND empresa_id=?', array(Dinero::decimal($restante),$cuenta['id'],$empresa));
-            $this->repartir_propina($pedido['id'], $empresa);
+            $this->repartir_propina($pedido['id'], $empresa, (int)$pedido['propina_porcentaje']);
         });
     }
 
-    private function repartir_propina($pedido_id, $empresa)
+    private function repartir_propina($pedido_id, $empresa, $porcentaje)
     {
         $cuentas = $this->consultar('SELECT id,total FROM pago_cuentas WHERE empresa_id=? AND pedido_id=? ORDER BY id', array($empresa,$pedido_id))->result_array();
         $subtotales = array();
         foreach ($cuentas as $c) { $subtotales[(int)$c['id']] = Dinero::centavos($c['total']); }
-        foreach (Dinero::repartirPropina($subtotales) as $id=>$propina) {
+        foreach (Dinero::repartirPropina($subtotales, $porcentaje) as $id=>$propina) {
             $this->consultar('UPDATE pago_cuentas SET propina=? WHERE empresa_id=? AND pedido_id=? AND id=?', array(Dinero::decimal($propina),$empresa,$pedido_id,$id));
         }
     }
@@ -241,13 +241,13 @@ class Pago_model extends MY_Model
             $cuenta = $this->consultar('SELECT * FROM pago_cuentas WHERE empresa_id=? AND pedido_id=? AND id=?', array($empresa,$pedido['id'],$cuenta_id))->row_array();
             if (!$cuenta) { throw new InvalidArgumentException('La cuenta no pertenece a este pedido.'); }
             $sumas = $this->consultar('SELECT COALESCE(SUM(total),0) AS total, COALESCE(SUM(propina),0) AS propina FROM pago_cuentas WHERE empresa_id=? AND pedido_id=?', array($empresa,$pedido['id']))->row_array();
-            if (Dinero::centavos($sumas['total'])!==Dinero::centavos($pedido['total']) || Dinero::centavos($sumas['propina'])!==Dinero::propina(Dinero::centavos($pedido['total']))) { throw new InvalidArgumentException('Las cuentas no coinciden con el total del pedido.'); }
+            if (Dinero::centavos($sumas['total'])!==Dinero::centavos($pedido['total']) || Dinero::centavos($sumas['propina'])!==Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) { throw new InvalidArgumentException('Las cuentas no coinciden con el total del pedido.'); }
             $sumas = $this->consultar('SELECT COALESCE(SUM(total),0) AS total, COALESCE(SUM(CASE WHEN cuenta_id=? THEN total ELSE 0 END),0) AS cuenta FROM pagos WHERE empresa_id=? AND pedido_id=?', array($cuenta_id,$empresa,$pedido['id']))->row_array();
             $abonado = Dinero::centavos($sumas['total']);
             $consumo = Dinero::centavos($cuenta['total']);
             $pagado_cuenta = Dinero::centavos($sumas['cuenta']);
             $saldo = $consumo + Dinero::centavos($cuenta['propina']) - $pagado_cuenta;
-            $total_pedido = Dinero::centavos($pedido['total']) + Dinero::propina(Dinero::centavos($pedido['total']));
+            $total_pedido = Dinero::centavos($pedido['total']) + Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje']);
             // Los abonos cubren primero el consumo; después la propina.
             $propina_pagada = max(0,$pagado_cuenta+$total-$consumo)-max(0,$pagado_cuenta-$consumo);
             if ($pedido['estado_pago']==='pagado' || $total>$saldo || $total>$total_pedido-$abonado) {
@@ -267,7 +267,7 @@ class Pago_model extends MY_Model
         $sumas=$this->consultar('SELECT COALESCE(SUM(total),0) total,COALESCE(SUM(propina),0) propina,
              COALESCE(SUM(efectivo),0) efectivo,COALESCE(SUM(credito),0) credito,COALESCE(SUM(debito),0) debito
              FROM pagos WHERE empresa_id=? AND pedido_id=?',array($empresa,$pedido['id']))->row_array();
-        $consumo=Dinero::centavos($pedido['total']);$propina=Dinero::propina($consumo);
+        $consumo=Dinero::centavos($pedido['total']);$propina=Dinero::propina($consumo, (int)$pedido['propina_porcentaje']);
         if (Dinero::centavos($sumas['total'])!==$consumo+$propina || Dinero::centavos($sumas['propina'])!==$propina ||
             Dinero::centavos($sumas['efectivo'])+Dinero::centavos($sumas['credito'])+Dinero::centavos($sumas['debito'])!==$consumo+$propina) {
             throw new RuntimeException('Los cobros no respaldan el total de la venta.');

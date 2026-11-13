@@ -7,7 +7,7 @@
 ), 'filtro_valores'=>array('estado'=>$estado), 'filtro_extras'=>array())); ?>
 <?php $this->load->view('plantilla/resultados', array('resultado_total'=>NULL, 'resultado_mostrados'=>count($pedidos), 'resultado_pagina'=>$pagina)); ?>
 <div class="tabla"><table>
-<thead><tr><th>Pedido</th><th>Referencia</th><th>Preparación</th><th class="tabla-numero">Consumo</th><th class="tabla-numero">Propina 10%</th><th class="tabla-numero tabla-total">Total a pagar</th><th class="tabla-numero">Pagado</th><th class="tabla-numero tabla-total">Saldo</th><th>Estado de pago</th><th>Acción</th></tr></thead>
+<thead><tr><th>Pedido</th><th>Referencia</th><th>Preparación</th><th class="tabla-numero">Consumo</th><th class="tabla-numero">Propina</th><th class="tabla-numero tabla-total">Total a pagar</th><th class="tabla-numero">Pagado</th><th class="tabla-numero tabla-total">Saldo</th><th>Estado de pago</th><th>Acción</th></tr></thead>
 <tbody>
 <?php
 $estados_pago = array(
@@ -22,10 +22,10 @@ foreach ($pedidos as $pedido):
     <td>#<?= (int)$pedido['numero'] ?></td><td><?= html_escape($pedido['referencia']) ?></td>
     <td><?= html_escape(str_replace('_',' ',$pedido['estado'])) ?></td>
     <td class="tabla-numero"><?= Dinero::mostrar(Dinero::centavos($pedido['total'])) ?></td>
-    <td class="tabla-numero"><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']))) ?></td>
-    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']))) ?></td>
+    <td class="tabla-numero"><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></td>
+    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></td>
     <td class="tabla-numero"><?= Dinero::mostrar(Dinero::centavos($pedido['abonado'])) ?></td>
-    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(max(0,Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']))-Dinero::centavos($pedido['abonado']))) ?></td>
+    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(max(0,Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])-Dinero::centavos($pedido['abonado']))) ?></td>
     <td><span class="estado-pago <?= html_escape($estado_pago['clase']) ?>"><?= html_escape($estado_pago['texto']) ?></span></td>
     <td><a class="boton boton-secundario boton-compacto" href="<?= html_escape(site_url('pagos/'.(int)$pedido['id'])) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="">Ver cuentas</a></td>
 </tr>

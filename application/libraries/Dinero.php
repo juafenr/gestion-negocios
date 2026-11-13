@@ -23,19 +23,21 @@ class Dinero
         return intdiv($centavos, 100) . '.' . str_pad((string) ($centavos % 100), 2, '0', STR_PAD_LEFT);
     }
 
-    /** 10%, redondeo al centavo más cercano (mitades hacia arriba). */
-    public static function propina($consumo)
+    /** Redondeo al centavo más cercano (mitades hacia arriba). */
+    public static function propina($consumo, $porcentaje = 10)
     {
-        return intdiv($consumo + 5, 10);
+        if (!in_array($porcentaje, array(0, 10), TRUE)) { throw new InvalidArgumentException('Porcentaje de propina inválido.'); }
+        return intdiv($consumo * $porcentaje + 50, 100);
     }
 
     /** Reparte el redondeo sin que separar cuentas cambie la propina total. */
-    public static function repartirPropina($subtotales)
+    public static function repartirPropina($subtotales, $porcentaje = 10)
     {
+        if (!in_array($porcentaje, array(0, 10), TRUE)) { throw new InvalidArgumentException('Porcentaje de propina inválido.'); }
         $resultado = array(); $restos = array(); $suma = 0; $asignado = 0;
         foreach ($subtotales as $id => $subtotal) {
-            $resultado[$id] = intdiv($subtotal, 10);
-            $restos[$id] = $subtotal % 10;
+            $resultado[$id] = intdiv($subtotal * $porcentaje, 100);
+            $restos[$id] = ($subtotal * $porcentaje) % 100;
             $suma += $subtotal;
             $asignado += $resultado[$id];
         }
@@ -43,7 +45,7 @@ class Dinero
         usort($ids, function ($a, $b) use ($restos) {
             return $restos[$b] <=> $restos[$a] ?: $a <=> $b;
         });
-        $faltan = self::propina($suma) - $asignado;
+        $faltan = self::propina($suma, $porcentaje) - $asignado;
         for ($i=0; $i<$faltan; $i++) { $resultado[$ids[$i]]++; }
         return $resultado;
     }

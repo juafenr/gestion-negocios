@@ -53,6 +53,9 @@
             <?php if ($usuario->puede('usuarios.ver')): ?>
                 <a class="<?= $seccion === 'usuarios' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('usuarios')) ?>" <?= $seccion === 'usuarios' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/usuario.svg')) ?>" alt="" width="22" height="22"><span>Usuarios</span></a>
             <?php endif; ?>
+            <?php if ($usuario->puede('usuarios.gestionar')): ?>
+                <a class="<?= $seccion === 'configuracion' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('configuracion/propina')) ?>" <?= $seccion === 'configuracion' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="" width="22" height="22"><span>Configuración</span></a>
+            <?php endif; ?>
             <?php if ($usuario->puede('ventas.historial')): ?>
                 <a class="<?= $seccion === 'ventas' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('ventas')) ?>" <?= $seccion === 'ventas' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/ventas.svg')) ?>" alt="" width="22" height="22"><span>Ventas</span></a>
             <?php endif; ?>

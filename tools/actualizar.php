@@ -502,6 +502,7 @@ try {
         'ultimo_numero_compra',
         'INT UNSIGNED NOT NULL DEFAULT 0'
     );
+    $a->agregar('empresas', 'propina_porcentaje', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
 
     $a->crear('proveedores', $creaciones['proveedores']);
     $a->crear('insumos', $creaciones['insumos']);
@@ -525,6 +526,8 @@ try {
 
     // Pedidos y numeración por empresa.
     $a->crear('pedidos', $creaciones['pedidos']);
+    // Los pedidos anteriores conservan el 10 % con el que se registraron.
+    $a->agregar('pedidos', 'propina_porcentaje', 'TINYINT UNSIGNED NOT NULL DEFAULT 10');
 
     $a->agregar(
         'pedidos',

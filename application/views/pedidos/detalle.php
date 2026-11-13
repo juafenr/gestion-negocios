@@ -197,8 +197,8 @@
         Q <?= number_format((float) $pedido['total'], 2) ?>
     </p>
 
-    <p>Propina (10%): <strong><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']))) ?></strong> ·
-    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']))) ?></strong></p>
+    <p>Propina (<?= (int)$pedido['propina_porcentaje'] ?>%): <strong><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></strong> ·
+    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></strong></p>
 
     <?php if ($pedido['estado'] === 'borrador'
         && $usuario->puede('pedidos.confirmar')
