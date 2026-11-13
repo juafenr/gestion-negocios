@@ -74,3 +74,9 @@ Comprueba también en el navegador:
 Se revisaron los cambios y se comprobó la sintaxis de JavaScript. Se ejecutaron las ocho consultas agregadas con datos aislados en SQLite para comprobar filtros, uniones, fechas, sumas y casos vacíos. Esta comprobación no sustituye la ejecución con MySQL/MariaDB.
 
 No se pudo ejecutar PHP/MySQL ni completar la revisión con un navegador en el entorno de preparación. La prueba PHP incluida queda pendiente de ejecución en XAMPP; no se presenta como aprobada.
+
+## Calendario del negocio
+
+Los rangos de 7, 30 y 90 días y el resumen de ventas de hoy utilizan `America/Guatemala`, independientemente de la zona de PHP/XAMPP. La opción `zona_horaria_negocio` en la configuración local permite adaptar el calendario a otra instalación; debe coincidir con la zona en la que se guardan las fechas del negocio.
+
+Los períodos incluyen el primer día a las 00:00 y terminan antes de mañana a las 00:00. No se convierten ni reescriben registros anteriores. `tests/calendario_unit.php` comprueba los cortes de medianoche, año nuevo y año bisiesto; `tests/estadisticas_integracion.php` verifica los límites con datos desechables en MariaDB.

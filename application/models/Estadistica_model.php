@@ -8,6 +8,7 @@ class Estadistica_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Calendario_negocio');
     }
 
     public static function dias_validos($valor)
@@ -22,13 +23,13 @@ class Estadistica_model extends MY_Model
         return $resultado->result_array();
     }
 
-    public function panel($dias)
+    public function panel($dias, ?DateTimeImmutable $ahora = NULL)
     {
         if (!in_array($dias, array(7, 30, 90), TRUE)) { throw new InvalidArgumentException('Período inválido.'); }
         $empresa = $this->empresa_id();
         $ci =& get_instance();
         $usuario = $ci->autenticacion->usuario_actual();
-        $hoy = new DateTimeImmutable('today');
+        $hoy = Calendario_negocio::hoy($ahora,$ci->config->item('zona_horaria_negocio') ?: 'America/Guatemala');
         $desde = $hoy->modify('-'.($dias - 1).' days');
         // Intervalo semiabierto: incluye hoy completo, excluye mañana a las 00:00.
         $parametros = array($empresa, $desde->format('Y-m-d'), $hoy->modify('+1 day')->format('Y-m-d'));

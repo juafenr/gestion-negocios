@@ -535,6 +535,8 @@ $config['proxy_ips'] = '';
 $local_file = APPPATH.'config/local.php';
 $local = is_file($local_file) ? require $local_file : array();
 $config['base_url'] = $local['base_url'] ?? 'http://localhost/gestion-negocios/';
+// Los DATETIME del negocio se interpretan en esta zona; no modifica php.ini ni fechas guardadas.
+$config['zona_horaria_negocio'] = $local['zona_horaria_negocio'] ?? 'America/Guatemala';
 $config['csrf_protection'] = TRUE;
 $config['csrf_token_name'] = 'gestion_csrf';
 $config['csrf_cookie_name'] = 'gestion_csrf_cookie';

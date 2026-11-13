@@ -8,6 +8,7 @@ class Inicio_model extends MY_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->library('Calendario_negocio');
     }
 
     private function consultar($sql, $valores)
@@ -25,7 +26,7 @@ class Inicio_model extends MY_Model
         $resumen = array();
 
         if ($usuario->puede('ventas.historial')) {
-            $hoy = new DateTimeImmutable('today');
+            $hoy = Calendario_negocio::hoy(NULL,$ci->config->item('zona_horaria_negocio') ?: 'America/Guatemala');
             $resumen['ventas'] = $this->consultar(
                 'SELECT COUNT(*) cantidad, COALESCE(SUM(subtotal),0) consumo,
                         COALESCE(SUM(propina),0) propina

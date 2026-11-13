@@ -383,9 +383,9 @@ try {
         VALUES (1,1001,1,'Cocina de prueba','pendiente','pendiente',100,DATE_SUB(NOW(),INTERVAL 12 MINUTE)),
                (1,1002,1,'Venta de hoy','entregado','pagado',100,NOW()),
                (2,1001,2,'Venta ajena','entregado','pagado',999,NOW())");
-    $ayer=(new DateTimeImmutable('yesterday'))->format('Y-m-d');
+    $ayer=(new DateTimeImmutable('yesterday',new DateTimeZone('America/Guatemala')))->format('Y-m-d');
     $q=$db->prepare('UPDATE ventas SET fecha=?');$q->bind_param('s',$ayer);$q->execute();
-    $hoy=date('Y-m-d H:i:s');
+    $hoy=(new DateTimeImmutable('now',new DateTimeZone('America/Guatemala')))->format('Y-m-d H:i:s');
     foreach (array(array(1,1002,1,'100.00','10.00','110.00'),array(2,1001,2,'999.00','99.90','1098.90')) as $v) {
         $q=$db->prepare('INSERT INTO ventas (empresa_id,pedido_id,pedido_numero,referencia,usuario_id,subtotal,propina,total,efectivo,credito,debito,fecha)
             SELECT empresa_id,id,numero,referencia,?,?,?,?,?,0,0,? FROM pedidos WHERE empresa_id=? AND numero=?');
@@ -394,14 +394,20 @@ try {
     $r=$a->pedir('inicio');
     exigir($r['status']===200 && strpos($r['body'],'Resumen de tu empresa')!==FALSE && strpos($r['body'],'Q 100.00')!==FALSE && strpos($r['body'],'Q 999.00')===FALSE,'Inicio muestra ventas propias sin mezclar empresas ni propina');
     exigir(strpos($r['body'],'El resumen no está disponible')===FALSE,'Las consultas de inicio se completan correctamente');
-    exigir(substr_count($r['body'],'<circle cx=')===7 && strpos($r['body'],'Ver importes por día')!==FALSE,'La gráfica incluye siete días y una tabla con los importes exactos');
+    exigir(substr_count($r['body'],'<circle class="est-punto"')===30 && strpos($r['body'],'Ver datos por día')!==FALSE
+        && preg_match('~<caption>Ventas completadas por día, sin propinas</caption>.*?<tbody>.*?<td[^>]*>Q 100\.00</td>.*?</tbody>~s',$r['body']),
+        'El tablero muestra 30 días por defecto y conserva la tabla con los importes exactos');
+    foreach(array(7,90) as $periodo_inicio){$r=$a->pedir('inicio?dias='.$periodo_inicio);
+        exigir($r['status']===200 && substr_count($r['body'],'<circle class="est-punto"')===$periodo_inicio && strpos($r['body'],'Q 999.00')===FALSE,
+            'La gráfica respeta el período de '.$periodo_inicio.' días sin mezclar empresas');}
     $r=$b->pedir('inicio');
     exigir($r['status']===200 && strpos($r['body'],'Q 999.00')!==FALSE && strpos($r['body'],'Q 100.00')===FALSE,'Resumen de empresa B aislado');
     $r=$caja->pedir('inicio');
     exigir($r['status']===200 && strpos($r['body'],'Pedidos por cobrar')!==FALSE && strpos($r['body'],'Ventas de hoy sin propina')===FALSE,'Cajero consulta pendientes sin acceder al historial de ventas');
     $r=$cocina->pedir('inicio');
     exigir($r['status']===200 && strpos($r['body'],'Pedidos en cocina')!==FALSE && strpos($r['body'],'Pedidos por cobrar')===FALSE && strpos($r['body'],'Insumos por reponer')===FALSE,'Cocinero solo recibe indicadores autorizados');
-    exigir(strpos($r['body'],'grafico-ventas')===FALSE,'La gráfica financiera no se envía a un rol sin acceso a ventas');
+    exigir(strpos($r['body'],'grafico-ventas')===FALSE && strpos($r['body'],'est-svg-ventas')===FALSE,
+        'La gráfica financiera no se envía a un rol sin acceso a ventas');
     $r=$cocina->pedir('cocina');
     exigir($r['status']===200 && strpos($r['body'],'Actualizar pedidos')!==FALSE && preg_match('/Tiempo desde la confirmación:<\/strong>\s+12 min/u',$r['body']),'Cocina muestra actualización manual y minutos desde confirmación');
     $r=$invitado->pedir('productos');
