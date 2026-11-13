@@ -113,6 +113,7 @@ class Producto_model extends MY_Model
         $pagina = max(1, min((int) $pagina, $paginas));
         $filtrar();
         $consulta = $this->db->select('id, nombre, sku, precio, descripcion, disponible, insumo_id')
+            ->select('(SELECT i.activo FROM insumos i WHERE i.id=productos.insumo_id AND i.empresa_id=productos.empresa_id) AS insumo_activo', FALSE)
             ->order_by('nombre', 'ASC')->order_by('id', 'ASC')
             ->limit(25, ($pagina - 1) * 25)->get();
         if (!$consulta) { throw new RuntimeException('No se pudieron consultar los productos.'); }
@@ -140,6 +141,73 @@ class Producto_model extends MY_Model
 
         return $consulta->row_array() ?: NULL;
     }
+    public function por_insumos(array $insumo_ids)
+    {
+        if (!$insumo_ids) { return array(); }
+        $consulta = $this->db->select('id, insumo_id, nombre, disponible')
+            ->from('productos')->where('empresa_id', $this->empresa_id())
+            ->where_in('insumo_id', array_map('intval', $insumo_ids))->get();
+        if (!$consulta) { show_error('No se pudo consultar la disponibilidad de venta.', 503); }
+        return array_column($consulta->result_array(), NULL, 'insumo_id');
+    }
+
+    /** Asignación explícita e idempotente: no edita precios, existencias ni pedidos. */
+    public function cambiar_disponibilidad($id, $disponible)
+    {
+        try {
+            $id = Validacion_negocio::id($id, 'Producto');
+            if (!in_array($disponible, array('0','1'), TRUE)) {
+                throw new InvalidArgumentException('Selecciona una disponibilidad válida.');
+            }
+        } catch (InvalidArgumentException $e) { return array('error'=>$e->getMessage(), 'status'=>422); }
+        $ci =& get_instance();
+        $usuario = $ci->autenticacion->usuario_actual();
+        if (!$usuario || !$usuario->puede('productos.gestionar')) {
+            return array('error'=>'No tienes permiso para gestionar productos.', 'status'=>403);
+        }
+        $empresa = $this->empresa_id();
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+        $iniciada = FALSE;
+        $consultar = function ($sql, $valores) {
+            $r = $this->db->query($sql, $valores);
+            if ($r === FALSE) { throw new RuntimeException('Falló la consulta de disponibilidad.'); }
+            return $r;
+        };
+        try {
+            if (!$this->db->trans_begin()) { throw new RuntimeException('No se pudo iniciar la operación.'); }
+            $iniciada = TRUE;
+            $autorizado = $consultar('SELECT u.id FROM usuarios u
+                JOIN empresas e ON e.id=u.empresa_id
+                JOIN rol_permisos rp ON rp.rol_id=u.rol_id
+                JOIN permisos p ON p.id=rp.permiso_id
+                WHERE u.id=? AND u.empresa_id=? AND u.activo=1 AND e.activa=1
+                AND p.codigo=? LIMIT 1', array($usuario->id(),$empresa,'productos.gestionar'))->row_array();
+            if (!$autorizado) { throw new InvalidArgumentException('No tienes permiso para gestionar productos.'); }
+            $producto = $consultar('SELECT id, insumo_id FROM productos
+                WHERE id=? AND empresa_id=? FOR UPDATE', array($id,$empresa))->row_array();
+            if (!$producto) { throw new InvalidArgumentException('Producto no encontrado en tu empresa.'); }
+            if ($disponible === '1' && $producto['insumo_id'] !== NULL) {
+                $insumo = $consultar('SELECT activo FROM insumos WHERE id=? AND empresa_id=? FOR UPDATE',
+                    array($producto['insumo_id'],$empresa))->row_array();
+                if (!$insumo || (int)$insumo['activo'] !== 1) {
+                    throw new InvalidArgumentException('Reactiva primero el insumo asociado antes de habilitar su venta.');
+                }
+            }
+            $consultar('UPDATE productos SET disponible=? WHERE id=? AND empresa_id=?', array((int)$disponible,$id,$empresa));
+            if (!$this->db->trans_status() || !$this->db->trans_commit()) { throw new RuntimeException('No se pudo guardar la disponibilidad.'); }
+            $iniciada = FALSE;
+            return array('error'=>NULL, 'status'=>200);
+        } catch (InvalidArgumentException $e) {
+            if ($iniciada) { $this->db->trans_rollback(); }
+            return array('error'=>$e->getMessage(), 'status'=>409);
+        } catch (Throwable $e) {
+            if ($iniciada) { $this->db->trans_rollback(); }
+            log_message('error', 'No se pudo cambiar la disponibilidad de un producto.');
+            return array('error'=>'No se pudo cambiar la disponibilidad. Intenta nuevamente.', 'status'=>503);
+        } finally { $this->db->db_debug = $debug; }
+    }
+
     public function crear_desde_insumo($insumo_id, $sku, $precio)
     {
         try {

@@ -21,7 +21,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
 
     <div class="acciones-cabecera">
     <a class="boton boton-secundario"
-        href="<?= html_escape(site_url('proveedores')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('proveedores'))) ?>">
         Volver
     </a>
 
@@ -38,9 +38,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
     </div>
 </div>
 
-<?php if ($mensaje): ?>
-    <p role="status"><?= html_escape($mensaje) ?></p>
-<?php endif; ?>
+
 
 <section class="recuadro">
     <h2>Información del proveedor</h2>

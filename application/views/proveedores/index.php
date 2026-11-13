@@ -51,13 +51,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
 
 <!-- Mensajes de confirmación -->
 
-<?php if (!empty($mensaje)): ?>
 
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-
-<?php endif; ?>
 
 
 <!-- Búsqueda de proveedores -->

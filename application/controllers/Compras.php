@@ -102,6 +102,7 @@ class Compras extends Protected_Controller
                 $r = $this->compras_model->crear_borrador($datos, $datos['clave']);
                 $error = $r['error'];
                 if ($error === NULL) {
+                    $this->session->set_flashdata('mensaje_exito', 'Solicitud de compra creada.');
                     redirect('compras/' . $r['id'], 'location', 303);
                     return;
                 }
@@ -133,6 +134,7 @@ class Compras extends Protected_Controller
                 $r = $this->compras_model->editar_borrador((int)$s['id'], $datos['version'], $datos);
                 $error = $r['error'];
                 if ($error === NULL) {
+                    $this->session->set_flashdata('mensaje_exito', 'Solicitud de compra actualizada.');
                     redirect('compras/' . $s['id'], 'location', 303);
                     return;
                 }
@@ -163,6 +165,8 @@ class Compras extends Protected_Controller
         $r = $this->input->post('revisada') === '1' ? $this->compras_model->confirmar((int)$s['id'], $this->input->post('version')) : array('error' => 'Marca la confirmación de revisión.');
         if ($r['error'] !== NULL) {
             $this->session->set_flashdata('error_compra', $r['error']);
+        } else {
+            $this->session->set_flashdata('mensaje_exito', 'Solicitud de compra confirmada.');
         }
         redirect('compras/' . $s['id'], 'location', 303);
     }
@@ -216,8 +220,8 @@ class Compras extends Protected_Controller
             $r = $this->compras_model->crear_proveedor($entrada);
             $error = $r['error'];
             if ($error === NULL) {
-                $this->session->set_flashdata('mensaje_compra', 'Proveedor registrado. Ya puedes seleccionarlo al crear una solicitud.');
-                redirect('compras', 'location', 303);
+                $this->session->set_flashdata('mensaje_exito', 'Proveedor registrado. Ya puedes seleccionarlo al crear una solicitud.');
+                redirect(ui_ruta_retorno('compras'), 'location', 303);
                 return;
             }
             $this->output->set_status_header(422);
@@ -254,7 +258,7 @@ class Compras extends Protected_Controller
             );
         } else {
             $this->session->set_flashdata(
-                'mensaje_compra',
+                'mensaje_exito',
                 'Estado de la solicitud actualizado.'
             );
         }
@@ -360,7 +364,7 @@ class Compras extends Protected_Controller
         }
 
         $this->session->set_flashdata(
-            'mensaje_compra',
+            'mensaje_exito',
             'Recepción registrada correctamente.'
         );
 

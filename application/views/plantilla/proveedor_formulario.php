@@ -2,6 +2,7 @@
 <section class="recuadro panel-formulario">
 <?php if ($proveedor_form_error !== ''): ?><div class="error" role="alert"><?= html_escape($proveedor_form_error) ?></div><?php endif; ?>
 <?= form_open($proveedor_form_accion,array('class'=>'formulario-ui','data-ui-form'=>'')) ?>
+<?php if (preg_match('~^proveedores/([0-9]+)/editar$~',$proveedor_form_accion,$proveedor_edicion)): ?><?= ui_campo_edicion('proveedores',$proveedor_edicion[1]) ?><?php endif; ?>
 <p class="ayuda-obligatorios">Solo el nombre es obligatorio. Puedes completar los datos de contacto después.</p>
 <fieldset class="seccion-formulario"><legend>Información del proveedor</legend><div class="campos-formulario">
 <?php foreach(array('nombre'=>array('Nombre',150),'contacto'=>array('Persona de contacto',100),'telefono'=>array('Teléfono',30),'correo'=>array('Correo electrónico',190),'direccion'=>array('Dirección',255)) as $pr_campo=>$pr_info): ?>

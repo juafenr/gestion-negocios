@@ -7,28 +7,32 @@ foreach ($filtro_campos as $fi_nombre => $fi_campo) {
         $fi_activos[$fi_nombre] = $fi_campo['opciones'][$fi_valor] ?? $fi_valor;
     }
 }
+$fi_principales = array_filter($filtro_campos, function ($campo) {
+    return ($campo['tipo'] ?? '') === 'search' || !empty($campo['obligatorio']);
+});
+if (!$fi_principales && $filtro_campos) {
+    $primero = array_key_first($filtro_campos);
+    $fi_principales[$primero] = $filtro_campos[$primero];
+}
+$fi_adicionales = array_diff_key($filtro_campos, $fi_principales);
+$fi_cantidad = count(array_intersect_key($fi_activos, $fi_adicionales));
 ?>
 <form method="get" action="<?= html_escape(site_url($filtro_ruta)) ?>" class="panel-filtros" data-ui-form>
     <div class="cabecera-filtros"><h2>Filtrar resultados</h2><p>Combina los criterios y aplica los filtros.</p></div>
     <fieldset class="campos-filtros"><legend class="solo-lectores">Filtros del listado</legend>
-    <?php foreach ($filtro_campos as $fi_nombre => $fi_campo):
-        $fi_id = 'filtro-'.$fi_nombre;
-        $fi_valor = (string) ($filtro_valores[$fi_nombre] ?? ($fi_campo['defecto'] ?? ''));
-    ?>
-        <div class="campo <?= ($fi_campo['tipo'] ?? '') === 'search' ? 'campo-busqueda' : '' ?>">
-            <label for="<?= html_escape($fi_id) ?>"><?= html_escape($fi_campo['etiqueta']) ?></label>
-            <?php if (isset($fi_campo['opciones'])): ?>
-            <select id="<?= html_escape($fi_id) ?>" name="<?= html_escape($fi_nombre) ?>">
-                <?php foreach ($fi_campo['opciones'] as $fi_clave => $fi_etiqueta): ?><option value="<?= html_escape((string) $fi_clave) ?>" <?= (string) $fi_clave === $fi_valor ? 'selected' : '' ?>><?= html_escape($fi_etiqueta) ?></option><?php endforeach; ?>
-            </select>
-            <?php else: ?>
-            <input id="<?= html_escape($fi_id) ?>" name="<?= html_escape($fi_nombre) ?>" type="<?= ($fi_campo['tipo'] ?? '') === 'date' ? 'date' : 'search' ?>" value="<?= html_escape($fi_valor) ?>"
-                <?= ($fi_campo['tipo'] ?? '') === 'date' ? 'min="1000-01-01" max="9999-12-31"' : 'maxlength="150"' ?>
-                <?= !empty($fi_campo['obligatorio']) ? 'required' : '' ?>
-                <?php if (!empty($fi_campo['ejemplo'])): ?>placeholder="<?= html_escape($fi_campo['ejemplo']) ?>"<?php endif; ?>>
-            <?php endif; ?>
-        </div>
+    <?php foreach ($fi_principales as $fi_nombre=>$fi_campo): ?>
+        <?php $this->load->view('plantilla/campo_filtro', array('fi_nombre'=>$fi_nombre,'fi_campo'=>$fi_campo,'filtro_valores'=>$filtro_valores)); ?>
     <?php endforeach; ?>
+    <?php if ($fi_adicionales): ?>
+        <details class="filtros-adicionales" open data-filtros-activos="<?= $fi_cantidad ?>">
+            <summary>Más filtros<?php if ($fi_cantidad): ?> <span class="cantidad-filtros"><?= $fi_cantidad ?> <?= $fi_cantidad === 1 ? 'aplicado' : 'aplicados' ?></span><?php endif; ?><span class="flecha-filtros" aria-hidden="true">⌄</span></summary>
+            <fieldset class="campos-filtros-extra"><legend class="solo-lectores">Criterios adicionales</legend>
+            <?php foreach ($fi_adicionales as $fi_nombre=>$fi_campo): ?>
+                <?php $this->load->view('plantilla/campo_filtro', array('fi_nombre'=>$fi_nombre,'fi_campo'=>$fi_campo,'filtro_valores'=>$filtro_valores)); ?>
+            <?php endforeach; ?>
+            </fieldset>
+        </details>
+    <?php endif; ?>
     </fieldset>
     <div class="acciones-filtros">
         <button type="submit"><img class="icono" src="<?= html_escape(base_url('assets/iconos/buscar.svg')) ?>" alt="">Aplicar filtros</button>

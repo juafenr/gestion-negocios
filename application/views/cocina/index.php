@@ -10,11 +10,7 @@
 <p><a class="boton boton-secundario" href="<?= html_escape(site_url('cocina')) ?>">Actualizar pedidos</a></p>
 <p class="nota">Actualiza la lista para consultar nuevos pedidos y el tiempo transcurrido desde su confirmación.</p>
 
-<?php if ($mensaje = $this->session->flashdata('mensaje_cocina')): ?>
-    <div class="aviso" role="status">
-        <?= html_escape($mensaje) ?>
-    </div>
-<?php endif; ?>
+
 
 <?php if (!empty($pedidos)): ?>
     <div class="cola-cocina">
@@ -26,9 +22,7 @@
                         <p><?= html_escape($pedido['referencia']) ?></p>
                     </div>
 
-                    <span class="estado estado-<?= html_escape($pedido['estado']) ?>">
-                        <?= html_escape($pedido['estado'] === 'en_preparacion' ? 'En preparación' : ucfirst($pedido['estado'])) ?>
-                    </span>
+                    <?= ui_estado($pedido['estado']) ?>
                 </div>
 
                 <p>

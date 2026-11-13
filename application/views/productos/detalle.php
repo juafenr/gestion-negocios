@@ -9,7 +9,7 @@ $this->load->view('plantilla/cabecera', array(
 <p>
     <a
         class="boton boton-secundario"
-        href="<?= html_escape(site_url('productos')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('productos'))) ?>">
         Volver a productos
     </a>
 </p>
@@ -166,4 +166,5 @@ $this->load->view('plantilla/cabecera', array(
 
 <?php endif; ?>
 
+<?php if ($usuario->puede('productos.gestionar')): $this->load->view('plantilla/historial_cambios',array('historial_entidad'=>'productos','historial_id'=>$producto['id'])); endif; ?>
 <?php $this->load->view('plantilla/pie'); ?>

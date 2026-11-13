@@ -52,7 +52,7 @@ $this->load->view('plantilla/cabecera', array(
                     </td>
 
                     <td>
-                        <?= html_escape($solicitud['estado']) ?>
+                        <?= ui_estado($solicitud['estado'], 'compra') ?>
                     </td>
 
                     <td>
