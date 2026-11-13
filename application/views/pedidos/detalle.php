@@ -3,14 +3,10 @@
 <?php $puede_editar = $pedido['estado'] === 'borrador' && $usuario->puede('pedidos.crear'); ?>
 
 <p>
-    <a class="boton boton-secundario" href="<?= html_escape(site_url('pedidos')) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/volver.svg')) ?>" alt="" width="22" height="22"><span>Volver a pedidos</span></a>
+    <a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('pedidos'))) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/volver.svg')) ?>" alt="" width="22" height="22"><span>Volver a pedidos</span></a>
 </p>
 
-<?php if (!empty($mensaje)): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <?php if (!empty($error_pedido)): ?>
     <div class="error" role="alert">
@@ -28,12 +24,12 @@
 
     <p>
         <strong>Estado:</strong>
-        <?= html_escape($pedido['estado'] === 'en_preparacion' ? 'En preparación' : $pedido['estado']) ?>
+        <?= ui_estado($pedido['estado']) ?>
     </p>
 
     <p>
         <strong>Pago:</strong>
-        <?= html_escape($pedido['estado_pago']) ?>
+        <?= ui_estado($pedido['estado_pago'], 'pago') ?>
     </p>
 
     <?php if ($usuario->puede('ventas.ver') && $usuario->puede('pedidos.ver') && $pedido['estado'] !== 'borrador'): ?>
@@ -240,9 +236,9 @@
                     <?php foreach ($eventos as $evento): ?>
                         <tr>
                             <td>
-                                <?= html_escape($evento['estado_anterior'] === 'en_preparacion' ? 'En preparación' : ucfirst($evento['estado_anterior'])) ?>
+                                <?= ui_estado($evento['estado_anterior']) ?>
                                 →
-                                <?= html_escape($evento['estado_nuevo'] === 'en_preparacion' ? 'En preparación' : ucfirst($evento['estado_nuevo'])) ?>
+                                <?= ui_estado($evento['estado_nuevo']) ?>
                             </td>
                             <td><?= html_escape($evento['usuario_nombre']) ?></td>
                             <td><?= html_escape(ucfirst($evento['rol_codigo'])) ?></td>

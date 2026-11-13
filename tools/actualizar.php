@@ -980,6 +980,7 @@ try {
         $a->tabla('ventas')
         && $a->tabla('pagos')
         && $a->columna('pagos', 'propina')
+        && $a->columna('pedidos', 'propina_monto')
     ) {
         $sql = trim(
             file_get_contents($root . '/database/conciliar_ventas.sql')
@@ -1020,6 +1021,8 @@ try {
                 . "no se inventaron importes ni métodos.\n";
         }
     }
+
+    $a->crear('registro_cambios', file_get_contents($root.'/database/migrations/015_registro_cambios.sql'));
 
     if ($aplicar) {
         echo "Actualización terminada. Ejecuta de nuevo sin --aplicar: "

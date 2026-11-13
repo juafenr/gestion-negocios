@@ -53,11 +53,7 @@ foreach ($filtros as $valor) {
     <?php endif; ?>
 </div>
 
-<?php if (!empty($mensaje)): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <?php if (!empty($error)): ?>
     <div class="error" role="alert">
@@ -110,17 +106,11 @@ foreach ($filtros as $valor) {
                     </td>
 
                     <td>
-                        <?= html_escape(
-                            $estados[$pedido['estado']]
-                            ?? $pedido['estado']
-                        ) ?>
+                        <?= ui_estado($pedido['estado']) ?>
                     </td>
 
                     <td>
-                        <?= html_escape(
-                            $estados_pago[$pedido['estado_pago']]
-                            ?? $pedido['estado_pago']
-                        ) ?>
+                        <?= ui_estado($pedido['estado_pago'], 'pago') ?>
                     </td>
 
                     <td class="tabla-numero">

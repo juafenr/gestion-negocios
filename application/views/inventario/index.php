@@ -42,9 +42,7 @@ $this->load->view('plantilla/cabecera', array(
 $mensaje = $this->session->flashdata('mensaje_inventario');
 ?>
 
-<?php if ($mensaje): ?>
-    <p role="status"><?= html_escape($mensaje) ?></p>
-<?php endif; ?>
+
 
 
 <!-- Resumen general del inventario -->
@@ -211,21 +209,23 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
                     <!-- Acciones -->
 
-                    <td class="acciones-inventario-fila"><details class="acciones-desplegables"><summary aria-label="Acciones de <?= html_escape($item['nombre']) ?>">Acciones <span aria-hidden="true">⌄</span></summary>
+                    <td class="acciones-inventario-fila"><details class="acciones-desplegables"><summary aria-label="Acciones de <?= html_escape($item['nombre']) ?>">Acciones <svg class="flecha-acciones" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></summary>
 
                         <div
                             class="acciones-insumo"
                             role="group"
                             aria-label="Acciones de <?= html_escape($item['nombre']) ?>">
 
-                            <!-- Habilitar para venta -->
+                            <!-- Disponibilidad de venta -->
 
                             <?php if (
-                                $activoInsumo &&
                                 $usuario->puede('inventario.ver') &&
                                 $usuario->puede('productos.gestionar')
                             ): ?>
-
+                                <?php $producto_venta = $productos_venta[$idInsumo] ?? NULL; ?>
+                                <?php if ($producto_venta): ?>
+                                    <?php $this->load->view('plantilla/disponibilidad_venta', array('venta_producto'=>$producto_venta, 'venta_origen'=>'inventario', 'venta_reactivar'=>(bool)$activoInsumo)); ?>
+                                <?php elseif ($activoInsumo): ?>
                                 <a
                                     class="boton boton-secundario boton-compacto accion-venta"
                                     href="<?= html_escape(
@@ -241,7 +241,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                                         height="22">
                                     <span>Habilitar para venta</span>
                                 </a>
-
+                                <?php endif; ?>
                             <?php endif; ?>
 
 
@@ -318,7 +318,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
                                 <?= form_open(
                                     'inventario/' . $idInsumo . '/estado',
-                                    array('class' => 'form-estado-insumo')
+                                    array('class'=>'form-estado-insumo', 'data-confirmar'=>html_escape(($activoInsumo ? '¿Desactivar el insumo «' : '¿Reactivar el insumo «').$item['nombre'].'»?'.($activoInsumo ? ' Se conservarán sus existencias y su historial.' : '')))
                                 ) ?>
 
                                 <button
@@ -354,24 +354,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
 
                     <td>
 
-                        <?php if (!empty($item['fecha_vencimiento'])): ?>
-
-                            <?= html_escape($item['fecha_vencimiento']) ?>
-
-                            <?php if ($item['fecha_vencimiento'] < date('Y-m-d')): ?>
-
-                                <span class="estado-stock estado-bajo">
-                                    Vencido
-                                </span>
-
-                            <?php endif; ?>
-
-                        <?php else: ?>
-
-                            Sin fecha
-
-                        <?php endif; ?>
-
+                        <?= ui_vencimiento($item['fecha_vencimiento']) ?>
                     </td>
 
                 </tr>

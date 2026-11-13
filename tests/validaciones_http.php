@@ -75,7 +75,14 @@ final class ClienteValidacion {
     }
     public function post($ruta,$datos,$formulario='inicio') {
         $form=$this->pedir($formulario);
+        $ruta_formulario = NULL;
+        if (preg_match('~^(inventario|usuarios|proveedores)/[0-9]+/editar$~',$ruta) || preg_match('~^productos/editar/[0-9]+$~',$ruta)) { $ruta_formulario=$ruta; }
+        if ($ruta_formulario !== NULL && !array_key_exists('version_edicion',$datos)) {
+            $edicion=$this->pedir($ruta_formulario);
+            if ($edicion['status']===200) { $datos['version_edicion']=self::campo($edicion['body'],'version_edicion'); }
+        }
         if ($form['status']!==200) { throw new RuntimeException('No abrió formulario '.$formulario.': HTTP '.$form['status']); }
+        $form=$this->pedir($formulario);
         $datos['gestion_csrf']=self::campo($form['body'],'gestion_csrf');
         return $this->pedir($ruta,$datos);
     }
@@ -223,6 +230,33 @@ try {
         $d=$insumo;$d['fecha_vencimiento']=$fecha;$a->invalido('inventario/crear',$d,'Vencimiento inválido: '.$fecha);
     }
     $r=$a->post('inventario/crear',$insumo);exigir(in_array($r['status'],array(302,303),TRUE) && fila("SELECT cantidad_actual FROM insumos WHERE nombre='Nuevo insumo'")['cantidad_actual']==='0.00','Inventario acepta cero inicial');
+    // El vencimiento debe sobrevivir al recorrido guardar -> lista -> volver a editar.
+    $d=$insumo;$d['nombre']='Insumo con vencimiento';$d['fecha_vencimiento']='2028-02-29';
+    $r=$a->post('inventario/crear',$d,'inventario/crear');
+    exigir(in_array($r['status'],array(302,303),TRUE),'Crear insumo con fecha válida bisiesta');
+    $fecha_id=(int)fila("SELECT id FROM insumos WHERE nombre='Insumo con vencimiento' AND empresa_id=1")['id'];
+    $editar_fecha='inventario/'.$fecha_id.'/editar';
+    $r=$a->pedir($editar_fecha);
+    exigir($r['status']===200 && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='2028-02-29' && strpos($r['body'],'quitar_fecha_vencimiento')===FALSE,'Al reabrir la edición se carga el vencimiento sin casilla adicional');
+    $d['stock_minimo']='2';unset($d['cantidad_actual']);
+    $r=$a->post($editar_fecha,$d,$editar_fecha);$a->pedir('inventario');$r=$a->pedir($editar_fecha);
+    exigir($r['status']===200 && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='2028-02-29','Editar otro dato y volver al menú conserva la fecha');
+    unset($d['fecha_vencimiento']);$r=$a->post($editar_fecha,$d,$editar_fecha);
+    exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT fecha_vencimiento FROM insumos WHERE id='.$fecha_id)['fecha_vencimiento']==='2028-02-29','Omitir el campo no elimina la fecha existente');
+    $d['fecha_vencimiento']='';$r=$a->post($editar_fecha,$d,$editar_fecha);
+    exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT fecha_vencimiento FROM insumos WHERE id='.$fecha_id)['fecha_vencimiento']===NULL,'Vaciar el campo y guardar elimina la fecha');
+    $r=$a->pedir($editar_fecha);
+    exigir($r['status']===200 && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='','Al volver a editar una fecha eliminada el campo sigue vacío');
+    $d['fecha_vencimiento']='2029-03-15';$mal=$d;$mal['stock_minimo']='-1';$antes=huella();
+    $r=$a->post($editar_fecha,$mal,$editar_fecha);
+    exigir($r['status']===422 && huella()===$antes && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='2029-03-15','Un error en otro campo conserva la fecha escrita y no cambia la base');
+    $r=$a->post($editar_fecha,$d,$editar_fecha);$r=$a->pedir($editar_fecha);
+    exigir($r['status']===200 && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='2029-03-15','La fecha puede modificarse y permanece al volver a editar');
+    foreach(array('2029-02-29',array('2029-03-15')) as $fecha_mal){$mal=$d;$mal['fecha_vencimiento']=$fecha_mal;$a->invalido($editar_fecha,$mal,'Editar rechaza vencimiento inválido');}
+    $mal=$d;$mal['fecha_vencimiento']='';$mal['stock_minimo']='-1';$antes=huella();$r=$a->post($editar_fecha,$mal,$editar_fecha);
+    exigir($r['status']===422 && huella()===$antes && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='','Vaciar la fecha conserva el campo vacío ante otro error sin modificar la base');
+    $d['fecha_vencimiento']='';$r=$a->post($editar_fecha,$d,$editar_fecha);$r=$a->pedir($editar_fecha);
+    exigir($r['status']===200 && ClienteValidacion::campo($r['body'],'fecha_vencimiento')==='' && fila('SELECT fecha_vencimiento FROM insumos WHERE id='.$fecha_id)['fecha_vencimiento']===NULL,'Guardar vacío tras corregir el error elimina la fecha sin casillas adicionales');
     $a->invalido('inventario/1/movimiento',array('tipo'=>'salida','cantidad'=>'11','motivo'=>'Prueba'),'Movimiento no deja existencia negativa');
     $a->invalido('inventario/1/movimiento',array('tipo'=>'entrada','cantidad'=>'1','motivo'=>' '),'Movimiento exige motivo');
     $a->invalido('inventario/vender/2',array('sku'=>'SAL','precio'=>'-1'),'Producto rechaza precio negativo');
@@ -494,6 +528,161 @@ try {
     fclose($canales[0]);stream_get_contents($canales[1]);stream_get_contents($canales[2]);
     fclose($canales[1]);fclose($canales[2]);$codigo_demo=proc_close($proceso_demo);
     exigir($codigo_demo===0 && (int)fila("SELECT COUNT(*) n FROM productos WHERE empresa_id=1 AND sku LIKE 'DEMO-SHUCO-%'")['n']===2,'Repetir la carga no duplica los artículos');
+    // Experiencia compartida: prioridades por rol, filtros, estados y avisos únicos.
+    foreach (array(array($a,array('inventario','compras','ventas')),array($caja,array('pedidos','pagos')),array($cocina,array('cocina'))) as $caso) {
+        $r=$caso[0]->pedir('inicio');
+        preg_match('/<section aria-label="Accesos principales".*?<\/section>/s',$r['body'],$bloque);
+        preg_match_all('/<a class="acceso" href="[^"]+index.php\/([^"]+)"/',$bloque[0]??'', $enlaces);
+        exigir($r['status']===200 && $enlaces[1]===$caso[1],'El inicio prioriza únicamente los accesos permitidos del rol: '.implode(', ',$caso[1]));
+    }
+    $r=$a->pedir('usuarios?busqueda=soporte&estado=inactivos&rol=cajero');
+    exigir($r['status']===200 && strpos($r['body'],'data-filtros-activos="2"')!==FALSE && strpos($r['body'],'Más filtros')!==FALSE,'Los filtros adicionales conservan los valores y cuentan los criterios activos');
+    $r=$a->pedir('usuarios');
+    exigir(strpos($r['body'],'data-filtros-activos="0"')!==FALSE,'Sin filtros secundarios activos el componente permite plegarlos en móvil');
+    $r=$a->pedir('ventas');
+    exigir($r['status']===200 && strpos($r['body'],'class="filtros-adicionales"')===FALSE,'Las dos fechas obligatorias de ventas permanecen visibles');
+    $r=$a->pedir('compras/'.$sid);
+    exigir($r['status']===200 && strpos($r['body'],'etiqueta-recibido')!==FALSE && strpos($r['body'],'Recibida')!==FALSE,'Compras presenta el estado recibido con texto y etiqueta consistente');
+    $r=$a->pedir('pedidos/'.$pedido_catalogo);
+    exigir($r['status']===200 && strpos($r['body'],'etiqueta-confirmado')!==FALSE && strpos($r['body'],'Confirmado')!==FALSE,'Pedidos presenta la confirmación con texto y etiqueta consistente');
+    $cuenta_ux=array('nombre'=>'Cuenta "UX" <script>prueba</script>','nombre_usuario'=>'nuevo_usuario','rol_id'=>$rol);
+    $r=$a->post('usuarios/'.$uid.'/editar',$cuenta_ux,'usuarios/'.$uid.'/editar');
+    exigir(in_array($r['status'],array(302,303),TRUE),'Actualizar una cuenta para verificar la experiencia de confirmación');
+    $r=$a->seguir($r);
+    exigir(substr_count($r['body'],'data-notificacion')===1 && substr_count($r['body'],'Usuario actualizado correctamente.')===1 && strpos($r['body'],'data-notificacion')<strpos($r['body'],'<h1>'),'El éxito aparece una sola vez en la ubicación común antes del título');
+    exigir(strpos($r['body'],'data-confirmar=')!==FALSE && strpos($r['body'],'&quot;UX&quot; &lt;script&gt;prueba&lt;/script&gt;')!==FALSE && strpos($r['body'],'<script>prueba</script>')===FALSE,'La confirmación identifica al usuario y escapa nombres con comillas o HTML');
+    $r=$a->pedir('usuarios');exigir(strpos($r['body'],'Usuario actualizado correctamente.')===FALSE,'El aviso de éxito desaparece en la siguiente petición');
+    $r=$a->post('usuarios/'.$uid.'/estado',array());$r=$a->seguir($r);
+    exigir((int)fila('SELECT activo FROM usuarios WHERE id='.$uid)['activo']===0 && strpos($r['body'],'Usuario desactivado:')!==FALSE,'Desactivar conserva la validación del servidor y muestra un aviso claro');
+    $a->post('usuarios/'.$uid.'/estado',array());
+    $r=$a->pedir('inventario');
+    exigir(strpos($r['body'],'data-confirmar=')!==FALSE && strpos($r['body'],'¿Desactivar el insumo «Harina»?')!==FALSE,'La confirmación de inventario identifica el insumo concreto');
+    $r=$a->post('inventario/1/movimiento',array('tipo'=>'entrada','cantidad'=>'1','motivo'=>'Revisión de experiencia'),'inventario/1/movimiento');$r=$a->seguir($r);
+    exigir($r['status']===200 && substr_count($r['body'],'data-notificacion')===1 && strpos($r['body'],'Movimiento registrado correctamente.')!==FALSE,'Movimiento registrado usa el mismo aviso único en el historial');
+    // La venta es reversible sin duplicar el producto ni cambiar precios o existencias.
+    $r=$a->post('inventario/crear',array('nombre'=>'Insumo de venta reversible','cantidad_actual'=>'7','stock_minimo'=>'1','unidad_medida'=>'unidad','fecha_vencimiento'=>''),'inventario/crear');
+    exigir(in_array($r['status'],array(302,303),TRUE),'Crear insumo de aceptación para la venta reversible');
+    $iid=(int)fila("SELECT id FROM insumos WHERE nombre='Insumo de venta reversible' AND empresa_id=1")['id'];
+    $r=$a->post('inventario/vender/'.$iid,array('sku'=>'DISP-VENTA','precio'=>'15.25'),'inventario/vender/'.$iid);
+    exigir(in_array($r['status'],array(302,303),TRUE),'Habilitar por primera vez un insumo para venta');
+    $vp=fila('SELECT * FROM productos WHERE empresa_id=1 AND insumo_id='.$iid);$vid=(int)$vp['id'];
+    $r=$a->pedir('inventario?busqueda=Insumo%20de%20venta%20reversible');
+    exigir($r['status']===200 && strpos($r['body'],'Desactivar venta')!==FALSE && strpos($r['body'],'Habilitar para venta')===FALSE,'Inventario ofrece desactivar cuando el producto ya existe');
+    $r=$a->post('pedidos/crear',array('referencia'=>'Pedido histórico de venta reversible'));
+    $historico=(int)fila("SELECT id FROM pedidos WHERE referencia='Pedido histórico de venta reversible'")['id'];
+    $a->post('pedidos/agregar/'.$historico,array('producto_id'=>(string)$vid,'cantidad'=>'2'));
+    $r=$a->post('pedidos/'.$historico.'/confirmar',array());
+    exigir(in_array($r['status'],array(302,303),TRUE),'Confirmar pedido previo a desactivar la venta');
+    $pedido_previo=fila('SELECT * FROM pedidos WHERE id='.$historico);
+    $detalle_previo=fila('SELECT * FROM pedido_detalles WHERE pedido_id='.$historico);
+    $stock_previo=fila('SELECT * FROM insumos WHERE id='.$iid);
+    $auditoria_previa=(int)fila('SELECT COUNT(*) n FROM producto_precio_historial WHERE producto_id='.$vid)['n'];
+    $r=$a->post('pedidos/crear',array('referencia'=>'Borrador de venta reversible'));
+    $borrador=(int)fila("SELECT id FROM pedidos WHERE referencia='Borrador de venta reversible'")['id'];
+    $a->post('pedidos/agregar/'.$borrador,array('producto_id'=>(string)$vid,'cantidad'=>'1'));
+    $ruta_venta='productos/'.$vid.'/disponibilidad';$desactivar=array('disponible'=>'0','origen'=>'inventario');
+    $r=$a->post($ruta_venta,$desactivar);
+    exigir($r['status']===303 && strpos($r['destino'],'/inventario')!==FALSE && fila('SELECT disponible FROM productos WHERE id='.$vid)['disponible']==='0','Desactivar venta regresa a inventario y cambia solo la disponibilidad');
+    $r=$a->seguir($r);
+    exigir(strpos($r['body'],'Venta desactivada: Insumo de venta reversible.')!==FALSE,'La desactivación muestra una confirmación uniforme');
+    $actual=fila('SELECT * FROM productos WHERE id='.$vid);unset($actual['disponible'],$vp['disponible']);
+    exigir($actual===$vp && fila('SELECT * FROM insumos WHERE id='.$iid)===$stock_previo && (int)fila('SELECT COUNT(*) n FROM producto_precio_historial WHERE producto_id='.$vid)['n']===$auditoria_previa,'Desactivar conserva el mismo producto, código, precio, historial y existencias');
+    exigir(fila('SELECT * FROM pedidos WHERE id='.$historico)===$pedido_previo && fila('SELECT * FROM pedido_detalles WHERE pedido_id='.$historico)===$detalle_previo,'Los pedidos confirmados y sus importes permanecen intactos');
+    $antes=huella();$r=$a->post($ruta_venta,$desactivar);
+    exigir($r['status']===303 && huella()===$antes,'Repetir desactivar es idempotente y no reactiva el producto');
+    $r=$a->pedir('inventario?busqueda=Insumo%20de%20venta%20reversible');
+    exigir(strpos($r['body'],'Reactivar venta')!==FALSE && strpos($r['body'],'Habilitar para venta')===FALSE,'Inventario ofrece reactivar el producto existente');
+    $r=$a->pedir('pedidos/'.$borrador);
+    exigir(!preg_match('/<option\b[^>]*value="'.$vid.'"/',$r['body']),'Un producto desactivado ya no se ofrece al agregar al pedido');
+    $a->invalido('pedidos/agregar/'.$borrador,array('producto_id'=>(string)$vid,'cantidad'=>'1'),'No se pueden agregar productos fuera de venta');
+    $a->invalido('pedidos/'.$borrador.'/confirmar',array(),'Se revalida la disponibilidad al confirmar un borrador');
+    exigir($a->pedir($ruta_venta)['status']===405,'Cambiar disponibilidad solo admite POST');
+    $antes=huella();$r=$a->pedir($ruta_venta,array('disponible'=>'1'));
+    exigir($r['status']===403 && huella()===$antes,'CSRF protege el cambio de disponibilidad');
+    foreach(array(array(),array('disponible'=>'2'),array('disponible'=>array('1')),array('disponible'=>'1','origen'=>array('inventario')),array('disponible'=>'1','origen'=>'https://ejemplo.test')) as $mal) {
+        $a->invalido($ruta_venta,$mal,'Disponibilidad rechaza valores inválidos y orígenes externos');
+    }
+    $antes=huella();$r=$caja->post($ruta_venta,array('disponible'=>'1'));
+    exigir($r['status']===403 && huella()===$antes,'Cajero no puede cambiar la disponibilidad');
+    $r=$b->post($ruta_venta,array('disponible'=>'1'));
+    exigir($r['status']===404 && huella()===$antes,'Otra empresa no puede cambiar la disponibilidad del producto');
+    $a->post('inventario/'.$iid.'/estado',array());
+    $a->invalido($ruta_venta,array('disponible'=>'1'),'No se puede reactivar venta con el insumo inactivo');
+    $r=$a->pedir('productos?busqueda=DISP-VENTA');
+    exigir(strpos($r['body'],'disabled title="Reactiva primero el insumo asociado."')!==FALSE,'El catálogo indica que primero se debe reactivar el insumo');
+    $a->post('inventario/'.$iid.'/estado',array());
+    exigir(fila('SELECT disponible FROM productos WHERE id='.$vid)['disponible']==='0','Reactivar el insumo no reactiva automáticamente su venta');
+    $r=$a->post($ruta_venta,array('disponible'=>'1','origen'=>'productos','precio'=>'999','sku'=>'NO-CAMBIAR'));
+    exigir($r['status']===303 && strpos($r['destino'],'/productos')!==FALSE && fila('SELECT disponible FROM productos WHERE id='.$vid)['disponible']==='1','Se puede reactivar la venta también desde el catálogo');
+    $actual=fila('SELECT * FROM productos WHERE id='.$vid);unset($actual['disponible']);
+    exigir($actual===$vp && (int)fila('SELECT COUNT(*) n FROM productos WHERE empresa_id=1 AND insumo_id='.$iid)['n']===1,'Reactivar reutiliza el mismo producto e ignora cambios de precio o código no autorizados por este flujo');
+    $antes=huella();$a->post($ruta_venta,array('disponible'=>'1'));
+    exigir(huella()===$antes,'Repetir reactivar no duplica ni altera el producto');
+    $r=$a->post('pedidos/'.$borrador.'/confirmar',array());
+    exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT estado FROM pedidos WHERE id='.$borrador)['estado']==='pendiente','El borrador vuelve a poder confirmarse al reactivar la venta');
+    $r=$a->post('productos/'.$nuevo_producto.'/disponibilidad',array('disponible'=>'0'));
+    exigir($r['status']===303 && fila('SELECT disponible FROM productos WHERE id='.$nuevo_producto)['disponible']==='0','También se puede desactivar un producto sin insumo asociado');
+    $r=$a->post('productos/'.$nuevo_producto.'/disponibilidad',array('disponible'=>'1'));
+    exigir($r['status']===303 && fila('SELECT disponible FROM productos WHERE id='.$nuevo_producto)['disponible']==='1','También se puede reactivar un producto sin insumo asociado');
+    // Regresiones de filtros, concurrencia y auditoría con el mismo código HTTP de producción.
+    $dfecha=fila('SELECT nombre, stock_minimo, unidad_medida, fecha_vencimiento FROM insumos WHERE id='.$fecha_id);
+    $r=$a->pedir('inventario?busqueda=Insumo&estado=agotado&pagina=2');
+    $r=$a->pedir($editar_fecha);
+    exigir(strpos($r['body'],'inventario?busqueda=Insumo&amp;pagina=2&amp;estado=agotado')!==FALSE,'Volver a inventario conserva búsqueda, filtros y página');
+    $vieja=ClienteValidacion::campo($r['body'],'version_edicion');
+    $dfecha['fecha_vencimiento']='2030-05-10';
+    $n=(int)fila("SELECT COUNT(*) n FROM registro_cambios WHERE entidad='insumos' AND registro_id=".$fecha_id)['n'];
+    $r=$a->post($editar_fecha,$dfecha,$editar_fecha);
+    exigir(in_array($r['status'],array(302,303),TRUE) && strpos($r['destino'],'busqueda=Insumo')!==FALSE && strpos($r['destino'],'pagina=2')!==FALSE,'Guardar conserva el contexto del listado');
+    $h=fila("SELECT * FROM registro_cambios WHERE entidad='insumos' AND registro_id=".$fecha_id.' ORDER BY id DESC LIMIT 1');
+    exigir($h['campo']==='fecha_vencimiento' && $h['valor_anterior']===NULL && $h['valor_nuevo']==='2030-05-10' && $h['usuario_id']==='1' && $h['empresa_id']==='1','Cambiar vencimiento registra responsable, empresa y ambos valores');
+    $antes=huella();$obsoleta=$dfecha;$obsoleta['version_edicion']=$vieja;$obsoleta['nombre']='Texto pendiente en formulario antiguo';
+    $r=$a->post($editar_fecha,$obsoleta,$editar_fecha);
+    exigir($r['status']===409 && huella()===$antes && strpos($r['body'],'Texto pendiente en formulario antiguo')!==FALSE && strpos($r['body'],'Otra persona modificó')!==FALSE,'Una edición antigua de inventario se rechaza y conserva lo escrito');
+    $r=$a->post($editar_fecha,$dfecha,$editar_fecha);
+    exigir(in_array($r['status'],array(302,303),TRUE) && (int)fila("SELECT COUNT(*) n FROM registro_cambios WHERE entidad='insumos' AND registro_id=".$fecha_id)['n']===$n+1,'Guardar sin cambios no duplica el historial');
+    $a->pedir('inventario');
+    $r=$a->pedir('inventario/'.$fecha_id.'/historial');
+    exigir(strpos($r['body'],'Historial de cambios')!==FALSE && strpos($r['body'],'2030-05-10')!==FALSE,'Inventario permite consultar su historial de vencimientos');
+    $r=$b->pedir('inventario/'.$fecha_id.'/historial');exigir($r['status']===404,'Otra empresa no puede consultar ese historial');
+
+    $a->pedir('productos?busqueda=DISP&disponibilidad=1&pagina=2');
+    $editar_producto='productos/editar/'.$vid;$r=$a->pedir($editar_producto);
+    exigir(strpos($r['body'],'productos?busqueda=DISP&amp;pagina=2&amp;disponibilidad=1')!==FALSE,'Volver a productos conserva búsqueda, página y disponibilidad');
+    $vproducto=ClienteValidacion::campo($r['body'],'version_edicion');
+    $dp=fila('SELECT nombre, sku, descripcion, precio, disponible FROM productos WHERE id='.$vid);$dp['precio']='19.75';
+    $r=$a->post($editar_producto,$dp,$editar_producto);
+    exigir($r['status']===303,'Guardar un precio con una versión vigente');
+    $h=fila("SELECT * FROM registro_cambios WHERE entidad='productos' AND registro_id=".$vid." AND campo='precio' ORDER BY id DESC LIMIT 1");
+    exigir($h['valor_anterior']==='15.25' && $h['valor_nuevo']==='19.75' && $h['usuario_id']==='1','Precio conserva la auditoría común y el historial de precios existente');
+    $antes=huella();$dp['version_edicion']=$vproducto;$dp['precio']='25.00';$dp['nombre']='Producto pendiente de comparar';$r=$a->post($editar_producto,$dp,$editar_producto);
+    exigir($r['status']===409 && huella()===$antes && strpos($r['body'],'Producto pendiente de comparar')!==FALSE,'Edición antigua de producto no sobrescribe precio ni auditoría');
+    $antes=huella();$dp['version_edicion']='token-modificado';$r=$a->post($editar_producto,$dp,$editar_producto);
+    exigir($r['status']===409 && huella()===$antes,'La firma de edición no puede falsificarse');
+    $a->post('productos/'.$vid.'/disponibilidad',array('disponible'=>'0'));
+    $h=fila("SELECT * FROM registro_cambios WHERE entidad='productos' AND registro_id=".$vid." AND campo='disponible' ORDER BY id DESC LIMIT 1");
+    exigir($h['valor_anterior']==='1' && $h['valor_nuevo']==='0' && $h['usuario_id']==='1','Desactivar desde la acción rápida registra la disponibilidad');
+    $r=$a->pedir('productos/'.$vid);exigir(strpos($r['body'],'Historial de cambios')!==FALSE && strpos($r['body'],'Disponibilidad de venta')!==FALSE,'El catálogo muestra el historial de disponibilidad y precio');
+    $a->pedir('productos');
+
+    $ruta_proveedor='proveedores/1/editar';$r=$a->pedir($ruta_proveedor);$vproveedor=ClienteValidacion::campo($r['body'],'version_edicion');
+    $dprov=fila('SELECT nombre, contacto, telefono, correo, direccion FROM proveedores WHERE id=1');$dprov['contacto']='Contacto vigente';
+    $r=$a->post($ruta_proveedor,$dprov,$ruta_proveedor);exigir($r['status']===303,'Proveedor admite una edición vigente');
+    $antes=huella();$dprov['contacto']='Contacto obsoleto';$dprov['version_edicion']=$vproveedor;$r=$a->post($ruta_proveedor,$dprov,$ruta_proveedor);
+    exigir($r['status']===409 && huella()===$antes && strpos($r['body'],'Contacto obsoleto')!==FALSE,'Proveedor rechaza una edición obsoleta y conserva el texto');
+    $ruta_usuario='usuarios/3/editar';$r=$a->pedir($ruta_usuario);$vusuario=ClienteValidacion::campo($r['body'],'version_edicion');
+    $du=fila('SELECT nombre, nombre_usuario, rol_id FROM usuarios WHERE id=3');$du['nombre']='Cuenta vigente';$r=$a->post($ruta_usuario,$du,$ruta_usuario);
+    exigir(in_array($r['status'],array(302,303),TRUE),'Usuario admite una edición vigente');
+    $antes=huella();$du['nombre']='Nombre pendiente de comparar';$du['version_edicion']=$vusuario;$r=$a->post($ruta_usuario,$du,$ruta_usuario);
+    exigir($r['status']===409 && huella()===$antes && strpos($r['body'],'Nombre pendiente de comparar')!==FALSE,'Usuario rechaza una edición obsoleta y conserva el texto');
+
+
+    $r=$invitado->pedir('sesion/formulario');
+    exigir(in_array($r['status'],array(302,303,307),TRUE),'El token vigente exige una sesión autenticada');
+    $antes=huella();$r=$a->pedir('sesion/formulario');$token_actual=json_decode($r['body'],TRUE);
+    exigir($r['status']===200 && $token_actual['nombre']==='gestion_csrf' && preg_match('/^[a-f0-9]{32,128}$/D',$token_actual['token']) && huella()===$antes,'Preparar un formulario devuelve CSRF vigente sin cambiar datos');
+    $r=$a->post('sesion/formulario',array());exigir($r['status']===405,'La preparación del formulario solo admite GET');
+    $r=$a->pedir('sesion/formulario',array());exigir($r['status']===403,'La preparación mantiene la protección CSRF en solicitudes POST');
     $reporte['resultado']='APROBADO';echo "\nAPROBADO: $pasadas comprobaciones HTTP y de persistencia.\n";
 } catch (Throwable $e) {
     $codigo=1;$reporte['error']=$e->getMessage();fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");

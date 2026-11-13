@@ -1,9 +1,10 @@
 <?php $this->load->view('plantilla/cabecera',array('titulo'=>$titulo,'seccion'=>'productos','usuario'=>$usuario)); ?>
-<p><a class="boton boton-secundario" href="<?= html_escape(site_url('productos')) ?>">← Volver a productos</a></p>
+<p><a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('productos'))) ?>">← Volver a productos</a></p>
 <div class="encabezado-formulario"><p class="sobretitulo">CATÁLOGO</p><h1><?= html_escape($titulo) ?></h1><p class="descripcion">Define los datos, el precio y la disponibilidad del producto en tu empresa.</p></div>
 <section class="recuadro panel-formulario">
 <?php if ($error !== ''): ?><div class="error" role="alert"><?= html_escape($error) ?></div><?php endif; ?>
 <?= form_open($accion,array('class'=>'formulario-ui','data-ui-form'=>'')) ?>
+<?php if (!empty($producto['id'])): ?><?= ui_campo_edicion('productos',$producto['id']) ?><?php endif; ?>
 <p class="ayuda-obligatorios">Los campos con asterisco (*) son obligatorios.</p>
 <fieldset class="seccion-formulario"><legend>Información del producto</legend><div class="campos-formulario">
     <div class="campo campo-completo"><label for="nombre">Nombre del producto o platillo <span aria-hidden="true">*</span></label><input id="nombre" name="nombre" maxlength="150" required value="<?= html_escape($producto['nombre']??'') ?>"></div>
@@ -16,7 +17,7 @@
 </div>
 <?php if (!empty($producto['id'])): ?><p class="ayuda-campo">Si cambias el precio, el valor anterior, el nuevo, la fecha y tu usuario quedarán en el historial. Los precios de pedidos anteriores se conservan.</p><?php endif; ?>
 </fieldset>
-<div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('productos')) ?>">Cancelar</a><button type="submit">Guardar producto</button></div>
+<div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('productos'))) ?>">Cancelar</a><button type="submit">Guardar producto</button></div>
 <?= form_close() ?></section>
 <?php if (!empty($producto['id'])): ?>
 <section class="recuadro panel-formulario"><h2>Imagen del producto</h2>

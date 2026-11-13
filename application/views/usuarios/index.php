@@ -28,7 +28,7 @@
                     <?php if ($usuario->puede('usuarios.gestionar')): ?>
                         <a class="boton boton-secundario boton-compacto" href="<?= html_escape(site_url('usuarios/' . $cuenta['id'] . '/editar')) ?>">Editar</a>
                         <?php if ((int) $cuenta['id'] !== $usuario->id()): ?>
-                            <?= form_open('usuarios/' . $cuenta['id'] . '/estado') ?>
+                            <?= form_open('usuarios/' . $cuenta['id'] . '/estado', array('data-confirmar'=>html_escape(($cuenta['activo'] ? '¿Desactivar al usuario «' : '¿Activar al usuario «').$cuenta['nombre'].'» ('.$cuenta['nombre_usuario'].')?'.($cuenta['activo'] ? ' No podrá iniciar sesión hasta que se reactive.' : '')))) ?>
                                 <button type="submit" class="boton-secundario"><?= $cuenta['activo'] ? 'Desactivar' : 'Activar' ?></button>
                             <?= form_close() ?>
                         <?php endif; ?>

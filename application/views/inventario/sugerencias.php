@@ -20,7 +20,7 @@ $this->load->view('plantilla/cabecera', array(
 
     <a
         class="boton boton-secundario"
-        href="<?= html_escape(site_url('inventario')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('inventario'))) ?>">
         Volver al inventario
     </a>
 </div>

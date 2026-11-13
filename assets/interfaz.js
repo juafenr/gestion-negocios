@@ -1,6 +1,16 @@
 /* Navegación móvil accesible. Las operaciones y validaciones siguen en el servidor. */
 (function () {
     'use strict';
+    const pantallaPequena = window.matchMedia('(max-width: 640px)');
+    document.querySelectorAll('.filtros-adicionales').forEach(detalle => {
+        let abiertoEnMovil = Number(detalle.dataset.filtrosActivos) > 0;
+        function ajustarFiltros() { detalle.open = !pantallaPequena.matches || abiertoEnMovil; }
+        detalle.addEventListener('toggle', () => {
+            if (pantallaPequena.matches) abiertoEnMovil = detalle.open;
+        });
+        pantallaPequena.addEventListener('change', ajustarFiltros);
+        ajustarFiltros();
+    });
     // Las tablas largas y anchas se pueden recorrer también con teclado.
     function prepararTablas() {
         document.querySelectorAll('.tabla').forEach(tabla => {
