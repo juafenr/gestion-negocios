@@ -43,7 +43,16 @@ $orientacion = array('administrador'=>'Revisa inventario, compras y ventas de tu
 </section>
 <?php endif; ?>
 
-<?php $this->load->view('plantilla/actividad_ventas'); ?>
+<?php if ($aviso_estadisticas !== ''): ?>
+    <p class="aviso" role="status">
+        <?= html_escape($aviso_estadisticas) ?>
+    </p>
+<?php endif; ?>
+
+<?php $this->load->view(
+    'inicio/estadisticas',
+    array('panel' => $estadisticas)
+); ?>
 <?php if ($inicio_accesos['otros']): ?>
 <details class="otros-accesos"><summary>Otros accesos disponibles</summary>
     <?php $this->load->view('plantilla/accesos_inicio',array('lista_accesos'=>$inicio_accesos['otros'])); ?>

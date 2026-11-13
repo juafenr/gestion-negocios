@@ -18,7 +18,17 @@ class Inicio extends Protected_Controller
         $this->solo_metodo('GET');
         $this->requerir_permiso('inicio.ver');
         $this->load->model('Inicio_model', 'inicio_model');
-        $this->load->helper('negocio');
+        $this->load->helper(array('negocio', 'estadisticas'));
+        $this->load->model('Estadistica_model', 'estadistica_model');
+        $dias = Estadistica_model::dias_validos($this->input->get('dias'));
+        $estadisticas = array();
+        $aviso_estadisticas = '';
+        try {
+            $estadisticas = $this->estadistica_model->panel($dias);
+        } catch (RuntimeException $e) {
+            log_message('error', 'No se pudieron cargar las estadísticas de inicio.');
+            $aviso_estadisticas = 'Las estadísticas no están disponibles por el momento. Puedes seguir usando los accesos rápidos.';
+        }
         $resumen = array();
         $aviso = '';
         try {
@@ -28,7 +38,8 @@ class Inicio extends Protected_Controller
             $aviso = 'El resumen no está disponible por el momento. Puedes seguir usando los accesos rápidos.';
         }
         $this->load->view('inicio/index', array(
-            'usuario' => $this->usuario, 'resumen' => $resumen, 'aviso_resumen' => $aviso
+            'usuario' => $this->usuario, 'resumen' => $resumen, 'aviso_resumen' => $aviso,
+            'estadisticas' => $estadisticas, 'aviso_estadisticas' => $aviso_estadisticas
         ));
     }
 }
