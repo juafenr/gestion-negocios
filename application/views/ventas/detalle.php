@@ -3,7 +3,6 @@
 <section class="recuadro"><h1>Venta del pedido #<?= (int)$venta['pedido_numero'] ?></h1>
 <p><?= html_escape($venta['referencia']) ?> · <?= html_escape($venta['fecha']) ?></p>
 <p>Registró el cierre: <?= html_escape($venta['responsable'] ?? 'No consta en el registro histórico') ?></p>
-<?php if ($venta['origen']==='historico'): ?><p class="nota">Venta recuperada de un pedido que ya estaba pagado antes de esta actualización. Para pedidos de importe cero se usa la fecha de confirmación, o la de creación si no estaba registrada.</p><?php endif; ?>
 <div class="tabla"><table><thead><tr><th>Producto</th><th class="tabla-numero">Cantidad</th><th class="tabla-numero">Precio unitario</th><th class="tabla-numero">Subtotal</th></tr></thead><tbody>
 <?php foreach ($detalles as $d): ?><tr><td><?= html_escape($d['producto_nombre']) ?></td><td class="tabla-numero"><?= (int)$d['cantidad'] ?></td><td class="tabla-numero"><?= negocio_moneda($d['precio_unitario']) ?></td><td class="tabla-numero"><?= negocio_moneda($d['subtotal']) ?></td></tr><?php endforeach; ?></tbody></table></div>
 <p class="total-pedido">Consumo <?= negocio_moneda($venta['subtotal']) ?> · Propina <?= negocio_moneda($venta['propina']) ?> · Total <?= negocio_moneda($venta['total']) ?></p>

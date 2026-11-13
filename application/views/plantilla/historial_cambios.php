@@ -14,7 +14,6 @@ $formato_cambio = function($campo,$valor) {
 ?>
 <section class="recuadro historial-cambios" aria-labelledby="titulo-cambios">
     <h2 id="titulo-cambios">Historial de cambios</h2>
-    <p class="ayuda-campo">Cambios registrados desde la incorporación de este historial. Los historiales anteriores se conservan.</p>
     <div class="tabla"><table>
         <thead><tr><th>Fecha</th><th>Dato modificado</th><th>Anterior</th><th>Nuevo</th><th>Responsable</th></tr></thead>
         <tbody>

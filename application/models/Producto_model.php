@@ -571,7 +571,7 @@ class Producto_model extends MY_Model
 
             return array(
                 'id' => NULL,
-                'error' => 'No se pudo guardar el producto. Revisa que el código esté disponible y que la migración del catálogo esté aplicada.'
+                'error' => 'No se pudo guardar el producto. Revisa que el código esté disponible e inténtalo de nuevo.'
             );
         } finally {
             $this->db->db_debug = $debug_anterior;

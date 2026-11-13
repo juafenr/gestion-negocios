@@ -20,7 +20,7 @@ class Ventas extends Protected_Controller
             $datos['desde']=$desde;$datos['hasta']=$hasta;$datos['usuario']=$this->usuario;
             $this->load->view('ventas/index',$datos);
         } catch (InvalidArgumentException $e) { show_error(html_escape($e->getMessage()),422); }
-        catch (Throwable $e) { log_message('error','Ventas: '.$e->getMessage());show_error('No se pudieron consultar las ventas. Revisa las migraciones.',503); }
+        catch (Throwable $e) { log_message('error','Ventas: '.$e->getMessage());show_error('No se pudieron consultar las ventas. Inténtalo de nuevo más tarde.',503); }
     }
     public function ver($id=NULL)
     {

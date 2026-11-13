@@ -24,7 +24,7 @@ class Pagos extends Protected_Controller
             $pedidos = $this->pagos_model->listar($estado,$pagina);
         } catch (Throwable $e) {
             log_message('error', 'Consulta de pagos: '.$e->getMessage());
-            show_error('No se pudo abrir pagos. Revisa la sección de actualización de la base de datos en README.md.',503);
+            show_error('No se pudo abrir pagos. Inténtalo de nuevo más tarde.',503);
             return;
         }
         $siguiente = count($pedidos)>30;
@@ -46,7 +46,7 @@ class Pagos extends Protected_Controller
         try { $datos = $this->pagos_model->resumen((int)$id); }
         catch (Throwable $e) {
             log_message('error', 'Consulta de cuentas: '.$e->getMessage());
-            show_error('No se pudieron consultar las cuentas. Revisa la actualización de la base de datos.',503);
+            show_error('No se pudieron consultar las cuentas. Inténtalo de nuevo más tarde.',503);
             return;
         }
         $datos['usuario']=$this->usuario;

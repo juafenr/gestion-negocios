@@ -18,7 +18,7 @@ class Usuario_model extends MY_Model
             ->join('empresas e', 'e.id = u.empresa_id')
             ->join('roles r', 'r.id = u.rol_id')
             ->where($campo, $valor)->where('u.activo', 1)->where('e.activa', 1)->limit(1)->get();
-        if ($q === FALSE) { show_error('No se pudo consultar la base de datos. Revisa la instalación.', 503); }
+        if ($q === FALSE) { show_error('No se pudieron consultar los usuarios. Inténtalo de nuevo más tarde.', 503); }
         $fila = $q->row_array();
         if (!$fila) { return NULL; }
         $fila['permisos'] = $this->permisos_del_rol((int) $fila['rol_id']);

@@ -112,7 +112,6 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <?php foreach (array('efectivo','credito','debito','recibido','cambio','propina','total') as $campo): ?><td class="tabla-numero<?= $campo === 'total' ? ' tabla-total' : '' ?>"><?= Dinero::mostrar(Dinero::centavos($p[$campo])) ?></td><?php endforeach; ?>
 <td><?= html_escape($p['usuario_nombre']) ?></td></tr>
 <?php endforeach; ?></tbody></table></div>
-<p class="descripcion">Los pagos registrados se conservan. Esta versión no incluye devoluciones ni anulación de cobros.</p>
 <?php endif; ?>
 </section>
 <?php $this->load->view('plantilla/pie'); ?>

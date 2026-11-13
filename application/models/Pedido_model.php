@@ -96,7 +96,7 @@ class Pedido_model extends MY_Model
             $this->db->db_debug = $debug_anterior;
         }
 
-        show_error('No se pudo guardar el pedido. Revisa la actualización de la base de datos e intenta nuevamente.', 503);
+        show_error('No se pudo guardar el pedido. Inténtalo de nuevo más tarde.', 503);
         return 0;
     }
 
@@ -913,7 +913,7 @@ class Pedido_model extends MY_Model
             $this->db->trans_rollback();
             log_message('error', 'Fallo al cancelar el pedido.');
 
-            return 'No se pudo cancelar el pedido. Revisa las migraciones y vuelve a intentarlo.';
+            return 'No se pudo cancelar el pedido. Inténtalo de nuevo más tarde.';
         } finally {
             $this->db->db_debug = $debug_anterior;
         }

@@ -96,7 +96,7 @@ class Pago_model extends MY_Model
         } catch (Throwable $e) {
             $this->db->trans_rollback();
             log_message('error', 'Fallo de pagos: '.$e->getMessage());
-            return 'No se guardó la operación. Revisa las migraciones e inténtalo nuevamente.';
+            return 'No se guardó la operación. Inténtalo de nuevo más tarde.';
         } finally {
             $this->db->db_debug = $debug;
         }

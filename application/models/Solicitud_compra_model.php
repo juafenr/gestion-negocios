@@ -48,7 +48,7 @@ class Solicitud_compra_model extends MY_Model
         } catch (Throwable $e) {
             $this->db->trans_rollback();
             log_message('error', 'Compras: ' . $e->getMessage());
-            return array('id' => NULL, 'error' => 'No se guardaron los cambios. Revisa las migraciones y vuelve a intentarlo.');
+            return array('id' => NULL, 'error' => 'No se guardaron los cambios. Inténtalo de nuevo más tarde.');
         } finally {
             $this->db->db_debug = $debug;
         }
