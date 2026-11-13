@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
     <meta name="theme-color" content="#ce530c">
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-tablas')) ?>">
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-ventas')) ?>">
     <script src="<?= html_escape(base_url('assets/interfaz.js?v=20261112-tablas')) ?>" defer></script>
     <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112')) ?>" defer></script>
 </head>
