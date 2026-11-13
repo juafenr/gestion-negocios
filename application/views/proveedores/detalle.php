@@ -85,7 +85,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
                 <tr>
                     <th>Insumo</th>
                     <th>Unidad</th>
-                    <th>Existencia actual</th>
+                    <th class="tabla-numero">Existencia actual</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -95,7 +95,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
                     <tr>
                         <td><?= html_escape($insumo['nombre']) ?></td>
                         <td><?= html_escape($insumo['unidad_medida']) ?></td>
-                        <td><?= html_escape($insumo['cantidad_actual']) ?></td>
+                        <td class="tabla-numero"><?= html_escape($insumo['cantidad_actual']) ?></td>
 
                         <td>
                             <?php if ($puedeGestionar): ?>
