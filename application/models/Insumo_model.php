@@ -13,7 +13,7 @@ class Insumo_model extends MY_Model
     public function listar($filtros = array())
     {
         $this->db
-            ->select('id, nombre, cantidad_actual, stock_minimo, unidad_medida, fecha_vencimiento, proveedor_id, activo')
+            ->select('id, nombre, imagen, cantidad_actual, stock_minimo, unidad_medida, fecha_vencimiento, proveedor_id, activo')
             ->from('insumos')
             ->where('empresa_id', $this->empresa_id())
             ->where(
@@ -163,7 +163,7 @@ class Insumo_model extends MY_Model
     public function buscar($id)
     {
         $q = $this->db
-            ->select('id, nombre, cantidad_actual, stock_minimo, unidad_medida, fecha_vencimiento, activo')
+            ->select('id, nombre, imagen, cantidad_actual, stock_minimo, unidad_medida, fecha_vencimiento, activo')
             ->from('insumos')
             ->where('empresa_id', $this->empresa_id())
             ->where('id', (int) $id)
@@ -270,6 +270,15 @@ class Insumo_model extends MY_Model
             ->get();
 
         return $consulta ? ($consulta->row_array() ?: NULL) : NULL;
+    }
+
+    public function cambiar_imagen($id, $nombre)
+    {
+        if ($nombre !== NULL && !preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/D', $nombre)) { return FALSE; }
+        return $this->db->where('id', (int)$id)
+            ->where('empresa_id', $this->empresa_id())
+            ->where('activo', 1)
+            ->update('insumos', array('imagen'=>$nombre));
     }
 
     public function existe_nombre($nombre, $excluirId = NULL)

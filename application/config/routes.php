@@ -7,16 +7,17 @@ $route['login'] = 'auth/index';
 $route['salir'] = 'auth/salir';
 $route['productos'] = 'productos/index';
 $route['productos/(:num)'] = 'productos/ver/$1';
+$route['productos/(:num)/imagen'] = 'productos/imagen/$1';
 $route['usuarios'] = 'usuarios/index';
 $route['usuarios/crear'] = 'usuarios/crear';
 $route['usuarios/(:num)/editar'] = 'usuarios/editar/$1';
 $route['usuarios/(:num)/estado'] = 'usuarios/estado/$1';
 
 $route['inicio'] = 'inicio/index';
-$route['configuracion/propina'] = 'configuracion/propina';
 $route['inventario'] = 'inventario/index';
 $route['inventario/crear'] = 'inventario/crear';
 $route['inventario/(:num)/editar'] = 'inventario/editar/$1';
+$route['inventario/(:num)/imagen'] = 'inventario/imagen/$1';
 
 $route['cocina'] = 'cocina/index';
 $route['cocina/pedidos/(:num)/estado'] = 'cocina/actualizar_estado/$1';

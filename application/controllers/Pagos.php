@@ -68,7 +68,9 @@ class Pagos extends Protected_Controller
         $this->solo_metodo('POST');
         $this->requerir_permiso('ventas.cobrar');
         $pedido=$this->pedido($id);
-        $this->resultado($id,$this->pagos_model->preparar((int)$pedido['id']),'La cuenta está preparada. Puedes cobrarla completa o separar productos antes del primer pago.');
+        $tipo=$this->input->post('propina_tipo');
+        $valor=$tipo==='porcentaje' ? $this->input->post('propina_porcentaje') : $this->input->post('propina_monto');
+        $this->resultado($id,$this->pagos_model->preparar((int)$pedido['id'],$tipo,$valor),'Propina elegida. Puedes cobrar la cuenta completa o separar productos antes del primer pago.');
     }
 
     public function separar($id = NULL)

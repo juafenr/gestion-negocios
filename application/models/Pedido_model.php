@@ -53,7 +53,7 @@ class Pedido_model extends MY_Model
             }
 
             $consulta = $this->db
-                ->select('ultimo_numero_pedido, propina_porcentaje')
+                ->select('ultimo_numero_pedido')
                 ->where('id', $empresa_id)
                 ->get('empresas');
 
@@ -70,7 +70,10 @@ class Pedido_model extends MY_Model
                 'referencia' => $referencia,
                 'estado' => 'borrador',
                 'estado_pago' => 'pendiente',
-                'propina_porcentaje' => (int) $empresa['propina_porcentaje'],
+                'propina_porcentaje' => 0,
+                'propina_tipo' => 'ninguna',
+                'propina_valor' => '0.00',
+                'propina_monto' => '0.00',
                 'total' => '0.00'
             ));
 

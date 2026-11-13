@@ -65,6 +65,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
             <?php foreach ($productos as $producto): ?>
                 <tr>
                     <td>
+                        <?php if (!empty($producto['imagen'])): ?><img class="imagen-miniatura" src="<?= html_escape(site_url('productos/'.(int)$producto['id'].'/imagen')) ?>" alt="" width="48" height="48"><?php else: ?><span class="imagen-miniatura imagen-miniatura-vacia" aria-hidden="true">—</span><?php endif; ?>
                         <?= html_escape($producto['nombre']) ?>
                     </td>
 

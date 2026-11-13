@@ -1,7 +1,7 @@
 <?php
 $this->load->view('plantilla/cabecera',array('titulo'=>'Cobrar pedido','seccion'=>'pagos','usuario'=>$usuario));
 $consumo=Dinero::centavos($pedido['total']);
-$propina=Dinero::propina($consumo, (int)$pedido['propina_porcentaje']);
+$propina=(int)$pedido['propina_elegida']===1 ? Dinero::centavos($pedido['propina_monto']) : 0;
 $total=$consumo+$propina;
 $saldo=max(0,$total-$abonado);
 $habilitado=in_array($pedido['estado'],array('pendiente','en_preparacion','listo','entregado'),TRUE);
@@ -18,20 +18,24 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <p><?= html_escape($pedido['referencia']) ?> · Preparación: <?= html_escape(str_replace('_',' ',$pedido['estado'])) ?> · Pago: <strong><?= html_escape($pedido['estado_pago']) ?></strong></p>
 <?php if ($error): ?><p class="error" role="alert"><?= html_escape($error) ?></p><?php endif; ?>
 <?php if ($mensaje): ?><p class="recuadro aviso" role="status"><?= html_escape($mensaje) ?></p><?php endif; ?>
-<p>Consumo: <strong><?= Dinero::mostrar($consumo) ?></strong> · Propina configurada (<?= (int)$pedido['propina_porcentaje'] ?>%): <strong><?= Dinero::mostrar($propina) ?></strong></p>
+<p>Consumo: <strong><?= Dinero::mostrar($consumo) ?></strong> · Propina: <strong><?php if ((int)$pedido['propina_elegida']===1): ?><?= $pedido['propina_tipo']==='porcentaje' ? html_escape($pedido['propina_valor']).' % — ' : ($pedido['propina_tipo']==='monto' ? 'Monto elegido — ' : '') ?><?= Dinero::mostrar($propina) ?><?php else: ?>Pendiente de elección al cobrar<?php endif; ?></strong></p>
 <div class="resumen-pagos">
-    <div class="recuadro"><span>Total con propina</span><strong><?= Dinero::mostrar($total) ?></strong></div>
+    <div class="recuadro"><span><?= (int)$pedido['propina_elegida']===1 ? 'Total con propina' : 'Consumo antes de elegir propina' ?></span><strong><?= Dinero::mostrar($total) ?></strong></div>
     <div class="recuadro"><span>Pagado</span><strong><?= Dinero::mostrar($abonado) ?></strong></div>
     <div class="recuadro saldo-pago"><span>Saldo pendiente</span><strong><?= Dinero::mostrar($saldo) ?></strong></div>
 </div>
 <?php if (!$habilitado): ?><p class="recuadro aviso">Solo se pueden cobrar pedidos confirmados. Un pedido cancelado no admite pagos.</p><?php endif; ?>
-<?php if (!$cuentas && $organizar): ?>
-<section class="recuadro"><h2>Preparar el cobro</h2>
-<p>Todos los productos se colocarán en una cuenta general. Después podrás separar los productos de cada persona o cobrar todo junto.</p>
-<?= form_open('pagos/preparar/'.(int)$pedido['id']) ?><button type="submit">Preparar cuenta</button><?= form_close() ?>
+<?php if ($organizar): ?>
+<section class="recuadro"><h2>¿Desea dejar propina?</h2>
+<p>Pregunta al cliente antes de cobrar. Puede elegir un porcentaje o un monto exacto en quetzales. La elección se puede cambiar mientras no haya pagos.</p>
+<?= form_open('pagos/preparar/'.(int)$pedido['id']) ?>
+<p class="campo"><label><input type="radio" name="propina_tipo" value="ninguna" required <?= (int)$pedido['propina_elegida']===1 && $pedido['propina_tipo']==='ninguna' ? 'checked' : '' ?>> No, sin propina</label></p>
+<p class="campo"><label><input type="radio" name="propina_tipo" value="porcentaje" required <?= (int)$pedido['propina_elegida']===1 && $pedido['propina_tipo']==='porcentaje' ? 'checked' : '' ?>> Sí, por porcentaje</label><label for="propina_porcentaje">Porcentaje (%)</label><input id="propina_porcentaje" name="propina_porcentaje" type="number" min="0.01" max="100" step="0.01" inputmode="decimal" placeholder="Ejemplo: 12.5" value="<?= $pedido['propina_tipo']==='porcentaje' ? html_escape($pedido['propina_valor']) : '' ?>"></p>
+<p class="campo"><label><input type="radio" name="propina_tipo" value="monto" required <?= (int)$pedido['propina_elegida']===1 && $pedido['propina_tipo']==='monto' ? 'checked' : '' ?>> Sí, monto exacto</label><label for="propina_monto">Propina (Q)</label><input id="propina_monto" name="propina_monto" type="number" min="0.01" max="9999999999.99" step="0.01" inputmode="decimal" placeholder="Ejemplo: 7.50" value="<?= $pedido['propina_tipo']==='monto' ? html_escape($pedido['propina_valor']) : '' ?>"></p>
+<button type="submit"><?= $cuentas ? 'Actualizar propina' : 'Preparar cuenta' ?></button><?= form_close() ?>
 </section>
 <?php endif; ?>
-<?php if ($cuentas): ?>
+<?php if ($cuentas && (int)$pedido['propina_elegida']===1): ?>
 <h2>Cuentas del pedido</h2>
 <div class="cuentas-pagos">
 <?php foreach ($cuentas as $cuenta): $restante=max(0,Dinero::centavos($cuenta['total'])+Dinero::centavos($cuenta['propina'])-Dinero::centavos($cuenta['abonado'])); ?>
@@ -50,7 +54,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <?php endforeach; ?>
 </div>
 <?php endif; ?>
-<?php if ($organizar && $general): ?>
+<?php if ($organizar && $general && (int)$pedido['propina_elegida']===1): ?>
 <section class="recuadro">
 <h2>Separar la cuenta de una persona</h2>
 <p>Escribe su nombre y cuántas unidades de cada producto pagará. Puedes repetir este paso para varias personas; lo que no asignes queda en la cuenta general. La propina se reparte proporcionalmente al consumo; el redondeo puede ajustar un centavo entre cuentas.</p>
@@ -73,7 +77,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 </details>
 </section>
 <?php endif; ?>
-<?php if ($puede_cobrar && $cuentas && $saldo>0 && $pedido['estado_pago']!=='pagado'): ?>
+<?php if ($puede_cobrar && $cuentas && $saldo>0 && $pedido['estado_pago']!=='pagado' && (int)$pedido['propina_elegida']===1): ?>
 <section class="recuadro">
 <h2>Registrar pago</h2>
 <p>Indica cuánto se aplica por cada método. Para un pago mixto, completa más de uno. Puedes abonar una parte del saldo. Los abonos cubren primero el consumo y después la propina de la cuenta.</p>
@@ -92,7 +96,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <p class="campo"><label for="recibido">Efectivo recibido (Q)</label><input type="number" id="recibido" name="recibido" min="0" max="9999999999.99" step="0.01" value="0.00" required><span class="descripcion">Lo que entrega el cliente en billetes o monedas.</span></p>
 </div>
 <p id="resumen-cobro" role="status" aria-live="polite">El cambio se calcula con el efectivo recibido menos el efectivo aplicado.</p>
-<p class="descripcion">El total y el saldo incluyen la propina configurada para este pedido. Si cobras en efectivo, registra lo aplicado y lo recibido para calcular el cambio.</p>
+<p class="descripcion">El total y el saldo incluyen la propina elegida para este pedido. Si cobras en efectivo, registra lo aplicado y lo recibido para calcular el cambio.</p>
 <p class="descripcion">Este registro no procesa tarjetas. No ingreses números de tarjeta, PIN ni códigos de seguridad.</p>
 <div class="acciones-formulario"><button type="submit" id="registrar-pago"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="">Registrar pago</button></div>
 <?= form_close() ?>

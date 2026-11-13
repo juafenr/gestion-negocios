@@ -17,15 +17,16 @@ $estados_pago = array(
 );
 foreach ($pedidos as $pedido):
     $estado_pago = $estados_pago[$pedido['estado_pago']] ?? array('clase' => 'pago-desconocido', 'texto' => 'Por revisar');
+    $propina = (int)$pedido['propina_elegida']===1 ? Dinero::centavos($pedido['propina_monto']) : 0;
 ?>
 <tr>
     <td>#<?= (int)$pedido['numero'] ?></td><td><?= html_escape($pedido['referencia']) ?></td>
     <td><?= html_escape(str_replace('_',' ',$pedido['estado'])) ?></td>
     <td class="tabla-numero"><?= Dinero::mostrar(Dinero::centavos($pedido['total'])) ?></td>
-    <td class="tabla-numero"><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></td>
-    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></td>
+    <td class="tabla-numero"><?= (int)$pedido['propina_elegida']===1 ? Dinero::mostrar($propina) : 'Por decidir' ?></td>
+    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+$propina) ?></td>
     <td class="tabla-numero"><?= Dinero::mostrar(Dinero::centavos($pedido['abonado'])) ?></td>
-    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(max(0,Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])-Dinero::centavos($pedido['abonado']))) ?></td>
+    <td class="tabla-numero tabla-total"><?= Dinero::mostrar(max(0,Dinero::centavos($pedido['total'])+$propina-Dinero::centavos($pedido['abonado']))) ?></td>
     <td><span class="estado-pago <?= html_escape($estado_pago['clase']) ?>"><?= html_escape($estado_pago['texto']) ?></span></td>
     <td><a class="boton boton-secundario boton-compacto" href="<?= html_escape(site_url('pagos/'.(int)$pedido['id'])) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="">Ver cuentas</a></td>
 </tr>

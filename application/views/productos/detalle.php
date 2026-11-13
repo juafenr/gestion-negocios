@@ -14,7 +14,14 @@ $this->load->view('plantilla/cabecera', array(
     </a>
 </p>
 
-<section class="recuadro">
+<section class="recuadro detalle-producto">
+    <div class="imagen-detalle">
+        <?php if (!empty($producto['imagen'])): ?>
+            <img src="<?= html_escape(site_url('productos/'.(int)$producto['id'].'/imagen')) ?>" alt="Imagen de <?= html_escape($producto['nombre']) ?>" width="280" height="280">
+        <?php else: ?>
+            <span class="imagen-placeholder" role="img" aria-label="Producto sin imagen">Sin imagen</span>
+        <?php endif; ?>
+    </div>
 
     <h1><?= html_escape($producto['nombre']) ?></h1>
 

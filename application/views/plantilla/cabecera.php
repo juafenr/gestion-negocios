@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
     <meta name="theme-color" content="#ce530c">
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-ventas')) ?>">
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-imagenes')) ?>">
     <script src="<?= html_escape(base_url('assets/interfaz.js?v=20261112-tablas')) ?>" defer></script>
     <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112')) ?>" defer></script>
 </head>
@@ -52,9 +52,6 @@
             <?php endif; ?>
             <?php if ($usuario->puede('usuarios.ver')): ?>
                 <a class="<?= $seccion === 'usuarios' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('usuarios')) ?>" <?= $seccion === 'usuarios' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/usuario.svg')) ?>" alt="" width="22" height="22"><span>Usuarios</span></a>
-            <?php endif; ?>
-            <?php if ($usuario->puede('usuarios.gestionar')): ?>
-                <a class="<?= $seccion === 'configuracion' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('configuracion/propina')) ?>" <?= $seccion === 'configuracion' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/pagos.svg')) ?>" alt="" width="22" height="22"><span>Configuración</span></a>
             <?php endif; ?>
             <?php if ($usuario->puede('ventas.historial')): ?>
                 <a class="<?= $seccion === 'ventas' ? 'seleccionado' : '' ?>" href="<?= html_escape(site_url('ventas')) ?>" <?= $seccion === 'ventas' ? 'aria-current="page"' : '' ?>><img class="icono" src="<?= html_escape(base_url('assets/iconos/ventas.svg')) ?>" alt="" width="22" height="22"><span>Ventas</span></a>

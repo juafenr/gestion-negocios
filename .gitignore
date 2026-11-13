@@ -28,6 +28,9 @@ Thumbs.db
 # Configuración privada de cada integrante
 /application/config/local.php
 /test-results/
+/application/uploads/catalogo/*.jpg
+/application/uploads/catalogo/*.png
+/application/uploads/catalogo/*.webp
 
 # Seguimiento personal fuera del repositorio de aplicación
 /docs/ESTADO_REQUISITOS_FUNCIONALES_MAIN.md

@@ -77,11 +77,11 @@ try {
     $ci_pago_test=(object)array('load'=>new CargaPagoTest(),'db'=>new DbPagoTest($db),'autenticacion'=>new AuthPagoTest());
     $ci_pago_test->autenticacion->usuario=identidad(1,1);
     $m=new Pago_model();
-    verificar($m->preparar(2)!==NULL,'Impide preparar un pedido de otra empresa');
-    verificar($m->preparar(3)!==NULL,'Impide cobrar un borrador');
-    verificar($m->preparar(4)!==NULL,'Impide cobrar un cancelado');
-    verificar($m->preparar(1)===NULL,'Prepara el pedido confirmado');
-    verificar($m->preparar(1)===NULL && count($m->resumen(1)['cuentas'])===1,'Preparar dos veces no duplica la cuenta');
+    verificar($m->preparar(2,'porcentaje','10')!==NULL,'Impide preparar un pedido de otra empresa');
+    verificar($m->preparar(3,'porcentaje','10')!==NULL,'Impide cobrar un borrador');
+    verificar($m->preparar(4,'porcentaje','10')!==NULL,'Impide cobrar un cancelado');
+    verificar($m->preparar(1,'porcentaje','10')===NULL,'Prepara el pedido confirmado');
+    verificar($m->preparar(1,'porcentaje','10')===NULL && count($m->resumen(1)['cuentas'])===1,'Preparar dos veces no duplica la cuenta');
     verificar($m->separar(1,'Duplicados',array(1=>'1','01'=>'1'))!==NULL,'Separación rechaza identificadores equivalentes duplicados');
     verificar($m->separar(1,'Juan',array(1=>'1'))===NULL,'Separa los productos de Juan');
     verificar($m->separar(1,'Ajeno',array(3=>'1'))!==NULL,'Rechaza un producto de otro pedido/empresa');
@@ -111,19 +111,19 @@ try {
     verificar($db->query('SELECT estado FROM pedidos WHERE id=1')->fetch_assoc()['estado']==='pendiente','Pagar no cambia el estado de preparación');
     verificar($db->query('SELECT SUM(propina) n FROM pagos WHERE pedido_id=1')->fetch_assoc()['n']==='10.00','Historial distingue Q 10 de propina');
     verificar($m->registrar(1,$juan,montos('1'))!==NULL,'No cobra otra vez una cuenta saldada');
-    verificar($m->preparar(5)===NULL,'Prepara cuenta de efectivo');
+    verificar($m->preparar(5,'monto','10.00')===NULL,'Prepara cuenta de efectivo con propina exacta');
     $ef=(int)$m->resumen(5)['cuentas'][0]['id'];
     verificar($m->registrar(5,$ef,montos('110','0','0','200'))===NULL,'Cobro completo en efectivo');
     verificar($m->resumen(5)['pagos'][0]['cambio']==='90.00','Cambio correcto Q 90');
-    verificar($m->preparar(6)===NULL,'Prepara cuenta de rollback');
+    verificar($m->preparar(6,'porcentaje','10')===NULL,'Prepara cuenta de rollback');
     verificar($m->separar(6,'Error',array(7=>'2'))!==NULL && count($m->resumen(6)['cuentas'])===1,'Un reparto inválido no deja cuentas incompletas');
     verificar($m->reiniciar(6)===NULL && !$m->resumen(6)['cuentas'],'Se puede reorganizar antes de cobrar');
     $ci_pago_test->autenticacion->usuario=identidad(2,2);
     verificar(!$m->resumen(1)['pagos'] && !$m->resumen(1)['cuentas'],'Empresa B no consulta el historial de A');
-    verificar($m->preparar(2)===NULL,'Empresa B prepara su propia cuenta');
+    verificar($m->preparar(2,'porcentaje','10')===NULL,'Empresa B prepara su propia cuenta');
     verificar($m->registrar(2,$juan,montos('1'))!==NULL,'Cuenta de A rechazada en pedido de B');
     $ci_pago_test->autenticacion->usuario=identidad(3,1,'cocinero');
-    verificar($m->preparar(6)!==NULL,'Cocinero no prepara cobros');
+    verificar($m->preparar(6,'porcentaje','10')!==NULL,'Cocinero no prepara cobros');
     verificar($m->registrar(1,$juan,montos('1'))!==NULL,'Cocinero no registra pagos');
     // La BD también impide referencias de pagos entre empresas.
     $rechazo=FALSE;
@@ -135,7 +135,7 @@ try {
     verificar((int)$db->query('SELECT COUNT(*) n FROM ventas WHERE pedido_id=1')->fetch_assoc()['n']===1,'RF-33: una venta por pedido completado');
     $venta=$db->query('SELECT * FROM ventas WHERE pedido_id=1')->fetch_assoc();
     verificar($venta['subtotal']==='100.00' && $venta['propina']==='10.00' && $venta['total']==='110.00','Venta conserva consumo y propina');
-    verificar($m->preparar(6)===NULL,'Preparar pedido para comprobar rollback');
+    verificar($m->preparar(6,'porcentaje','10')===NULL,'Preparar pedido para comprobar rollback');
     $cuenta6=(int)$m->resumen(6)['cuentas'][0]['id'];
     $pago6=montos('110');
     $db->query('RENAME TABLE ventas TO ventas_no_disponible');
@@ -146,7 +146,7 @@ try {
     verificar($m->registrar(6,$cuenta6,$pago6)===NULL && (int)$db->query('SELECT COUNT(*) n FROM ventas WHERE pedido_id=6')->fetch_assoc()['n']===1,'Reintento no duplica venta');
     $db->query("INSERT INTO pedidos (id,empresa_id,numero,usuario_id,referencia,estado,total) VALUES (7,1,6,1,'Sin cargo','pendiente',0)");
     $db->query("INSERT INTO pedido_detalles (empresa_id,pedido_id,producto_id,producto_nombre,cantidad,precio_unitario) VALUES (1,7,1,'Sin cargo',1,0)");
-    verificar($m->preparar(7)===NULL && (int)$db->query('SELECT COUNT(*) n FROM ventas WHERE pedido_id=7')->fetch_assoc()['n']===1,'Pedido sin cargo también registra venta única');
+    verificar($m->preparar(7,'ninguna',NULL)===NULL && (int)$db->query('SELECT COUNT(*) n FROM ventas WHERE pedido_id=7')->fetch_assoc()['n']===1,'Pedido sin cargo también registra venta única');
     $db->query('DELETE FROM ventas WHERE pedido_id=1');
     $sql=file_get_contents(__DIR__.'/../database/conciliar_ventas.sql');$db->query($sql);$db->query($sql);
     verificar((int)$db->query('SELECT COUNT(*) n FROM ventas WHERE pedido_id=1')->fetch_assoc()['n']===1,'Conciliación histórica idempotente');

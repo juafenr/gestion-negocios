@@ -142,7 +142,8 @@ class Productos extends Protected_Controller
             $this->mostrar_formulario(
                 $producto,
                 $accion,
-                'Editar producto'
+                'Editar producto',
+                $this->session->flashdata('error_imagen') ?: ''
             );
             return;
         }
@@ -159,6 +160,7 @@ class Productos extends Protected_Controller
         if ($resultado['error'] !== NULL) {
             $valores = $this->valores_para_formulario($datos);
             $valores['id'] = $producto['id'];
+            $valores['imagen'] = $producto['imagen'];
 
             $this->mostrar_formulario(
                 $valores,
@@ -175,6 +177,34 @@ class Productos extends Protected_Controller
         );
 
         redirect('productos', 'location', 303);
+    }
+
+    public function imagen($id = NULL)
+    {
+        $this->requerir_permiso('productos.ver');
+        $producto = $this->obtener_producto($id);
+        $this->load->library('Imagen_catalogo');
+        if ($this->input->method(TRUE) === 'GET') {
+            if (!$producto['imagen'] || !$this->imagen_catalogo->servir($producto['imagen'])) { show_404(); }
+            exit;
+        }
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('productos.gestionar');
+        $nuevo = NULL;
+        try {
+            if ($this->input->post('quitar') !== '1') {
+                $nuevo = $this->imagen_catalogo->guardar($_FILES['imagen'] ?? NULL);
+            }
+            if (!$this->productos_model->cambiar_imagen($producto['id'], $nuevo)) {
+                throw new RuntimeException('No se pudo asociar la imagen al producto.');
+            }
+            $this->imagen_catalogo->eliminar($producto['imagen']);
+            $this->session->set_flashdata('mensaje_imagen', $nuevo ? 'Imagen actualizada.' : 'Imagen retirada.');
+        } catch (Throwable $e) {
+            $this->imagen_catalogo->eliminar($nuevo);
+            $this->session->set_flashdata('error_imagen', $e instanceof InvalidArgumentException ? $e->getMessage() : 'No se pudo guardar la imagen.');
+        }
+        redirect('productos/editar/' . (int)$producto['id'], 'location', 303);
     }
 
     private function obtener_producto($id)

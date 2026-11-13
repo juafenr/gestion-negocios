@@ -157,6 +157,7 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                 <tr>
 
                     <td>
+                        <?php if (!empty($item['imagen'])): ?><img class="imagen-miniatura" src="<?= html_escape(site_url('inventario/'.$idInsumo.'/imagen')) ?>" alt="" width="48" height="48"><?php else: ?><span class="imagen-miniatura imagen-miniatura-vacia" aria-hidden="true">—</span><?php endif; ?>
                         <?= html_escape($item['nombre']) ?>
                     </td>
 

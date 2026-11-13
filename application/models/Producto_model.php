@@ -112,7 +112,7 @@ class Producto_model extends MY_Model
         $paginas = max(1, (int) ceil($total / 25));
         $pagina = max(1, min((int) $pagina, $paginas));
         $filtrar();
-        $consulta = $this->db->select('id, nombre, sku, precio, descripcion, disponible, insumo_id')
+        $consulta = $this->db->select('id, nombre, sku, precio, descripcion, disponible, insumo_id, imagen')
             ->order_by('nombre', 'ASC')->order_by('id', 'ASC')
             ->limit(25, ($pagina - 1) * 25)->get();
         if (!$consulta) { throw new RuntimeException('No se pudieron consultar los productos.'); }
@@ -125,7 +125,7 @@ class Producto_model extends MY_Model
         $consulta = $this->db
             ->select(
                 'id, nombre, sku, precio,
-                descripcion, disponible, insumo_id'
+                descripcion, disponible, insumo_id, imagen'
             )
             ->from('productos')
             ->where('empresa_id', $this->empresa_id())
@@ -139,6 +139,13 @@ class Producto_model extends MY_Model
         }
 
         return $consulta->row_array() ?: NULL;
+    }
+    public function cambiar_imagen($id, $nombre)
+    {
+        if ($nombre !== NULL && !preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/D', $nombre)) { return FALSE; }
+        return $this->db->where('id', (int)$id)
+            ->where('empresa_id', $this->empresa_id())
+            ->update('productos', array('imagen'=>$nombre));
     }
     public function crear_desde_insumo($insumo_id, $sku, $precio)
     {

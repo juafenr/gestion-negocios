@@ -18,6 +18,7 @@ try {
     verificar(Dinero::propina(5)===1,'Medio centavo se redondea hacia arriba');
     verificar(Dinero::propina(4)===0,'Menos de medio centavo se redondea hacia abajo');
     verificar(Dinero::repartirPropina(array(1=>6000,2=>4000))===array(1=>600,2=>400),'Propina de Q 10 repartida en Q 6 y Q 4');
+    verificar(Dinero::repartirMonto(array(1=>6000,2=>4000),751)===array(1=>451,2=>300),'Monto exacto de Q 7.51 se reparte sin perder centavos');
     $reparto=Dinero::repartirPropina(array(1=>5,2=>5,3=>5));
     verificar(array_sum($reparto)===2 && $reparto[1]===1 && $reparto[2]===1 && $reparto[3]===0,'Repartir no agrega centavos al total');
     foreach (array('-1','1.001','1e2',' 1','1,50','NaN','10000000000.00','',NULL,array('1')) as $malo) {

@@ -190,6 +190,37 @@ class Inventario extends Protected_Controller
         redirect('inventario');
     }
 
+    public function imagen($id = NULL)
+    {
+        $this->requerir_permiso('inventario.ver');
+        if (!is_string($id) || !ctype_digit($id) || strlen($id)>10 || (int)$id<1) { show_404(); return; }
+        $insumo = $this->insumos_model->buscar_incluyendo_inactivos($id);
+        if (!$insumo) { show_404(); return; }
+        $this->load->library('Imagen_catalogo');
+        if ($this->input->method(TRUE) === 'GET') {
+            if (!$insumo['imagen'] || !$this->imagen_catalogo->servir($insumo['imagen'])) { show_404(); }
+            exit;
+        }
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('inventario.gestionar');
+        if ((int)$insumo['activo'] !== 1) { show_404(); return; }
+        $nuevo = NULL;
+        try {
+            if ($this->input->post('quitar') !== '1') {
+                $nuevo = $this->imagen_catalogo->guardar($_FILES['imagen'] ?? NULL);
+            }
+            if (!$this->insumos_model->cambiar_imagen($insumo['id'], $nuevo)) {
+                throw new RuntimeException('No se pudo asociar la imagen al insumo.');
+            }
+            $this->imagen_catalogo->eliminar($insumo['imagen']);
+            $this->session->set_flashdata('mensaje_imagen', $nuevo ? 'Imagen actualizada.' : 'Imagen retirada.');
+        } catch (Throwable $e) {
+            $this->imagen_catalogo->eliminar($nuevo);
+            $this->session->set_flashdata('error_imagen', $e instanceof InvalidArgumentException ? $e->getMessage() : 'No se pudo guardar la imagen.');
+        }
+        redirect('inventario/' . (int)$insumo['id'] . '/editar', 'location', 303);
+    }
+
     private function configurar_validacion($nuevo = FALSE)
     {
         foreach (array('nombre', 'stock_minimo', 'unidad_medida', 'fecha_vencimiento', 'cantidad_actual') as $campo) {

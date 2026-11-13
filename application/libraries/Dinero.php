@@ -50,6 +50,35 @@ class Dinero
         return $resultado;
     }
 
+    /** Reparte un monto exacto por consumo y asigna los centavos restantes de forma estable. */
+    public static function repartirMonto($subtotales, $monto)
+    {
+        if (!is_int($monto) || $monto < 0) { throw new InvalidArgumentException('Monto de propina inválido.'); }
+        $suma = array_sum($subtotales);
+        if ($suma === 0) {
+            if ($monto !== 0) { throw new InvalidArgumentException('No puede repartirse propina sin consumo.'); }
+            return array_fill_keys(array_keys($subtotales), 0);
+        }
+        $resultado = array(); $restos = array(); $asignado = 0;
+        foreach ($subtotales as $id=>$subtotal) {
+            if ($monto===0 || $subtotal <= intdiv(PHP_INT_MAX, $monto)) {
+                $producto = $subtotal * $monto;
+                $resultado[$id] = intdiv($producto, $suma);
+                $restos[$id] = $producto % $suma;
+            } else {
+                if (!function_exists('bcmul')) { throw new RuntimeException('El reparto requiere BCMath para este importe.'); }
+                $producto = bcmul((string)$subtotal,(string)$monto,0);
+                $resultado[$id] = (int)bcdiv($producto,(string)$suma,0);
+                $restos[$id] = (int)bcmod($producto,(string)$suma);
+            }
+            $asignado += $resultado[$id];
+        }
+        $ids = array_keys($subtotales);
+        usort($ids, function ($a,$b) use ($restos) { return $restos[$b] <=> $restos[$a] ?: $a <=> $b; });
+        for ($i=0;$i<$monto-$asignado;$i++) { $resultado[$ids[$i]]++; }
+        return $resultado;
+    }
+
     public static function mostrar($centavos)
     {
         if (!is_int($centavos) || $centavos < 0) { throw new InvalidArgumentException('Monto inválido.'); }

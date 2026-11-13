@@ -506,10 +506,12 @@ try {
 
     $a->crear('proveedores', $creaciones['proveedores']);
     $a->crear('insumos', $creaciones['insumos']);
+    $a->agregar('insumos', 'imagen', 'VARCHAR(40) NULL');
     $a->agregar('insumos', 'fecha_vencimiento', 'DATE NULL');
     $a->agregar('insumos', 'proveedor_id', 'INT UNSIGNED NULL');
 
     // Catálogo: agregar únicamente columnas que todavía no existen.
+    $a->agregar('productos', 'imagen', 'VARCHAR(40) NULL');
     $a->agregar('productos', 'insumo_id', 'INT UNSIGNED NULL');
 
     $a->agregar(
@@ -528,6 +530,29 @@ try {
     $a->crear('pedidos', $creaciones['pedidos']);
     // Los pedidos anteriores conservan el 10 % con el que se registraron.
     $a->agregar('pedidos', 'propina_porcentaje', 'TINYINT UNSIGNED NOT NULL DEFAULT 10');
+    $falta_eleccion = !$a->columna('pedidos', 'propina_elegida');
+    $a->agregar('pedidos', 'propina_elegida', 'TINYINT UNSIGNED NOT NULL DEFAULT 0');
+    if ($falta_eleccion || ($a->columna('pedidos', 'propina_elegida') && (int)$db->query(
+        "SELECT COUNT(*) n FROM pedidos WHERE propina_elegida=0 AND estado_pago IN ('parcial','pagado')"
+    )->fetch_assoc()['n'] > 0)) {
+        $a->operacion('conservar propina de pedidos ya cobrados',
+            "UPDATE pedidos SET propina_elegida=1 WHERE propina_elegida=0 AND estado_pago IN ('parcial','pagado')");
+    }
+    $faltan_datos_propina = !$a->columna('pedidos', 'propina_tipo') ||
+        !$a->columna('pedidos', 'propina_valor') || !$a->columna('pedidos', 'propina_monto');
+    $a->agregar('pedidos', 'propina_tipo', "VARCHAR(12) NOT NULL DEFAULT 'ninguna'");
+    $a->agregar('pedidos', 'propina_valor', 'DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0.00');
+    $a->agregar('pedidos', 'propina_monto', 'DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0.00');
+    if ($faltan_datos_propina || ($a->columna('pedidos', 'propina_tipo') &&
+        $a->columna('pedidos', 'propina_valor') && $a->columna('pedidos', 'propina_monto') &&
+        (int)$db->query("SELECT COUNT(*) n FROM pedidos WHERE propina_elegida=1
+            AND propina_tipo='ninguna' AND propina_monto=0 AND propina_porcentaje>0")->fetch_assoc()['n'] > 0)) {
+        $a->operacion('conservar importes de propina anteriores',
+            "UPDATE pedidos SET propina_tipo=IF(propina_porcentaje=0,'ninguna','porcentaje'),
+             propina_valor=propina_porcentaje,
+             propina_monto=ROUND(total*propina_porcentaje/100,2)
+             WHERE propina_elegida=1 AND propina_tipo='ninguna' AND propina_monto=0");
+    }
 
     $a->agregar(
         'pedidos',

@@ -108,10 +108,6 @@ class Pedidos extends Protected_Controller
                     if ($pedido) {
                         $error = $this->pedidos_model->agregar_producto($pedido, (int)$producto, (int)$cantidad) ?? '';
                         if ($error === '') { $error = $this->pedidos_model->confirmar($pedido, $this->usuario->id(), $this->usuario->rol()) ?? ''; }
-                        if ($error === '') {
-                            $this->load->model('Pago_model', 'pagos_model');
-                            $error = $this->pagos_model->preparar($pedido) ?? '';
-                        }
                         if ($error === '') { redirect('pagos/'.$pedido, 'location', 303); return; }
                         $this->session->set_flashdata('error_pedido', 'Pedido rápido incompleto: '.$error.' Revisa el borrador o pedido antes de continuar.');
                         redirect('pedidos/'.$pedido, 'location', 303);

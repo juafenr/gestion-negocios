@@ -30,7 +30,10 @@ function borrar_arbol($dir) {
         if ($f->isDir() && !$f->isLink()) { borrar_arbol($f->getPathname()); }
         else { unlink($f->getPathname()); }
     }
-    rmdir($dir);
+    for ($intento=0;$intento<10 && is_dir($dir);$intento++) {
+        if (@rmdir($dir)) { break; }
+        usleep(100000);
+    }
 }
 function huella() {
     global $db;
@@ -75,6 +78,23 @@ final class ClienteValidacion {
         if ($form['status']!==200) { throw new RuntimeException('No abrió formulario '.$formulario.': HTTP '.$form['status']); }
         $datos['gestion_csrf']=self::campo($form['body'],'gestion_csrf');
         return $this->pedir($ruta,$datos);
+    }
+    public function post_archivo($ruta,$archivo,$formulario) {
+        $form=$this->pedir($formulario);
+        if ($form['status']!==200) { throw new RuntimeException('No abrió formulario '.$formulario.': HTTP '.$form['status']); }
+        curl_setopt($this->c,CURLOPT_URL,$this->base.$ruta);
+        curl_setopt($this->c,CURLOPT_POST,TRUE);
+        curl_setopt($this->c,CURLOPT_POSTFIELDS,array(
+            'gestion_csrf'=>self::campo($form['body'],'gestion_csrf'),
+            'imagen'=>new CURLFile($archivo,'image/png','foto.png')
+        ));
+        $body=curl_exec($this->c);
+        if ($body===FALSE) { throw new RuntimeException('HTTP: '.curl_error($this->c)); }
+        if (preg_match('/A PHP Error was encountered|Fatal error:|Parse error:|Uncaught .*Error|Severity: (Warning|Notice)/i',$body)) {
+            throw new RuntimeException('Error PHP en '.$ruta.'. Consulta el registro temporal de la prueba.');
+        }
+        return array('status'=>(int)curl_getinfo($this->c,CURLINFO_HTTP_CODE),'body'=>$body,
+            'destino'=>curl_getinfo($this->c,CURLINFO_REDIRECT_URL));
     }
     public function seguir($r) {
         if (strpos($r['destino'],$this->base)!==0) { throw new RuntimeException('Redirección inesperada: '.$r['destino']); }
@@ -146,10 +166,18 @@ try {
         $r=$invitado->post('login',$mal,'login');exigir($r['status']===422,'Login rechaza campos vacíos o anidados');
     }
     $a->entrar('admin_a',$password);$b->entrar('admin_b',$password);$caja->entrar('cajero_a',$password);$cocina->entrar('cocinero_a',$password);
-    exigir((int)fila('SELECT propina_porcentaje FROM empresas WHERE id=1')['propina_porcentaje']===0,'Empresa nueva inicia sin propina automática');
-    $r=$a->post('configuracion/propina',array('porcentaje'=>'10'),'configuracion/propina');
-    exigir($r['status']===303 && (int)fila('SELECT propina_porcentaje FROM empresas WHERE id=1')['propina_porcentaje']===10,'Administrador configura propina de 10 %');
-    exigir($caja->pedir('configuracion/propina')['status']===403,'Cajero no cambia la propina');
+    $foto=$temp.'/foto.png';
+    file_put_contents($foto,base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6a1sAAAAASUVORK5CYII='));
+    exigir(strpos($a->pedir('inventario/1/editar')['body'],'Sin imagen')!==FALSE,'Insumo sin foto muestra marcador');
+    $r=$a->post_archivo('inventario/1/imagen',$foto,'inventario/1/editar');
+    $imagen_insumo=fila('SELECT imagen FROM insumos WHERE id=1')['imagen'];
+    exigir($r['status']===303 && (bool)preg_match('/^[a-f0-9]{32}\.png$/',$imagen_insumo),'Subir foto opcional de insumo');
+    $r=$a->pedir('inventario/1/imagen');
+    exigir($r['status']===200 && substr($r['body'],0,8)==="\x89PNG\r\n\x1a\n",'Foto de insumo se entrega por ruta autenticada (HTTP '.$r['status'].', bytes '.bin2hex(substr($r['body'],0,8)).')');
+    exigir($b->pedir('inventario/1/imagen')['status']===404,'Otra empresa no ve la foto de insumo');
+    $r=$a->post('inventario/1/imagen',array('quitar'=>'1'),'inventario/1/editar');
+    exigir($r['status']===303 && fila('SELECT imagen FROM insumos WHERE id=1')['imagen']===NULL,'Quitar foto del insumo restaura marcador');
+    exigir($a->pedir('configuracion/propina')['status']===404,'La configuración global de propina ya no está disponible');
     foreach (array('usuarios','ventas','compras','proveedores/1/editar') as $ruta) {
         exigir($cocina->pedir($ruta)['status']===403,'Cocinero sin permiso: '.$ruta);
     }
@@ -211,7 +239,21 @@ try {
     $cocina->invalido('cocina/pedidos/'.$pid.'/estado',array('estado'=>array('listo')),'Cocina rechaza estado anidado');
     $cocina->invalido('cocina/pedidos/'.$pid.'/estado',array('estado'=>'entregado'),'Cocina no salta estados');
     $r=$cocina->post('cocina/pedidos/'.$pid.'/estado',array('estado'=>'en_preparacion'));exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT estado FROM pedidos WHERE id='.$pid)['estado']==='en_preparacion','Cocina acepta transición válida');
-    $r=$caja->post('pagos/preparar/'.$pid,array());exigir($r['status']===303,'Preparar cuenta');
+    $r=$caja->pedir('pagos/'.$pid);
+    exigir($r['status']===200 && strpos($r['body'],'¿Desea dejar propina?')!==FALSE,'El cobro pregunta por la propina');
+    $antes=huella();$r=$caja->post('pagos/preparar/'.$pid,array());
+    exigir($r['status']===303 && huella()===$antes,'Preparar sin responder la propina no cambia datos');
+    $r=$caja->post('pagos/preparar/'.$pid,array('propina_tipo'=>'porcentaje','propina_porcentaje'=>'10'),'pagos/'.$pid);
+    exigir($r['status']===303 && fila('SELECT propina_monto FROM pedidos WHERE id='.$pid)['propina_monto']==='1.00','El cliente acepta 10 % al cobrar');
+    $caja->invalido('pagos/preparar/'.$pid,array('propina_tipo'=>'porcentaje','propina_porcentaje'=>'101'),'Porcentaje mayor que 100 se rechaza','pagos/'.$pid);
+    $caja->invalido('pagos/preparar/'.$pid,array('propina_tipo'=>'monto','propina_monto'=>'-1'),'Monto negativo de propina se rechaza','pagos/'.$pid);
+    $caja->invalido('pagos/preparar/'.$pid,array('propina_tipo'=>array('monto'),'propina_monto'=>'1'),'Tipo de propina anidado se rechaza','pagos/'.$pid);
+    $r=$caja->post('pagos/preparar/'.$pid,array('propina_tipo'=>'monto','propina_monto'=>'7.50'),'pagos/'.$pid);
+    exigir($r['status']===303 && fila('SELECT propina_monto FROM pedidos WHERE id='.$pid)['propina_monto']==='7.50','La propina admite un monto exacto');
+    $r=$caja->post('pagos/preparar/'.$pid,array('propina_tipo'=>'porcentaje','propina_porcentaje'=>'12.5'),'pagos/'.$pid);
+    exigir($r['status']===303 && fila('SELECT propina_monto FROM pedidos WHERE id='.$pid)['propina_monto']==='1.25','La propina admite porcentaje decimal');
+    $r=$caja->post('pagos/preparar/'.$pid,array('propina_tipo'=>'porcentaje','propina_porcentaje'=>'10'),'pagos/'.$pid);
+    exigir($r['status']===303 && fila('SELECT propina_monto FROM pedidos WHERE id='.$pid)['propina_monto']==='1.00','La elección puede cambiar antes del primer pago');
     $cuenta=(string)fila('SELECT id FROM pago_cuentas WHERE pedido_id='.$pid)['id'];
     $pago=array('cuenta_id'=>$cuenta,'efectivo'=>'11','credito'=>'0','debito'=>'0','recibido'=>'11','clave'=>bin2hex(random_bytes(32)));
     foreach (array('efectivo','credito','debito','recibido') as $campo) {
@@ -222,12 +264,15 @@ try {
     $d=$pago;$d['recibido']='10';$caja->invalido('pagos/registrar/'.$pid,$d,'Efectivo recibido insuficiente');
     $d=$pago;$d['efectivo']='12';$d['recibido']='12';$caja->invalido('pagos/registrar/'.$pid,$d,'Pago mayor al saldo');
     $r=$caja->post('pagos/registrar/'.$pid,$pago);exigir($r['status']===303 && fila('SELECT estado_pago FROM pedidos WHERE id='.$pid)['estado_pago']==='pagado','Pago válido completa pedido y venta');
-    $r=$a->post('configuracion/propina',array('porcentaje'=>'0'),'configuracion/propina');
-    exigir($r['status']===303 && (int)fila('SELECT propina_porcentaje FROM pedidos WHERE id='.$pid)['propina_porcentaje']===10,'Cambiar configuración conserva propina del pedido anterior');
+    $antes=huella();$r=$caja->post('pagos/preparar/'.$pid,array('propina_tipo'=>'ninguna'),'pagos/'.$pid);
+    exigir($r['status']===303 && huella()===$antes,'La propina no cambia después de registrar el pago');
+    exigir((int)fila('SELECT propina_porcentaje FROM pedidos WHERE id='.$pid)['propina_porcentaje']===10,'El pago conserva la propina elegida');
     $r=$a->post('pedidos/rapido',array('referencia'=>'Prueba rápida','producto_id'=>'1','cantidad'=>'1'),'pedidos/rapido');
     $rapido=fila("SELECT id,estado,propina_porcentaje FROM pedidos WHERE referencia='Prueba rápida'");
     exigir($r['status']===303 && $rapido && $rapido['estado']==='pendiente' && (int)$rapido['propina_porcentaje']===0,'Pedido rápido confirma con propina de 0 %');
-    exigir((int)fila('SELECT COUNT(*) n FROM pago_cuentas WHERE pedido_id='.(int)$rapido['id'])['n']===1,'Pedido rápido deja la cuenta preparada');
+    exigir((int)fila('SELECT COUNT(*) n FROM pago_cuentas WHERE pedido_id='.(int)$rapido['id'])['n']===0,'Pedido rápido espera la respuesta sobre propina');
+    $r=$a->post('pagos/preparar/'.$rapido['id'],array('propina_tipo'=>'ninguna'),'pagos/'.$rapido['id']);
+    exigir($r['status']===303 && (int)fila('SELECT propina_elegida FROM pedidos WHERE id='.(int)$rapido['id'])['propina_elegida']===1,'El cliente declina propina al cobrar');
     $cuenta_rapida=(string)fila('SELECT id FROM pago_cuentas WHERE pedido_id='.(int)$rapido['id'])['id'];
     $importe_rapido=fila('SELECT total FROM pedidos WHERE id='.(int)$rapido['id'])['total'];
     $r=$a->post('pagos/registrar/'.$rapido['id'],array('cuenta_id'=>$cuenta_rapida,'efectivo'=>$importe_rapido,'credito'=>'0','debito'=>'0','recibido'=>$importe_rapido,'clave'=>bin2hex(random_bytes(32))));
@@ -393,6 +438,17 @@ try {
     $nuevo_producto=(int)fila("SELECT id FROM productos WHERE empresa_id=1 AND sku='NUEVO-MERGE'")['id'];
     $pantalla=$a->seguir($r);
     exigir(strpos($pantalla['body'],'Producto creado correctamente.')!==FALSE,'La lista muestra la confirmación de producto creado');
+    exigir(strpos($a->pedir('productos/'.$nuevo_producto)['body'],'Sin imagen')!==FALSE,'Producto sin foto muestra marcador');
+    $r=$a->post_archivo('productos/'.$nuevo_producto.'/imagen',$foto,'productos/editar/'.$nuevo_producto);
+    $imagen_producto=fila('SELECT imagen FROM productos WHERE id='.$nuevo_producto)['imagen'];
+    exigir($r['status']===303 && (bool)preg_match('/^[a-f0-9]{32}\.png$/',$imagen_producto),'Subir foto opcional de producto');
+    $r=$a->pedir('productos/'.$nuevo_producto.'/imagen');
+    exigir($r['status']===200 && substr($r['body'],0,8)==="\x89PNG\r\n\x1a\n",'Foto del producto se entrega por ruta autenticada');
+    exigir($b->pedir('productos/'.$nuevo_producto.'/imagen')['status']===404,'Otra empresa no ve la foto del producto');
+    $antes=huella();$r=$caja->post('productos/'.$nuevo_producto.'/imagen',array('quitar'=>'1'),'productos/'.$nuevo_producto);
+    exigir($r['status']===403 && huella()===$antes,'Cajero no puede retirar foto del producto');
+    $r=$a->post('productos/'.$nuevo_producto.'/imagen',array('quitar'=>'1'),'productos/editar/'.$nuevo_producto);
+    exigir($r['status']===303 && fila('SELECT imagen FROM productos WHERE id='.$nuevo_producto)['imagen']===NULL,'Quitar foto del producto restaura marcador');
     $r=$a->post('pedidos/crear',array('referencia'=>'Pedido de precio histórico'));
     exigir(in_array($r['status'],array(302,303),TRUE),'Crear borrador para comprobar el catálogo integrado');
     $pedido_catalogo=(int)fila("SELECT id FROM pedidos WHERE referencia='Pedido de precio histórico'")['id'];
@@ -423,6 +479,21 @@ try {
     $producto['disponible']='1';$a->post('productos/editar/'.$nuevo_producto,$producto,'productos/editar/'.$nuevo_producto);
     $r=$a->post('pedidos/'.$pedido_catalogo.'/confirmar',array());
     exigir(in_array($r['status'],array(302,303),TRUE) && fila('SELECT estado FROM pedidos WHERE id='.$pedido_catalogo)['estado']==='pendiente','Reactivar el producto permite confirmar el pedido conservando su precio');
+    mkdir($temp.'/tools',0700);
+    copy($root.'/tools/cargar_demo_catalogo.php',$temp.'/tools/cargar_demo_catalogo.php');
+    $comando=array(PHP_BINARY,$temp.'/tools/cargar_demo_catalogo.php','1','--aplicar');
+    $proceso_demo=proc_open($comando,array(0=>array('pipe','r'),1=>array('pipe','w'),2=>array('pipe','w')),$canales,$temp);
+    fclose($canales[0]);$salida_demo=stream_get_contents($canales[1]);$error_demo=stream_get_contents($canales[2]);
+    fclose($canales[1]);fclose($canales[2]);$codigo_demo=proc_close($proceso_demo);
+    exigir($codigo_demo===0 && (int)fila("SELECT COUNT(*) n FROM productos WHERE empresa_id=1 AND sku LIKE 'DEMO-SHUCO-%'")['n']===2 &&
+        (int)fila("SELECT COUNT(*) n FROM insumos WHERE empresa_id=1 AND nombre LIKE '%(demo)'")['n']===2,
+        'El cargador de muestra añade dos productos y dos insumos: '.$error_demo);
+    $demo_id=(int)fila("SELECT id FROM productos WHERE empresa_id=1 AND sku='DEMO-SHUCO-01'")['id'];
+    exigir($a->pedir('productos/'.$demo_id.'/imagen')['status']===200,'La foto del shuco de muestra se puede ver');
+    $proceso_demo=proc_open($comando,array(0=>array('pipe','r'),1=>array('pipe','w'),2=>array('pipe','w')),$canales,$temp);
+    fclose($canales[0]);stream_get_contents($canales[1]);stream_get_contents($canales[2]);
+    fclose($canales[1]);fclose($canales[2]);$codigo_demo=proc_close($proceso_demo);
+    exigir($codigo_demo===0 && (int)fila("SELECT COUNT(*) n FROM productos WHERE empresa_id=1 AND sku LIKE 'DEMO-SHUCO-%'")['n']===2,'Repetir la carga no duplica los artículos');
     $reporte['resultado']='APROBADO';echo "\nAPROBADO: $pasadas comprobaciones HTTP y de persistencia.\n";
 } catch (Throwable $e) {
     $codigo=1;$reporte['error']=$e->getMessage();fwrite(STDERR,'FALLO: '.$e->getMessage()."\n");

@@ -18,4 +18,16 @@
 </div></fieldset>
 <div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('inventario')) ?>">Cancelar</a><button type="submit">Guardar insumo</button></div>
 <?= form_close() ?></section>
+<?php if (!$nuevo): ?>
+<section class="recuadro panel-formulario"><h2>Imagen del insumo</h2>
+<?php if ($mensaje_imagen=$this->session->flashdata('mensaje_imagen')): ?><p class="aviso" role="status"><?= html_escape($mensaje_imagen) ?></p><?php endif; ?>
+<?php if ($error_imagen=$this->session->flashdata('error_imagen')): ?><p class="error" role="alert"><?= html_escape($error_imagen) ?></p><?php endif; ?>
+<?php if (!empty($insumo['imagen'])): ?><img class="imagen-formulario" src="<?= html_escape(site_url('inventario/'.(int)$insumo['id'].'/imagen')) ?>" alt="Imagen actual de <?= html_escape($insumo['nombre']) ?>" width="180" height="180"><?php else: ?><span class="imagen-placeholder imagen-formulario">Sin imagen</span><?php endif; ?>
+<?= form_open_multipart('inventario/'.(int)$insumo['id'].'/imagen') ?>
+<p class="campo"><label for="imagen_insumo">Subir o reemplazar imagen</label><input id="imagen_insumo" type="file" name="imagen" accept="image/jpeg,image/png,image/webp" required><span class="descripcion">JPG, PNG o WebP; máximo 3 MB.</span></p>
+<button type="submit">Guardar imagen</button>
+<?= form_close() ?>
+<?php if (!empty($insumo['imagen'])): ?><?= form_open('inventario/'.(int)$insumo['id'].'/imagen') ?><input type="hidden" name="quitar" value="1"><button type="submit" class="boton-secundario">Quitar imagen</button><?= form_close() ?><?php endif; ?>
+</section>
+<?php else: ?><p class="descripcion">Después de crear el insumo podrás agregarle una imagen desde Editar.</p><?php endif; ?>
 <?php $this->load->view('plantilla/pie'); ?>

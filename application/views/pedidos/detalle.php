@@ -201,8 +201,10 @@
         Q <?= number_format((float) $pedido['total'], 2) ?>
     </p>
 
-    <p>Propina (<?= (int)$pedido['propina_porcentaje'] ?>%): <strong><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></strong> ·
-    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']), (int)$pedido['propina_porcentaje'])) ?></strong></p>
+    <?php if ((int)$pedido['propina_elegida']===1): ?>
+    <p>Propina<?= $pedido['propina_tipo']==='porcentaje' ? ' ('.html_escape($pedido['propina_valor']).' %)' : '' ?>: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['propina_monto'])) ?></strong> ·
+    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::centavos($pedido['propina_monto'])) ?></strong></p>
+    <?php else: ?><p>La propina se pregunta al preparar el cobro.</p><?php endif; ?>
 
     <?php if ($pedido['estado'] === 'borrador'
         && $usuario->puede('pedidos.confirmar')
