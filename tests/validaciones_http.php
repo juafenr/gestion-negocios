@@ -146,6 +146,10 @@ try {
         $r=$invitado->post('login',$mal,'login');exigir($r['status']===422,'Login rechaza campos vacíos o anidados');
     }
     $a->entrar('admin_a',$password);$b->entrar('admin_b',$password);$caja->entrar('cajero_a',$password);$cocina->entrar('cocinero_a',$password);
+    exigir((int)fila('SELECT propina_porcentaje FROM empresas WHERE id=1')['propina_porcentaje']===0,'Empresa nueva inicia sin propina automática');
+    $r=$a->post('configuracion/propina',array('porcentaje'=>'10'),'configuracion/propina');
+    exigir($r['status']===303 && (int)fila('SELECT propina_porcentaje FROM empresas WHERE id=1')['propina_porcentaje']===10,'Administrador configura propina de 10 %');
+    exigir($caja->pedir('configuracion/propina')['status']===403,'Cajero no cambia la propina');
     foreach (array('usuarios','ventas','compras','proveedores/1/editar') as $ruta) {
         exigir($cocina->pedir($ruta)['status']===403,'Cocinero sin permiso: '.$ruta);
     }
@@ -218,6 +222,17 @@ try {
     $d=$pago;$d['recibido']='10';$caja->invalido('pagos/registrar/'.$pid,$d,'Efectivo recibido insuficiente');
     $d=$pago;$d['efectivo']='12';$d['recibido']='12';$caja->invalido('pagos/registrar/'.$pid,$d,'Pago mayor al saldo');
     $r=$caja->post('pagos/registrar/'.$pid,$pago);exigir($r['status']===303 && fila('SELECT estado_pago FROM pedidos WHERE id='.$pid)['estado_pago']==='pagado','Pago válido completa pedido y venta');
+    $r=$a->post('configuracion/propina',array('porcentaje'=>'0'),'configuracion/propina');
+    exigir($r['status']===303 && (int)fila('SELECT propina_porcentaje FROM pedidos WHERE id='.$pid)['propina_porcentaje']===10,'Cambiar configuración conserva propina del pedido anterior');
+    $r=$a->post('pedidos/rapido',array('referencia'=>'Prueba rápida','producto_id'=>'1','cantidad'=>'1'),'pedidos/rapido');
+    $rapido=fila("SELECT id,estado,propina_porcentaje FROM pedidos WHERE referencia='Prueba rápida'");
+    exigir($r['status']===303 && $rapido && $rapido['estado']==='pendiente' && (int)$rapido['propina_porcentaje']===0,'Pedido rápido confirma con propina de 0 %');
+    exigir((int)fila('SELECT COUNT(*) n FROM pago_cuentas WHERE pedido_id='.(int)$rapido['id'])['n']===1,'Pedido rápido deja la cuenta preparada');
+    $cuenta_rapida=(string)fila('SELECT id FROM pago_cuentas WHERE pedido_id='.(int)$rapido['id'])['id'];
+    $importe_rapido=fila('SELECT total FROM pedidos WHERE id='.(int)$rapido['id'])['total'];
+    $r=$a->post('pagos/registrar/'.$rapido['id'],array('cuenta_id'=>$cuenta_rapida,'efectivo'=>$importe_rapido,'credito'=>'0','debito'=>'0','recibido'=>$importe_rapido,'clave'=>bin2hex(random_bytes(32))));
+    exigir($r['status']===303 && fila('SELECT estado_pago FROM pedidos WHERE id='.(int)$rapido['id'])['estado_pago']==='pagado','Pedido rápido se cobra sin propina');
+    exigir(fila('SELECT propina,total FROM ventas WHERE pedido_id='.(int)$rapido['id'])['propina']==='0.00','Venta rápida conserva propina cero');
     $antes=huella();$caja->post('pagos/registrar/'.$pid,$pago);exigir(huella()===$antes,'Reintento de pago no duplica registros');
     exigir($a->pedir('ventas?desde=2026-02-30&hasta=2026-03-01')['status']===422,'Ventas rechaza fecha imposible');
     exigir($a->pedir('ventas?desde=2026-12-01&hasta=2026-01-01')['status']===422,'Ventas rechaza rango invertido');

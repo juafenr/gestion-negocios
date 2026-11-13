@@ -7,6 +7,7 @@ CREATE TABLE empresas (
     nombre VARCHAR(120) NOT NULL,
     ultimo_numero_pedido INT UNSIGNED NOT NULL DEFAULT 0,
     ultimo_numero_compra INT UNSIGNED NOT NULL DEFAULT 0,
+    propina_porcentaje TINYINT UNSIGNED NOT NULL DEFAULT 0,
     activa TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -152,6 +153,7 @@ CREATE TABLE pedidos (
     estado VARCHAR(20) NOT NULL DEFAULT 'borrador',
     estado_pago VARCHAR(20) NOT NULL DEFAULT 'pendiente',
     total DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0.00,
+    propina_porcentaje TINYINT UNSIGNED NOT NULL DEFAULT 10,
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     confirmado_en DATETIME NULL,
     UNIQUE KEY uq_pedido_empresa_numero (empresa_id, numero),

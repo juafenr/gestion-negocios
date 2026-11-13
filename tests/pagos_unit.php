@@ -13,6 +13,8 @@ try {
     verificar(Dinero::centavos('12.5')===1250,'Un decimal se interpreta correctamente');
     verificar(Dinero::decimal(12345)==='123.45','Formato sin coma flotante');
     verificar(Dinero::propina(10000)===1000,'10% de Q 100 es Q 10');
+    verificar(Dinero::propina(2000,0)===0,'0% de Q 20 no añade propina');
+    verificar(Dinero::repartirPropina(array(1=>6000,2=>4000),0)===array(1=>0,2=>0),'0% no añade propina al separar cuentas');
     verificar(Dinero::propina(5)===1,'Medio centavo se redondea hacia arriba');
     verificar(Dinero::propina(4)===0,'Menos de medio centavo se redondea hacia abajo');
     verificar(Dinero::repartirPropina(array(1=>6000,2=>4000))===array(1=>600,2=>400),'Propina de Q 10 repartida en Q 6 y Q 4');

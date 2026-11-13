@@ -1,7 +1,7 @@
 <?php
 $this->load->view('plantilla/cabecera',array('titulo'=>'Cobrar pedido','seccion'=>'pagos','usuario'=>$usuario));
 $consumo=Dinero::centavos($pedido['total']);
-$propina=Dinero::propina($consumo);
+$propina=Dinero::propina($consumo, (int)$pedido['propina_porcentaje']);
 $total=$consumo+$propina;
 $saldo=max(0,$total-$abonado);
 $habilitado=in_array($pedido['estado'],array('pendiente','en_preparacion','listo','entregado'),TRUE);
@@ -18,7 +18,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <p><?= html_escape($pedido['referencia']) ?> · Preparación: <?= html_escape(str_replace('_',' ',$pedido['estado'])) ?> · Pago: <strong><?= html_escape($pedido['estado_pago']) ?></strong></p>
 <?php if ($error): ?><p class="error" role="alert"><?= html_escape($error) ?></p><?php endif; ?>
 <?php if ($mensaje): ?><p class="recuadro aviso" role="status"><?= html_escape($mensaje) ?></p><?php endif; ?>
-<p>Consumo: <strong><?= Dinero::mostrar($consumo) ?></strong> · Propina automática (10%): <strong><?= Dinero::mostrar($propina) ?></strong></p>
+<p>Consumo: <strong><?= Dinero::mostrar($consumo) ?></strong> · Propina configurada (<?= (int)$pedido['propina_porcentaje'] ?>%): <strong><?= Dinero::mostrar($propina) ?></strong></p>
 <div class="resumen-pagos">
     <div class="recuadro"><span>Total con propina</span><strong><?= Dinero::mostrar($total) ?></strong></div>
     <div class="recuadro"><span>Pagado</span><strong><?= Dinero::mostrar($abonado) ?></strong></div>
@@ -92,7 +92,7 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <p class="campo"><label for="recibido">Efectivo recibido (Q)</label><input type="number" id="recibido" name="recibido" min="0" max="9999999999.99" step="0.01" value="0.00" required><span class="descripcion">Lo que entrega el cliente en billetes o monedas.</span></p>
 </div>
 <p id="resumen-cobro" role="status" aria-live="polite">El cambio se calcula con el efectivo recibido menos el efectivo aplicado.</p>
-<p class="descripcion">Ejemplo: consumo Q 100 + propina Q 10 = Q 110. Efectivo aplicado Q 40, tarjeta Q 70 y efectivo recibido Q 50: cambio Q 10.</p>
+<p class="descripcion">El total y el saldo incluyen la propina configurada para este pedido. Si cobras en efectivo, registra lo aplicado y lo recibido para calcular el cambio.</p>
 <p class="descripcion">Este registro no procesa tarjetas. No ingreses números de tarjeta, PIN ni códigos de seguridad.</p>
 <div class="acciones-formulario"><button type="submit" id="registrar-pago"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="">Registrar pago</button></div>
 <?= form_close() ?>

@@ -34,6 +34,7 @@ foreach ($filtros as $valor) {
     </div>
 
     <?php if ($usuario->puede('pedidos.crear')): ?>
+        <?php if ($usuario->puede('pedidos.confirmar') && $usuario->puede('ventas.cobrar')): ?><p><a class="boton" href="<?= html_escape(site_url('pedidos/rapido')) ?>">Pedido rápido</a></p><?php endif; ?>
         <p>
             <a
                 class="boton"

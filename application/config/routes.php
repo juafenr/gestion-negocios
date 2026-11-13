@@ -13,6 +13,7 @@ $route['usuarios/(:num)/editar'] = 'usuarios/editar/$1';
 $route['usuarios/(:num)/estado'] = 'usuarios/estado/$1';
 
 $route['inicio'] = 'inicio/index';
+$route['configuracion/propina'] = 'configuracion/propina';
 $route['inventario'] = 'inventario/index';
 $route['inventario/crear'] = 'inventario/crear';
 $route['inventario/(:num)/editar'] = 'inventario/editar/$1';
@@ -22,6 +23,7 @@ $route['cocina/pedidos/(:num)/estado'] = 'cocina/actualizar_estado/$1';
 
 $route['pedidos'] = 'pedidos/index';
 $route['pedidos/crear'] = 'pedidos/crear';
+$route['pedidos/rapido'] = 'pedidos/rapido';
 $route['pedidos/(:num)/confirmar'] = 'pedidos/confirmar/$1';
 $route['pedidos/(:num)'] = 'pedidos/ver/$1';
 $route['pedidos/confirmar/(:num)'] = 'pedidos/confirmar/$1';

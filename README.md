@@ -10,12 +10,14 @@ Está desarrollada con **PHP 8.2**, **CodeIgniter 3.1.13** y **MySQL/MariaDB**. 
 | --- | --- |
 | Acceso | Inicio de sesión por nombre de usuario o correo; roles de administrador, cajero y cocinero; permisos por acción y separación de datos por empresa. |
 | Productos y pedidos | Alta, edición, búsqueda y disponibilidad de productos; pedidos con productos, cantidades, confirmación, historial y cancelación con motivo. |
-| Cocina y pagos | Cola de pedidos y cambios de estado; cuentas separadas, abonos, pagos mixtos, cambio en efectivo y propina automática del 10 %. |
+| Cocina y pagos | Cola de pedidos y cambios de estado; cuentas separadas, abonos, pagos mixtos, cambio en efectivo y propina configurable por empresa (0 % inicial o 10 %). |
 | Ventas | Registro único al completar el cobro, historial y resumen por fecha. |
 | Inventario | Insumos, existencias, mínimos, entradas, salidas, ajustes, alertas e historial de movimientos. |
 | Proveedores y compras | Proveedores asociados a insumos, solicitudes agrupadas, revisión, exportación TXT, estados y recepción parcial o completa con actualización de existencias. |
 
 Las rutas privadas comprueban sesión, permisos y empresa en el servidor. Los formularios usan protección CSRF y validación de datos; el historial conserva cancelaciones, movimientos de inventario y cambios de precio.
+
+El administrador ajusta la propina en **Configuración**. El cambio se aplica a pedidos nuevos; cada pedido conserva su porcentaje para que los cobros históricos no varíen. En **Pedidos → Pedido rápido**, el cajero puede crear y confirmar un pedido de un producto en una pantalla y pasar directamente al cobro. Los pedidos con varios productos siguen usando el flujo normal.
 
 ## Requisitos
 
