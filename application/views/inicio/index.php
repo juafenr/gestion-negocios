@@ -66,8 +66,8 @@
         </svg>
         <p class="grafico-leyenda">Consumo vendido en quetzales</p>
         <?php if (!array_filter(array_column($serie, 'consumo'), function ($valor) { return (float) $valor > 0; })): ?><p class="nota">Todavía no hay ventas completadas en estos siete días.</p><?php endif; ?>
-        <details><summary>Ver importes por día</summary><div class="tabla"><table><thead><tr><th>Fecha</th><th>Ventas sin propina</th></tr></thead><tbody>
-        <?php foreach ($serie as $dia): ?><tr><td><?= html_escape($dia['dia']) ?></td><td><?= negocio_moneda($dia['consumo']) ?></td></tr><?php endforeach; ?>
+        <details><summary>Ver importes por día</summary><div class="tabla"><table><thead><tr><th>Fecha</th><th class="tabla-numero">Ventas sin propina</th></tr></thead><tbody>
+        <?php foreach ($serie as $dia): ?><tr><td><?= html_escape($dia['dia']) ?></td><td class="tabla-numero"><?= negocio_moneda($dia['consumo']) ?></td></tr><?php endforeach; ?>
         </tbody></table></div></details>
     </section>
     <section class="recuadro" aria-labelledby="titulo-pendientes"><div class="panel-encabezado"><div><h2 id="titulo-pendientes">Para revisar hoy</h2><p>Un vistazo a tu operación actual.</p></div></div>

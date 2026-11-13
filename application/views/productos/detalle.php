@@ -80,8 +80,8 @@ $this->load->view('plantilla/cabecera', array(
                     <tr>
                         <th scope="col">Fecha y hora</th>
                         <th scope="col">Responsable</th>
-                        <th scope="col">Precio anterior</th>
-                        <th scope="col">Precio nuevo</th>
+                        <th class="tabla-numero" scope="col">Precio anterior</th>
+                        <th class="tabla-numero" scope="col">Precio nuevo</th>
                     </tr>
                 </thead>
 
@@ -98,14 +98,14 @@ $this->load->view('plantilla/cabecera', array(
                                 ) ?>
                             </td>
 
-                            <td>
+                            <td class="tabla-numero">
                                 Q <?= number_format(
                                     (float) $cambio['precio_anterior'],
                                     2
                                 ) ?>
                             </td>
 
-                            <td>
+                            <td class="tabla-numero">
                                 Q <?= number_format(
                                     (float) $cambio['precio_nuevo'],
                                     2

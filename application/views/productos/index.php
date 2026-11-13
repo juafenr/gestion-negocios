@@ -55,7 +55,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
                 <th scope="col">Producto</th>
                 <th scope="col">Código</th>
                 <th scope="col">Descripción</th>
-                <th scope="col">Precio</th>
+                <th class="tabla-numero" scope="col">Precio</th>
                 <th scope="col">Disponibilidad</th>
                 <th scope="col">Acciones</th>
             </tr>
@@ -82,7 +82,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
                         <?php endif; ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         Q <?= number_format(
                             (float) $producto['precio'],
                             2

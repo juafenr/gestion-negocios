@@ -88,7 +88,7 @@ foreach ($filtros as $valor) {
                 <th scope="col">Fecha de creación</th>
                 <th scope="col">Estado</th>
                 <th scope="col">Pago</th>
-                <th scope="col">Consumo</th>
+                <th class="tabla-numero" scope="col">Consumo</th>
                 <th scope="col">Detalle</th>
             </tr>
         </thead>
@@ -122,7 +122,7 @@ foreach ($filtros as $valor) {
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             Dinero::mostrar(
                                 Dinero::centavos($pedido['total'])

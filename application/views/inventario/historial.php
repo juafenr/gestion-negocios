@@ -35,9 +35,9 @@ $mensaje = $this->session
             <tr>
                 <th>Fecha</th>
                 <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Anterior</th>
-                <th>Nueva</th>
+                <th class="tabla-numero">Cantidad</th>
+                <th class="tabla-numero">Anterior</th>
+                <th class="tabla-numero">Nueva</th>
                 <th>Motivo</th>
                 <th>Responsable</th>
             </tr>
@@ -61,19 +61,19 @@ $mensaje = $this->session
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             $movimiento['cantidad']
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             $movimiento['cantidad_anterior']
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             $movimiento['cantidad_nueva']
                         ) ?>

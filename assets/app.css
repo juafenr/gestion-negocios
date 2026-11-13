@@ -178,9 +178,16 @@ label { font-size: 13px; }
 .subtitulo-linea { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--borde); }
 
 /* Tablas: cabeceras discretas, números alineados y desbordamiento contenido. */
-.tabla { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; background: #fff; border: 1px solid var(--borde); border-radius: 14px; box-shadow: var(--sombra); }
+.tabla { width: 100%; max-width: 100%; max-height: min(68vh, 42rem); overflow: auto; overscroll-behavior-x: contain; scrollbar-width: thin; background: #fff; border: 1px solid var(--borde); border-radius: 14px; box-shadow: var(--sombra); scroll-padding-block: 64px 16px; }
 .tabla-desbordable::before { content: 'Desplázate para ver todas las columnas →'; display: block; position: sticky; left: 0; width: fit-content; max-width: 100%; padding: 10px 16px; color: var(--muted); background: #fff; font-size: 11px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla table { border-collapse: separate; border-spacing: 0; }
+.tabla thead th { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 var(--borde); }
+.tabla .tabla-numero { text-align: right; white-space: nowrap; }
+.tabla td.tabla-numero { min-width: 90px; }
+.tabla .tabla-numero input[type='number'] { text-align: right; font-variant-numeric: tabular-nums; }
+.tabla .tabla-numero .accion-detalle { justify-content: flex-end; }
+.tabla td.tabla-total { color: var(--acento-hover); background: #fff5eb; font-weight: 700; }
 th, td { padding: 15px 18px; text-align: left; vertical-align: middle; border-bottom: 1px solid #f0ece7; font-variant-numeric: tabular-nums; }
 th { color: #79716a; background: #faf9f7; font-size: 11px; font-weight: 600; white-space: nowrap; }
 tbody tr { background: #fff; }
@@ -395,7 +402,9 @@ details summary { cursor: pointer; font-weight: 600; margin-bottom: 16px; }
   .cabecera, .menu, .velo-menu, .saltar-contenido, body > footer, .filtros-inventario, .filtros-pagos { display: none !important; }
   .estructura { margin: 0; padding: 0; min-height: 0; }
   .contenido { padding: 0; max-width: none; }
-  .recuadro, .tabla { box-shadow: none; overflow: visible; }
+  .recuadro, .tabla { box-shadow: none; overflow: visible; max-height: none; }
+  .tabla thead th { position: static; box-shadow: none; }
+  .tabla thead { display: table-header-group; }
   .tabla-inventario { min-width: 0; }
   th, td { padding: 7px; font-size: 10px; }
 }

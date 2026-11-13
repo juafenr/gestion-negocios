@@ -92,9 +92,9 @@ $errorEstado = $this->session->flashdata('error_compra');
             <thead>
                 <tr>
                     <th>Insumo</th>
-                    <th>Cantidad solicitada</th>
-                    <th>Recibido</th>
-                    <th>Pendiente</th>
+                    <th class="tabla-numero">Cantidad solicitada</th>
+                    <th class="tabla-numero">Recibido</th>
+                    <th class="tabla-numero">Pendiente</th>
                     <th>Unidad</th>
                 </tr>
             </thead>
@@ -114,15 +114,15 @@ $errorEstado = $this->session->flashdata('error_compra');
                             <?= html_escape($l['insumo_nombre']) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($solicitado, 2) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($recibido, 2) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($pendiente, 2) ?>
                         </td>
 

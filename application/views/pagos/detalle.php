@@ -57,9 +57,9 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <?php if ($lineas_generales): ?>
 <?= form_open('pagos/separar/'.(int)$pedido['id']) ?>
 <p class="campo"><label for="nombre_cuenta">Nombre de la cuenta</label><input type="text" name="nombre" id="nombre_cuenta" maxlength="80" placeholder="Ejemplo: Juan" required></p>
-<div class="tabla"><table><thead><tr><th>Producto</th><th>Precio por unidad</th><th>Unidades restantes</th><th>Unidades para esta persona</th></tr></thead><tbody>
+<div class="tabla"><table><thead><tr><th>Producto</th><th class="tabla-numero">Precio por unidad</th><th class="tabla-numero">Unidades restantes</th><th class="tabla-numero">Unidades para esta persona</th></tr></thead><tbody>
 <?php foreach ($lineas_generales as $d): ?>
-<tr><td><?= html_escape($d['producto_nombre']) ?></td><td><?= Dinero::mostrar(Dinero::centavos($d['precio_unitario'])) ?></td><td><?= (int)$d['cantidad'] ?></td><td><input class="cantidad-cuenta" type="number" name="cantidades[<?= (int)$d['detalle_id'] ?>]" value="0" min="0" max="<?= (int)$d['cantidad'] ?>" step="1" required aria-label="Unidades de <?= html_escape($d['producto_nombre']) ?>"></td></tr>
+<tr><td><?= html_escape($d['producto_nombre']) ?></td><td class="tabla-numero"><?= Dinero::mostrar(Dinero::centavos($d['precio_unitario'])) ?></td><td class="tabla-numero"><?= (int)$d['cantidad'] ?></td><td class="tabla-numero"><input class="cantidad-cuenta" type="number" name="cantidades[<?= (int)$d['detalle_id'] ?>]" value="0" min="0" max="<?= (int)$d['cantidad'] ?>" step="1" required aria-label="Unidades de <?= html_escape($d['producto_nombre']) ?>"></td></tr>
 <?php endforeach; ?>
 </tbody></table></div>
 <p><button type="submit">Crear cuenta separada</button></p>
@@ -102,10 +102,10 @@ foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $
 <section class="recuadro"><h2>Historial de pagos</h2>
 <?php if (!$pagos): ?><p>Todavía no hay pagos registrados.</p><?php else: ?>
 <div class="tabla"><table>
-<thead><tr><th>Fecha</th><th>Cuenta</th><th>Efectivo aplicado</th><th>Crédito</th><th>Débito</th><th>Efectivo recibido</th><th>Cambio</th><th>Propina incluida</th><th>Total aplicado</th><th>Registró</th></tr></thead>
+<thead><tr><th>Fecha</th><th>Cuenta</th><th class="tabla-numero">Efectivo aplicado</th><th class="tabla-numero">Crédito</th><th class="tabla-numero">Débito</th><th class="tabla-numero">Efectivo recibido</th><th class="tabla-numero">Cambio</th><th class="tabla-numero">Propina incluida</th><th class="tabla-numero tabla-total">Total aplicado</th><th>Registró</th></tr></thead>
 <tbody><?php foreach ($pagos as $p): ?>
 <tr><td><?= html_escape($p['creado_en']) ?></td><td><?= html_escape($p['cuenta_nombre']) ?></td>
-<?php foreach (array('efectivo','credito','debito','recibido','cambio','propina','total') as $campo): ?><td><?= Dinero::mostrar(Dinero::centavos($p[$campo])) ?></td><?php endforeach; ?>
+<?php foreach (array('efectivo','credito','debito','recibido','cambio','propina','total') as $campo): ?><td class="tabla-numero<?= $campo === 'total' ? ' tabla-total' : '' ?>"><?= Dinero::mostrar(Dinero::centavos($p[$campo])) ?></td><?php endforeach; ?>
 <td><?= html_escape($p['usuario_nombre']) ?></td></tr>
 <?php endforeach; ?></tbody></table></div>
 <p class="descripcion">Los pagos registrados se conservan. Esta versión no incluye devoluciones ni anulación de cobros.</p>

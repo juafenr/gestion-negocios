@@ -34,10 +34,10 @@ $this->load->view('plantilla/cabecera', array(
         <thead>
             <tr>
                 <th>Insumo</th>
-                <th>Cantidad actual</th>
-                <th>Stock mínimo</th>
+                <th class="tabla-numero">Cantidad actual</th>
+                <th class="tabla-numero">Stock mínimo</th>
                 <th>Unidad</th>
-                <th>Cantidad sugerida</th>
+                <th class="tabla-numero">Cantidad sugerida</th>
             </tr>
         </thead>
 
@@ -48,14 +48,14 @@ $this->load->view('plantilla/cabecera', array(
                         <?= html_escape($insumo['nombre']) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= number_format(
                             (float) $insumo['cantidad_actual'],
                             2
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= number_format(
                             (float) $insumo['stock_minimo'],
                             2
@@ -66,7 +66,7 @@ $this->load->view('plantilla/cabecera', array(
                         <?= html_escape($insumo['unidad_medida']) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <strong>
                             <?= number_format(
                                 (float) $insumo['cantidad_sugerida'],
