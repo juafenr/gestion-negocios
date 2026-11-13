@@ -22,7 +22,9 @@
     }
     form.addEventListener('input', actualizar);
     form.addEventListener('change', actualizar);
-    form.addEventListener('submit', () => { campo('registrar-pago').disabled = true; });
+    form.addEventListener('submit', evento => {
+        queueMicrotask(() => { if (!evento.defaultPrevented) campo('registrar-pago').disabled = true; });
+    });
     window.addEventListener('pageshow', () => { campo('registrar-pago').disabled = false; });
     actualizar();
 }());

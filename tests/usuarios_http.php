@@ -28,6 +28,10 @@ final class ClienteUsuarios
 
     public function pedir($ruta, $datos = NULL)
     {
+        if ($datos !== NULL && preg_match('~^usuarios/[0-9]+/editar$~',$ruta) && !array_key_exists('version_edicion',$datos)) {
+            $form=$this->pedir($ruta);
+            if ($form['status']===200 && preg_match('/name="version_edicion" value="([^"]+)"/',$form['body'],$m)) { $datos['version_edicion']=$m[1]; }
+        }
         curl_setopt($this->curl, CURLOPT_URL, $this->base.$ruta);
         if ($datos === NULL) {
             curl_setopt($this->curl, CURLOPT_HTTPGET, TRUE);

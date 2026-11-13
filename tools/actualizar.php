@@ -996,6 +996,8 @@ try {
         }
     }
 
+    $a->crear('registro_cambios', file_get_contents($root.'/database/migrations/015_registro_cambios.sql'));
+
     if ($aplicar) {
         echo "Actualización terminada. Ejecuta de nuevo sin --aplicar: "
             . "debe indicar Sin cambios pendientes.\n";

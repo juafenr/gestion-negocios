@@ -16,6 +16,10 @@ function ejecutar_validacion($argumentos,$nombre,$log,$root) {
 }
 try {
     foreach (array('application/libraries/Validacion_negocio.php',
+        'application/libraries/Edicion_segura.php','application/views/plantilla/historial_cambios.php','application/core/MY_Controller.php','tests/interfaz_unit.php','application/views/plantilla/disponibilidad_venta.php','application/config/routes.php','application/views/inventario/formulario.php',
+        'application/helpers/interfaz_helper.php','application/views/plantilla/notificaciones.php',
+        'application/views/plantilla/filtros.php','application/views/plantilla/campo_filtro.php',
+        'application/views/plantilla/accesos_inicio.php','application/views/plantilla/actividad_ventas.php','application/views/inicio/index.php',
         'application/controllers/Productos.php','application/models/Producto_model.php',
         'application/views/productos/index.php','application/views/productos/formulario.php','application/views/productos/detalle.php',
         'application/controllers/Usuarios.php','application/controllers/Proveedores.php','application/controllers/Inventario.php','application/controllers/Pedidos.php','application/controllers/Compras.php',
@@ -23,7 +27,7 @@ try {
         'application/views/proveedores/editar.php','tests/validacion_negocio_unit.php','tests/rf_juan_integracion.php','tests/validaciones_http.php') as $archivo) {
         ejecutar_validacion(array('-l',$archivo),'Sintaxis: '.$archivo,$log,$root);
     }
-    foreach (array('pagos_unit.php','validacion_negocio_unit.php','rf_juan_integracion.php','validaciones_http.php') as $prueba) {
+    foreach (array('interfaz_unit.php','pagos_unit.php','validacion_negocio_unit.php','rf_juan_integracion.php','validaciones_http.php') as $prueba) {
         ejecutar_validacion(array('tests/'.$prueba),'Prueba: '.$prueba,$log,$root);
     }
     echo "\nAPROBADO: sintaxis, reglas, integración de modelos y aceptación HTTP.\n";

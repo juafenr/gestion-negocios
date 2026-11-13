@@ -6,6 +6,7 @@ class Usuarios extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Edicion_segura');
         $this->load->model('Usuario_model', 'usuarios_model');
         $this->load->library('Validacion_negocio');
     }
@@ -61,7 +62,8 @@ class Usuarios extends Protected_Controller
                     'password_hash' => password_hash($password, PASSWORD_BCRYPT, array('cost' => 10))
                 ));
                 if (!$ok) { show_error('No se pudo crear el usuario.', 503); }
-                redirect('usuarios');
+                $this->session->set_flashdata('mensaje_usuario', 'Usuario creado correctamente.');
+        redirect(ui_ruta_retorno('usuarios'));
             }
             $datos['error'] = $error;
             $this->output->set_status_header(422);
@@ -99,13 +101,17 @@ class Usuarios extends Protected_Controller
                 $datos['rol_id'] = (string) $cuenta['rol_id'];
             }
             if ($error === '') {
-                if (!$this->usuarios_model->actualizar_en_empresa($id, $datos['nombre'], $datos['nombre_usuario'], $datos['rol_id'])) {
-                    show_error('No se pudo actualizar el usuario.', 503);
+                $guardado = $this->edicion_segura->guardar('usuarios',$id,function() use ($id,$datos) {
+                    return $this->usuarios_model->actualizar_en_empresa($id,$datos['nombre'],$datos['nombre_usuario'],$datos['rol_id']);
+                });
+                if (!$guardado) { $error=$this->edicion_segura->error ?: 'No se pudo actualizar el usuario.'; }
+                else {
+                    $this->session->set_flashdata('mensaje_usuario', 'Usuario actualizado correctamente.');
+                    redirect(ui_ruta_retorno('usuarios'));
                 }
-                redirect('usuarios');
             }
             $datos['error'] = $error;
-            $this->output->set_status_header(422);
+            $this->output->set_status_header($this->edicion_segura->error !== '' ? $this->edicion_segura->status : 422);
         }
         $this->load->view('usuarios/formulario', array(
             'usuario' => $this->usuario, 'roles' => $roles, 'datos' => $datos,
@@ -127,7 +133,8 @@ class Usuarios extends Protected_Controller
         if (!$this->usuarios_model->cambiar_estado_en_empresa($id, !(bool) $cuenta['activo'])) {
             show_error('No se pudo cambiar el estado del usuario.', 503);
         }
-        redirect('usuarios');
+        $this->session->set_flashdata('mensaje_usuario', ($cuenta['activo'] ? 'Usuario desactivado: ' : 'Usuario activado: ').$cuenta['nombre'].'.');
+        redirect(ui_ruta_retorno('usuarios'));
     }
 
     private function texto_post($campo)

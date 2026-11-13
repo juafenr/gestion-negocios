@@ -3,11 +3,9 @@
 <p class="sobretitulo">SOLICITUD DE COMPRA</p>
 <h1>Seleccionar insumos</h1>
 <p class="descripcion">Indica cuánto necesitas comprar de cada insumo. Se creará un borrador independiente por proveedor.</p>
-<p><a class="boton boton-secundario" href="<?= html_escape(site_url('compras')) ?>">Ver solicitudes</a></p>
+<p><a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('compras'))) ?>">Ver solicitudes</a></p>
 
-<?php if (!empty($mensaje)): ?>
-    <p class="recuadro aviso" role="status"><?= html_escape($mensaje) ?></p>
-<?php endif; ?>
+
 <?php if (!empty($creadas)): ?>
     <ul>
         <?php foreach ($creadas as $creada): ?>

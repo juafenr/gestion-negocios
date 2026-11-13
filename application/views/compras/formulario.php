@@ -1,6 +1,6 @@
 <?php $this->load->view('plantilla/cabecera',array('titulo'=>'Borrador de compra','seccion'=>'compras','usuario'=>$usuario));
 if (!$lineas) { $lineas=array(array('insumo_id'=>'','cantidad'=>'')); } ?>
-<p><a class="boton boton-secundario" href="<?= html_escape(site_url('compras')) ?>">Volver a solicitudes</a></p>
+<p><a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('compras'))) ?>">Volver a solicitudes</a></p>
 <section class="recuadro"><h1>Borrador de compra</h1>
 <p class="descripcion">Selecciona un proveedor y los insumos que solicitarás. Podrás revisar el documento antes de confirmarlo.</p>
 <?php if ($error): ?><p class="error" role="alert"><?= html_escape($error) ?></p><?php endif; ?>
@@ -23,7 +23,7 @@ if (!$lineas) { $lineas=array(array('insumo_id'=>'','cantidad'=>'')); } ?>
 <p><button id="agregar-linea" type="button" class="boton-secundario" hidden><img class="icono" src="<?= html_escape(base_url('assets/iconos/agregar.svg')) ?>" alt="">Agregar insumo</button></p>
 <noscript><p>Sin JavaScript puedes guardar una línea y volver a editarla. Activa JavaScript para agregar o quitar más líneas.</p></noscript>
 <p class="campo"><label for="observaciones">Observaciones</label><textarea id="observaciones" name="observaciones" rows="4" maxlength="1000" class="texto-compra"><?= html_escape($datos['observaciones']) ?></textarea></p>
-<div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('compras')) ?>">Cancelar</a><button type="submit"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="">Guardar borrador</button></div>
+<div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('compras'))) ?>">Cancelar</a><button type="submit"><img class="icono" src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>" alt="">Guardar borrador</button></div>
 <?= form_close() ?></section>
 <script src="<?= html_escape(base_url('assets/compras.js')) ?>" defer></script>
 <?php $this->load->view('plantilla/pie'); ?>

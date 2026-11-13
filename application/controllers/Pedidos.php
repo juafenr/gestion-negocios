@@ -80,6 +80,7 @@ class Pedidos extends Protected_Controller
             );
         }
 
+        $this->session->set_flashdata('mensaje_pedido', 'Pedido creado correctamente.');
         redirect('pedidos/' . $pedidoId);
     }
 
@@ -354,6 +355,7 @@ class Pedidos extends Protected_Controller
             return;
         }
 
+        $this->session->set_flashdata('mensaje_pedido', 'Producto agregado al pedido.');
         redirect('pedidos/' . (int) $id);
     }
 
@@ -420,6 +422,7 @@ class Pedidos extends Protected_Controller
             return;
         }
 
+        $this->session->set_flashdata('mensaje_pedido', ($quitar ? 'Producto retirado del pedido.' : 'Cantidad del pedido actualizada.'));
         redirect('pedidos/' . (int) $id);
     }
         public function confirmar($id = NULL)
@@ -455,6 +458,7 @@ class Pedidos extends Protected_Controller
             return;
         }
 
+        $this->session->set_flashdata('mensaje_pedido', 'Pedido confirmado correctamente.');
         redirect('pedidos/' . (int) $id);
     }
         public function cancelar($id = NULL)

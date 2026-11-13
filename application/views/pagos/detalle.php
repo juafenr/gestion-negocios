@@ -13,7 +13,7 @@ $lineas_generales=array();
 foreach ($reparto as $d) { if ($general && $d['cuenta_id']===$general['id']) { $lineas_generales[]=$d; } }
 ?>
 <p><a class="boton boton-secundario" href="<?= html_escape(site_url('pedidos/'.(int)$pedido['id'])) ?>">Volver al pedido</a>
-<a class="boton boton-secundario" href="<?= html_escape(site_url('pagos')) ?>">Todos los cobros</a></p>
+<a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('pagos'))) ?>">Todos los cobros</a></p>
 <h1>Pago del pedido #<?= (int)$pedido['numero'] ?></h1>
 <p><?= html_escape($pedido['referencia']) ?> · Preparación: <?= html_escape(str_replace('_',' ',$pedido['estado'])) ?> · Pago: <strong><?= html_escape($pedido['estado_pago']) ?></strong></p>
 <?php if ($error): ?><p class="error" role="alert"><?= html_escape($error) ?></p><?php endif; ?>

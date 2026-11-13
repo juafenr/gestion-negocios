@@ -2,7 +2,7 @@
 
 
 <p>
-    <a class="boton boton-secundario" href="<?= html_escape(site_url('inventario')) ?>">
+    <a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('inventario'))) ?>">
         Volver al inventario
     </a>
 </p>
@@ -21,11 +21,7 @@ $mensaje = $this->session
     ->flashdata('mensaje_inventario');
 ?>
 
-<?php if ($mensaje): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <div class="tabla">
 
@@ -114,4 +110,5 @@ $mensaje = $this->session
 <!-- Paginación del historial -->
 
 <?php $this->load->view('plantilla/paginacion',array('ruta_paginacion'=>'inventario/'.(int)$insumo['id'].'/historial','parametros_paginacion'=>array(),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
+<?php if ($usuario->puede('inventario.gestionar')): $this->load->view('plantilla/historial_cambios',array('historial_entidad'=>'insumos','historial_id'=>$insumo['id'])); endif; ?>
 <?php $this->load->view('plantilla/pie'); ?>
