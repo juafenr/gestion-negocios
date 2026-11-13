@@ -106,9 +106,9 @@
             <thead>
                 <tr>
                     <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio unitario</th>
-                    <th>Subtotal</th>
+                    <th class="tabla-numero">Cantidad</th>
+                    <th class="tabla-numero">Precio unitario</th>
+                    <th class="tabla-numero">Subtotal</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -122,7 +122,7 @@
                             ) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?php if ($puede_editar): ?>
                                 <?= form_open(
                                     'pedidos/actualizar/'
@@ -152,14 +152,14 @@
                             <?php endif; ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             Q <?= number_format(
                                 (float) $detalle['precio_unitario'],
                                 2
                             ) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             Q <?= number_format(
                                 (float) $detalle['precio_unitario']
                                 * (int) $detalle['cantidad'],

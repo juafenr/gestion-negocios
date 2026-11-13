@@ -13,11 +13,11 @@ if (!$lineas) { $lineas=array(array('insumo_id'=>'','cantidad'=>'')); } ?>
 <p class="campo"><label for="fecha">Fecha de solicitud *</label><input id="fecha" name="fecha" type="date" value="<?= html_escape($datos['fecha']) ?>" required></p></div>
 <h2 class="subtitulo-linea">Insumos solicitados</h2>
 <p class="nota">Las cantidades deben ser mayores que cero y tener hasta dos decimales. Si un insumo ya tiene proveedor asociado, debe coincidir con el seleccionado.</p>
-<div class="tabla"><table><thead><tr><th>Insumo y unidad *</th><th>Cantidad *</th><th>Acción</th></tr></thead><tbody id="lineas-compra">
+<div class="tabla"><table><thead><tr><th>Insumo y unidad *</th><th class="tabla-numero">Cantidad *</th><th>Acción</th></tr></thead><tbody id="lineas-compra">
 <?php foreach ($lineas as $linea): ?>
 <tr><td><select name="insumos[]" aria-label="Insumo"><option value="">Selecciona un insumo</option>
 <?php foreach ($insumos as $i): ?><option value="<?= (int)$i['id'] ?>" <?= (string)$linea['insumo_id']===(string)$i['id'] ? 'selected' : '' ?>><?= html_escape($i['nombre'].' ('.$i['unidad_medida'].')') ?></option><?php endforeach; ?></select></td>
-<td><input name="cantidades[]" type="number" min="0.01" max="99999999.99" step="0.01" value="<?= html_escape($linea['cantidad']) ?>" aria-label="Cantidad solicitada"></td>
+<td class="tabla-numero"><input name="cantidades[]" type="number" min="0.01" max="99999999.99" step="0.01" value="<?= html_escape($linea['cantidad']) ?>" aria-label="Cantidad solicitada"></td>
 <td><button type="button" class="boton-secundario quitar-linea" hidden><img class="icono" src="<?= html_escape(base_url('assets/iconos/quitar.svg')) ?>" alt="">Quitar</button></td></tr>
 <?php endforeach; ?></tbody></table></div>
 <p><button id="agregar-linea" type="button" class="boton-secundario" hidden><img class="icono" src="<?= html_escape(base_url('assets/iconos/agregar.svg')) ?>" alt="">Agregar insumo</button></p>

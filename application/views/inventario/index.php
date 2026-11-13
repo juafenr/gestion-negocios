@@ -129,8 +129,8 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
         <thead>
             <tr>
                 <th>Nombre</th>
-                <th>Cantidad actual</th>
-                <th>Stock mínimo</th>
+                <th class="tabla-numero">Cantidad actual</th>
+                <th class="tabla-numero">Stock mínimo</th>
                 <th>Unidad</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -160,11 +160,11 @@ $mensaje = $this->session->flashdata('mensaje_inventario');
                         <?= html_escape($item['nombre']) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape($item['cantidad_actual']) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape($item['stock_minimo']) ?>
                     </td>
 

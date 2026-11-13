@@ -24,14 +24,14 @@
     <?= form_open('compras/seleccionar', array('class' => 'formulario recuadro')) ?>
         <div class="tabla">
             <table>
-                <thead><tr><th>Insumo</th><th>Existencia</th><th>Mínimo</th><th>Cantidad a comprar</th></tr></thead>
+                <thead><tr><th>Insumo</th><th class="tabla-numero">Existencia</th><th class="tabla-numero">Mínimo</th><th class="tabla-numero">Cantidad a comprar</th></tr></thead>
                 <tbody>
                     <?php foreach ($insumos as $insumo): ?>
                         <tr>
                             <td><?= html_escape($insumo['nombre']) ?></td>
-                            <td><?= html_escape($insumo['cantidad_actual']) ?> <?= html_escape($insumo['unidad_medida']) ?></td>
-                            <td><?= html_escape($insumo['stock_minimo']) ?> <?= html_escape($insumo['unidad_medida']) ?></td>
-                            <td>
+                            <td class="tabla-numero"><?= html_escape($insumo['cantidad_actual']) ?> <?= html_escape($insumo['unidad_medida']) ?></td>
+                            <td class="tabla-numero"><?= html_escape($insumo['stock_minimo']) ?> <?= html_escape($insumo['unidad_medida']) ?></td>
+                            <td class="tabla-numero">
                                 <label for="cantidad-<?= (int) $insumo['id'] ?>">Cantidad de <?= html_escape($insumo['nombre']) ?></label>
                                 <input id="cantidad-<?= (int) $insumo['id'] ?>" name="cantidad[<?= (int) $insumo['id'] ?>]" type="number" min="0.01" max="99999999.99" step="0.01" value="<?= html_escape($valores[(int) $insumo['id']] ?? '') ?>" inputmode="decimal">
                             </td>
@@ -68,10 +68,10 @@
         <h2 id="resumen-compra">Selección revisada</h2>
         <div class="tabla">
             <table>
-                <thead><tr><th>Insumo</th><th>Cantidad solicitada</th><th>Proveedor</th></tr></thead>
+                <thead><tr><th>Insumo</th><th class="tabla-numero">Cantidad solicitada</th><th>Proveedor</th></tr></thead>
                 <tbody>
                     <?php foreach ($seleccion as $linea): ?>
-                        <tr><td><?= html_escape($linea['nombre']) ?></td><td><?= html_escape($linea['cantidad_solicitada']) ?> <?= html_escape($linea['unidad_medida']) ?></td><td><?= html_escape($nombres_proveedores[(int) $linea['proveedor_id']] ?? 'Sin proveedor activo asociado') ?></td></tr>
+                        <tr><td><?= html_escape($linea['nombre']) ?></td><td class="tabla-numero"><?= html_escape($linea['cantidad_solicitada']) ?> <?= html_escape($linea['unidad_medida']) ?></td><td><?= html_escape($nombres_proveedores[(int) $linea['proveedor_id']] ?? 'Sin proveedor activo asociado') ?></td></tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
