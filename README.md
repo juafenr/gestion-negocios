@@ -25,7 +25,7 @@ Al preparar el cobro, el cajero pregunta si el cliente desea dejar propina y eli
 
 ## Requisitos
 
-- PHP **8.2.35 x64** recomendado para la instalación local del equipo. Si Apache carga PHP como módulo en Windows, se necesita la compilación **Thread Safe**. Extensiones `mysqli`, `mbstring`, `curl` y `openssl`; las pruebas HTTP necesitan además `proc_open`.
+- PHP **8.2.35 x64** recomendado para la instalación local del equipo. Si Apache carga PHP como módulo en Windows, se necesita la compilación **Thread Safe**. Extensiones `mysqli`, `mbstring`, `curl`, `openssl` y `fileinfo` (validación de imágenes); las pruebas HTTP necesitan además `proc_open`.
 - Apache 2.4 y MySQL/MariaDB con tablas InnoDB.
 - Una base de datos local a la que el usuario configurado pueda crear tablas. Para las pruebas integradas se necesitan permisos de crear y eliminar **bases temporales**.
 - XAMPP es la instalación local utilizada por el equipo. Las rutas de ejemplo siguientes suponen `C:\xampp\htdocs\gestion-negocios`.
@@ -77,7 +77,7 @@ Set-Location 'C:\xampp\htdocs\gestion-negocios'
 & 'C:\xampp\php\php.exe' tests\ejecutar_validaciones.php
 ```
 
-La suite comprueba sintaxis PHP, reglas de negocio, integración de modelos y solicitudes HTTP reales. Usa bases y una copia del código temporales; guarda el resultado en `test-results/`, carpeta ignorada por Git. El cierre correcto muestra **`APROBADO: sintaxis, reglas, integración de modelos y aceptación HTTP.`** Si la ejecución se interrumpe, revisa si quedó alguna base temporal antes de repetirla.
+La suite comprueba sintaxis PHP, reglas de negocio, calendario, estadísticas por empresa, integración de modelos, migraciones y solicitudes HTTP reales. Usa bases y una copia del código temporales; guarda el resultado en `test-results/`, carpeta ignorada por Git. El cierre correcto muestra **`APROBADO: sintaxis, reglas, integración de modelos y aceptación HTTP.`** Si la ejecución se interrumpe, revisa si quedó alguna base temporal antes de repetirla.
 
 Para revisar otros recorridos HTTP sobre la instalación local con Apache activo:
 

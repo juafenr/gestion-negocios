@@ -1,6 +1,7 @@
 <?php
 $this->load->view('plantilla/cabecera', array('titulo'=>'Inicio','seccion'=>'inicio','usuario'=>$usuario));
 $inicio_accesos = ui_accesos_inicio($usuario);
+$hoy_inicio = Calendario_negocio::hoy(NULL,$this->config->item('zona_horaria_negocio'))->format('Y-m-d');
 $indicadores_rol = array('administrador'=>array('ventas','reponer','ultimos_dias'),
     'cajero'=>array('por_cobrar'), 'cocinero'=>array('cocina'));
 if (isset($indicadores_rol[$usuario->rol()])) {
@@ -27,7 +28,7 @@ $orientacion = array('administrador'=>'Revisa inventario, compras y ventas de tu
             <span>Ventas de hoy sin propina</span>
             <strong><?= negocio_moneda($resumen['ventas']['consumo']) ?></strong>
             <p><?= (int) $resumen['ventas']['cantidad'] ?> <?= (int) $resumen['ventas']['cantidad'] === 1 ? 'pedido pagado' : 'pedidos pagados' ?> · Propinas: <?= negocio_moneda($resumen['ventas']['propina']) ?></p>
-            <a href="<?= html_escape(site_url('ventas').'?'.http_build_query(array('desde'=>date('Y-m-d'), 'hasta'=>date('Y-m-d')))) ?>">Consultar ventas de hoy</a>
+            <a href="<?= html_escape(site_url('ventas').'?'.http_build_query(array('desde'=>$hoy_inicio, 'hasta'=>$hoy_inicio))) ?>">Consultar ventas de hoy</a>
         </div>
         <?php endif; ?>
         <?php if (isset($resumen['cocina'])): ?>

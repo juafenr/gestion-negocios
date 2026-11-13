@@ -8,6 +8,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 define('BASEPATH', __DIR__.'/../system/');
 define('APPPATH', __DIR__.'/../application/');
 require APPPATH.'libraries/UsuarioAutenticado.php';
+require APPPATH.'libraries/Calendario_negocio.php';
 class ResultadoEstTest {
     private $resultado;
     public function __construct($r) { $this->resultado=$r; }
@@ -25,6 +26,7 @@ class DbEstTest {
         return new ResultadoEstTest($s->get_result());
     }
 }
+class ConfigEstTest { public function item($nombre) { return $nombre==='zona_horaria_negocio' ? 'America/Guatemala' : NULL; } }
 class CargaEstTest { public function database() {} public function library($nombre) {} }
 class AuthEstTest { public $usuario; public function usuario_actual() { return $this->usuario; } }
 class CI_Model { public function __construct() {} public function __get($nombre) { return get_instance()->$nombre; } }
@@ -77,7 +79,8 @@ try {
         (1,1,1,'Producto A',2,20),(1,1,2,'Producto B',1,60),(1,2,1,'Producto A',5,20),
         (2,3,3,'Exclusivo B',1,999),(1,4,1,'Producto A',5,20),(1,5,1,'Producto A',45,20),
         (1,6,1,'Producto A',5,20),(1,7,1,'Producto A',5,20)");
-    $hoy=new DateTimeImmutable('today');
+    $instante=new DateTimeImmutable('2026-11-13T01:30:00Z');
+    $hoy=Calendario_negocio::hoy($instante);
     $desde=$hoy->modify('-6 days')->format('Y-m-d').' 00:00:00';
     $hoy_texto=$hoy->format('Y-m-d').' 12:00:00';
     $fuera=$hoy->modify('-7 days')->format('Y-m-d').' 23:59:59';
@@ -111,7 +114,16 @@ try {
     $GLOBALS['ci_est_test']=$ci;
     $todos=array('ventas.historial','ventas.ver','pedidos.ver','inventario.ver','reportes.ver');
     $ci->autenticacion->usuario=usuario_est(1,$todos);
-    $modelo=new Estadistica_model(); $a=$modelo->panel(7);
+    $ci->config=new ConfigEstTest();
+    $modelo=new Estadistica_model(); $a=$modelo->panel(7,$instante);
+    comprobar_est($a['hasta']==='12/11/2026' && $a['serie'][6]['dia']==='2026-11-12',
+        'El período termina en Guatemala y no en el día siguiente de Berlín');
+    foreach(array(30,90) as $dias_prueba){
+        $rango=$modelo->panel($dias_prueba,$instante);
+        comprobar_est(count($rango['serie'])===$dias_prueba && $rango['serie'][0]['dia']===$hoy->modify('-'.($dias_prueba-1).' days')->format('Y-m-d')
+            && $rango['serie'][$dias_prueba-1]['dia']==='2026-11-12' && $rango['ventas']['consumo']==='300.00',
+            'El rango de '.$dias_prueba.' días incluye ventas anteriores sin incluir mañana');
+    }
     comprobar_est((int)$a['ventas']['cantidad']===2 && $a['ventas']['consumo']==='200.00','Ventas sin mezclar empresa B, abonos, cancelaciones ni fechas externas');
     comprobar_est($a['ventas']['propina']==='20.00' && $a['ventas']['promedio']==='100.00','Propinas separadas y promedio exacto');
     comprobar_est(count($a['serie'])===7 && $a['serie'][0]['consumo']==='100.00' && $a['serie'][6]['consumo']==='100.00','Incluye límites correctos y orden cronológico');
@@ -123,26 +135,26 @@ try {
     comprobar_est($a['cobros']['total']==='125.00' && $a['cobros']['efectivo']==='50.00' && $a['cobros']['debito']==='15.00','Cobros incluyen abonos y excluyen cambio, otras fechas y otra empresa');
     comprobar_est((int)$a['inventario']['total']===4 && (int)$a['inventario']['normal']===1 && (int)$a['inventario']['bajo']===2 && (int)$a['inventario']['agotado']===1,'Stock: mínimo incluido, agotados separados e inactivos excluidos');
     comprobar_est(array_column($a['pedidos'],'cantidad')===array(1,1,0),'Pedidos actuales excluyen entregados, cancelados y otra empresa');
-    $ci->autenticacion->usuario=usuario_est(2,$todos); $b=$modelo->panel(7);
+    $ci->autenticacion->usuario=usuario_est(2,$todos); $b=$modelo->panel(7,$instante);
     comprobar_est($b['ventas']['consumo']==='999.00' && $b['productos'][0]['nombre']==='Exclusivo B' && (int)$b['inventario']['total']===1 && $b['despachos'][0]['nombre']==='B' && count($b['menos_vendidos'])===1,'Empresa B solo ve sus propios datos');
-    $ci->autenticacion->usuario=usuario_est(3,$todos); $vacio=$modelo->panel(90);
+    $ci->autenticacion->usuario=usuario_est(3,$todos); $vacio=$modelo->panel(90,$instante);
     comprobar_est((int)$vacio['ventas']['cantidad']===0 && count($vacio['serie'])===90 && !$vacio['productos'] && !$vacio['menos_vendidos'] && !$vacio['despachos'] && (int)$vacio['inventario']['total']===0,'Empresa vacía y período de 90 días sin divisiones por cero');
-    $ci->autenticacion->usuario=usuario_est(1,array('pedidos.ver','pedidos.actualizar_cocina')); $antes=$ci->db->consultas; $cocina=$modelo->panel(30);
+    $ci->autenticacion->usuario=usuario_est(1,array('pedidos.ver','pedidos.actualizar_cocina')); $antes=$ci->db->consultas; $cocina=$modelo->panel(30,$instante);
     comprobar_est(array_keys($cocina)===array('dias','desde','hasta','pedidos') && $ci->db->consultas-$antes===1,'Cocina no consulta ni recibe estadísticas financieras o inventario');
-    $ci->autenticacion->usuario=usuario_est(1,array('ventas.ver','pedidos.ver')); $caja=$modelo->panel(7);
+    $ci->autenticacion->usuario=usuario_est(1,array('ventas.ver','pedidos.ver')); $caja=$modelo->panel(7,$instante);
     comprobar_est(isset($caja['cobros'],$caja['pedidos']) && !isset($caja['ventas']) && !isset($caja['productos']) && !isset($caja['inventario']) && !isset($caja['despachos']) && !isset($caja['menos_vendidos']),'Cajero ve cobros y pedidos, no historial de ventas ni stock');
-    $ci->autenticacion->usuario=usuario_est(1,array('reportes.ver','pedidos.ver')); $reporte=$modelo->panel(7);
+    $ci->autenticacion->usuario=usuario_est(1,array('reportes.ver','pedidos.ver')); $reporte=$modelo->panel(7,$instante);
     comprobar_est(isset($reporte['despachos'],$reporte['pedidos']) && !isset($reporte['ventas']) && !isset($reporte['cobros']),'Reporte de despachos respeta sus permisos sin abrir montos financieros');
-    $ci->autenticacion->usuario=usuario_est(1,array('ventas.ver')); $antes=$ci->db->consultas; $solo=$modelo->panel(7);
+    $ci->autenticacion->usuario=usuario_est(1,array('ventas.ver')); $antes=$ci->db->consultas; $solo=$modelo->panel(7,$instante);
     comprobar_est(count($solo)===3 && $ci->db->consultas===$antes,'Permisos incompletos no ejecutan consultas de cobros');
     foreach (array(NULL,array('7'),'1','7 OR 1=1','90.0',90) as $invalido) {
         comprobar_est(Estadistica_model::dias_validos($invalido)===30,'Entrada no permitida vuelve al período predeterminado');
     }
     comprobar_est(Estadistica_model::dias_validos('7')===7 && Estadistica_model::dias_validos('90')===90,'Acepta períodos permitidos');
-    $rechazo=FALSE; try { $modelo->panel(999); } catch (InvalidArgumentException $e) { $rechazo=TRUE; }
+    $rechazo=FALSE; try { $modelo->panel(999,$instante); } catch (InvalidArgumentException $e) { $rechazo=TRUE; }
     comprobar_est($rechazo,'El modelo también limita los períodos');
     $ci->autenticacion->usuario=NULL; $rechazo=FALSE;
-    try { $modelo->panel(7); } catch (RuntimeException $e) { $rechazo=TRUE; }
+    try { $modelo->panel(7,$instante); } catch (RuntimeException $e) { $rechazo=TRUE; }
     comprobar_est($rechazo,'Sin identidad autenticada no hay estadísticas');
     echo 'APROBADO: estadísticas, separación por empresa, permisos y límites.'.PHP_EOL;
 } catch (Throwable $e) {
