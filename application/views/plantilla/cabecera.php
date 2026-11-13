@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-botones')) ?>">
     <script src="<?= html_escape(base_url('assets/interfaz.js?v=20261112')) ?>" defer></script>
     <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112')) ?>" defer></script>
+    <?php if ($seccion === 'inicio'): ?>
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/estadisticas.css?v=1')) ?>">
+    <script src="<?= html_escape(base_url('assets/estadisticas.js?v=1')) ?>" defer></script>
+    <?php endif; ?>
 </head>
 
 <body>

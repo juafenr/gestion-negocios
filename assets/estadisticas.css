@@ -1,0 +1,93 @@
+/* Solo Inicio: gráficos locales sin dependencias ni cambios en formularios del sistema. */
+.estadisticas { margin: 34px 0 38px; --est-verde: #27704d; --est-azul: #596a97; --est-ambar: #b98210; --est-rojo: #b33f38; }
+.estadisticas .est-encabezado { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.estadisticas .est-encabezado h2 { margin: 0 0 8px; font-size: 25px; }
+.estadisticas .est-encabezado p { margin-bottom: 6px; }
+.estadisticas .est-periodos { display: flex; padding: 4px; gap: 4px; border: 1px solid var(--borde); border-radius: 12px; background: var(--superficie); }
+.estadisticas .est-periodos a { padding: 8px 15px; color: var(--muted); border-radius: 8px; text-decoration: none; font-weight: 600; white-space: nowrap; }
+.estadisticas .est-periodos a[aria-current], .estadisticas .est-periodos a:hover { background: var(--acento-suave); color: var(--acento-hover); }
+.estadisticas .est-fechas { margin: 10px 0 20px; font-size: 12px; color: var(--muted); }
+.estadisticas .est-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 20px; margin-top: 20px; align-items: start; }
+.estadisticas .est-tarjeta { grid-column: span 2; min-width: 0; background: var(--superficie); padding: 24px; border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+.estadisticas .est-ventas { grid-column: span 4; }
+.estadisticas .est-operacion { grid-column: span 3; }
+.estadisticas .est-productos { align-self: stretch; display: flex; flex-direction: column; }
+.estadisticas .est-titulo { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 22px; }
+.estadisticas h3 { font-size: 17px; margin: 0 0 7px; }
+.estadisticas .est-titulo p { font-size: 12px; color: var(--muted); margin: 0; }
+.estadisticas .est-insignia { flex-shrink: 0; border-radius: 6px; background: var(--acento-suave); color: var(--acento-hover); font-size: 9px; letter-spacing: .07em; font-weight: 700; padding: 4px 7px; }
+.estadisticas .est-ahora { color: var(--est-verde); background: #edf5ee; }
+.estadisticas .est-metricas { display: grid; grid-template-columns: 1.4fr .8fr 1fr; gap: 15px; padding-bottom: 20px; }
+.estadisticas .est-metricas span, .estadisticas .est-total span { display: block; color: var(--muted); font-size: 11px; }
+.estadisticas .est-metricas strong { display: block; font-size: clamp(17px,1.6vw,25px); line-height: 1.4; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.estadisticas .est-metricas > div:first-child strong { color: var(--acento-hover); }
+.estadisticas .est-lienzo { min-width: 0; }
+.estadisticas .est-linea { width: 100%; height: auto; display: block; overflow: visible; }
+.estadisticas svg text { font-family: inherit; font-size: 11px; fill: var(--muted); }
+.estadisticas .est-rejilla { stroke: var(--borde); stroke-dasharray: 3 5; }
+.estadisticas .est-trazo { fill: none; stroke: var(--acento); stroke-width: 2.8; stroke-linejoin: round; stroke-linecap: round; }
+.estadisticas .est-punto { fill: var(--acento); stroke: var(--superficie); stroke-width: 2; cursor: pointer; }
+.estadisticas .est-punto:focus, .estadisticas .est-punto:hover, .estadisticas .est-punto[data-activo] { stroke: var(--acento-hover); stroke-width: 3; fill: white; outline: none; r: 6px; }
+.estadisticas .est-dato { margin: 8px 0 12px; min-height: 31px; font-size: 12px; padding: 6px 10px; border-radius: 6px; background: var(--fondo); color: var(--texto); font-variant-numeric: tabular-nums; }
+.estadisticas .nota { font-size: 11px; line-height: 1.6; }
+.estadisticas .est-detalles { border-top: 1px solid var(--borde); padding-top: 12px; margin-top: 16px; }
+.estadisticas summary { cursor: pointer; font-size: 12px; color: var(--acento-hover); }
+.estadisticas .est-detalles .tabla { max-height: 280px; overflow: auto; margin-top: 12px; }
+.estadisticas caption { text-align: left; padding: 8px; font-size: 12px; }
+.estadisticas .est-ranking { list-style: none; margin: 0 0 24px; padding: 0; }
+.estadisticas .est-ranking li { display: flex; align-items: center; gap: 12px; margin: 0 0 25px; }
+.estadisticas .est-ranking li > div { min-width: 0; flex: 1; }
+.estadisticas .est-puesto { width: 27px; height: 27px; display: grid; place-items: center; flex-shrink: 0; background: var(--fondo); color: var(--muted); border-radius: 8px; font-size: 11px; }
+.estadisticas .est-ranking li:first-child .est-puesto { background: var(--acento-suave); color: var(--acento-hover); }
+.estadisticas .est-fila { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; margin-bottom: 9px; }
+.estadisticas .est-fila > span { overflow-wrap: anywhere; min-width: 0; }
+.estadisticas .est-fila strong { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.estadisticas small { font-size: 10px; color: var(--muted); font-weight: 400; }
+.estadisticas .est-barra { display: block; width: 100%; height: 8px; }
+.estadisticas .est-barra-gruesa { height: 12px; }
+.estadisticas .est-pista { fill: var(--fondo); }
+.estadisticas .est-color-acento { fill: var(--acento); background: var(--acento); }
+.estadisticas .est-color-verde { fill: var(--est-verde); background: var(--est-verde); }
+.estadisticas .est-color-azul { fill: var(--est-azul); background: var(--est-azul); }
+.estadisticas .est-color-ambar { fill: var(--est-ambar); background: var(--est-ambar); }
+.estadisticas .est-color-rojo { fill: var(--est-rojo); background: var(--est-rojo); }
+.estadisticas .est-dona-contenedor { text-align: center; }
+.estadisticas .est-dona { width: 174px; height: 174px; max-width: 100%; }
+.estadisticas .est-anillo-base, .estadisticas .est-anillo { fill: none; stroke-width: 20; }
+.estadisticas .est-anillo-base { stroke: var(--fondo); }
+.estadisticas .est-anillo { transform: rotate(-90deg); transform-origin: 100px 100px; }
+.estadisticas .est-trazo-acento { stroke: var(--acento); }
+.estadisticas .est-trazo-verde { stroke: var(--est-verde); }
+.estadisticas .est-trazo-azul { stroke: var(--est-azul); }
+.estadisticas .est-dona-numero { font-size: 33px; font-weight: 650; fill: var(--texto); }
+.estadisticas .est-total strong { font-size: 24px; line-height: 1.35; display: block; overflow-wrap: anywhere; }
+.estadisticas .est-total-stock { margin-bottom: 28px; }
+.estadisticas .est-total-stock strong { font-size: 40px; }
+.estadisticas .est-leyenda { list-style: none; margin: 22px 0; padding: 0; }
+.estadisticas .est-leyenda li { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0 0 14px; font-size: 12px; }
+.estadisticas .est-leyenda strong { font-variant-numeric: tabular-nums; }
+.estadisticas .est-leyenda small { display: inline-block; min-width: 38px; text-align: right; }
+.estadisticas .est-leyenda i { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; }
+.estadisticas .est-barras > div { margin-bottom: 25px; }
+.estadisticas .est-consejo { padding: 12px; background: #fff7e7; color: #77510e; border-left: 3px solid var(--est-ambar); border-radius: 4px; font-size: 12px; }
+.estadisticas .est-consejo-bien { background: #edf5ee; color: var(--est-verde); border-color: var(--est-verde); }
+.estadisticas .est-pie { margin-top: auto; margin-bottom: 0; padding-top: 12px; }
+.estadisticas .est-enlace { display: inline-block; margin-top: 18px; font-size: 12px; font-weight: 600; text-decoration: none; }
+.estadisticas .est-vacio { padding: 14px; background: var(--fondo); font-size: 12px; border-radius: 10px; color: var(--muted); }
+.estadisticas .est-vacio-amplio { display: grid; justify-items: center; text-align: center; gap: 12px; padding: 36px 15px; margin-bottom: 20px; }
+.estadisticas .est-vacio-amplio p { margin: 0; }
+@media (min-width: 1201px) { .estadisticas .est-grid > .est-tarjeta:only-child { grid-column: span 3; } }
+@media (max-width: 1200px) { .estadisticas .est-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .estadisticas .est-tarjeta { grid-column: span 1; } .estadisticas .est-ventas { grid-column: 1 / -1; } }
+@media (max-width: 650px) {
+  .estadisticas .est-grid { grid-template-columns: minmax(0,1fr); gap: 16px; }
+  .estadisticas .est-tarjeta { grid-column: 1; padding: 19px 16px; }
+  .estadisticas .est-metricas { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .estadisticas .est-metricas > div:first-child { grid-column: 1 / -1; }
+  .estadisticas .est-metricas > div:first-child strong { font-size: 27px; }
+  .estadisticas .est-insignia { font-size: 8px; }
+  .estadisticas .est-titulo { gap: 8px; }
+  .estadisticas .est-titulo h3 { font-size: 16px; }
+  .estadisticas .est-linea { min-width: 0; }
+  .estadisticas .est-linea text { font-size: 17px; }
+}
+@media (prefers-reduced-motion: no-preference) { .estadisticas .est-tarjeta { animation: est-aparecer .3s ease-out both; } @keyframes est-aparecer { from { opacity: .5; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } } }
