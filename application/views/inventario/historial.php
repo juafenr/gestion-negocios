@@ -2,7 +2,7 @@
 
 
 <p>
-    <a class="boton boton-secundario" href="<?= html_escape(site_url('inventario')) ?>">
+    <a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('inventario'))) ?>">
         Volver al inventario
     </a>
 </p>
@@ -21,11 +21,7 @@ $mensaje = $this->session
     ->flashdata('mensaje_inventario');
 ?>
 
-<?php if ($mensaje): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <div class="tabla">
 
@@ -35,9 +31,9 @@ $mensaje = $this->session
             <tr>
                 <th>Fecha</th>
                 <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Anterior</th>
-                <th>Nueva</th>
+                <th class="tabla-numero">Cantidad</th>
+                <th class="tabla-numero">Anterior</th>
+                <th class="tabla-numero">Nueva</th>
                 <th>Motivo</th>
                 <th>Responsable</th>
             </tr>
@@ -61,19 +57,19 @@ $mensaje = $this->session
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             $movimiento['cantidad']
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             $movimiento['cantidad_anterior']
                         ) ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             $movimiento['cantidad_nueva']
                         ) ?>
@@ -114,4 +110,5 @@ $mensaje = $this->session
 <!-- Paginación del historial -->
 
 <?php $this->load->view('plantilla/paginacion',array('ruta_paginacion'=>'inventario/'.(int)$insumo['id'].'/historial','parametros_paginacion'=>array(),'pagina_actual'=>$pagina,'cantidad_paginas'=>$paginas,'hay_siguiente'=>FALSE)); ?>
+<?php if ($usuario->puede('inventario.gestionar')): $this->load->view('plantilla/historial_cambios',array('historial_entidad'=>'insumos','historial_id'=>$insumo['id'])); endif; ?>
 <?php $this->load->view('plantilla/pie'); ?>

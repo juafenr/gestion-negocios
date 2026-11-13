@@ -7,6 +7,7 @@ CREATE TABLE empresas (
     nombre VARCHAR(120) NOT NULL,
     ultimo_numero_pedido INT UNSIGNED NOT NULL DEFAULT 0,
     ultimo_numero_compra INT UNSIGNED NOT NULL DEFAULT 0,
+    propina_porcentaje TINYINT UNSIGNED NOT NULL DEFAULT 0,
     activa TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -77,6 +78,7 @@ CREATE TABLE insumos (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     empresa_id INT UNSIGNED NOT NULL,
     nombre VARCHAR(150) NOT NULL,
+    imagen VARCHAR(40) NULL,
     cantidad_actual DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     stock_minimo DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     unidad_medida VARCHAR(20) NOT NULL,
@@ -101,6 +103,7 @@ CREATE TABLE productos (
     insumo_id INT UNSIGNED NULL,
     sku VARCHAR(40) NOT NULL,
     nombre VARCHAR(150) NOT NULL,
+    imagen VARCHAR(40) NULL,
     descripcion VARCHAR(1000) NOT NULL DEFAULT '',
     precio DECIMAL(10,2) UNSIGNED NOT NULL,
     disponible TINYINT UNSIGNED NOT NULL DEFAULT 1,
@@ -152,6 +155,11 @@ CREATE TABLE pedidos (
     estado VARCHAR(20) NOT NULL DEFAULT 'borrador',
     estado_pago VARCHAR(20) NOT NULL DEFAULT 'pendiente',
     total DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0.00,
+    propina_porcentaje TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    propina_elegida TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    propina_tipo VARCHAR(12) NOT NULL DEFAULT 'ninguna',
+    propina_valor DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0.00,
+    propina_monto DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0.00,
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     confirmado_en DATETIME NULL,
     UNIQUE KEY uq_pedido_empresa_numero (empresa_id, numero),
@@ -576,3 +584,16 @@ WHERE r.codigo = 'administrador'
       'compras.confirmar',
       'compras.exportar'
   );
+CREATE TABLE IF NOT EXISTS registro_cambios (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT UNSIGNED NOT NULL,
+    usuario_id INT UNSIGNED NOT NULL,
+    entidad VARCHAR(20) NOT NULL,
+    registro_id INT UNSIGNED NOT NULL,
+    campo VARCHAR(40) NOT NULL,
+    valor_anterior TEXT NULL,
+    valor_nuevo TEXT NULL,
+    cambiado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY ix_cambios_registro (empresa_id, entidad, registro_id, id),
+    CONSTRAINT fk_cambios_usuario FOREIGN KEY (empresa_id, usuario_id) REFERENCES usuarios (empresa_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

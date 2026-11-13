@@ -34,6 +34,7 @@ foreach ($filtros as $valor) {
     </div>
 
     <?php if ($usuario->puede('pedidos.crear')): ?>
+        <?php if ($usuario->puede('pedidos.confirmar') && $usuario->puede('ventas.cobrar')): ?><p><a class="boton" href="<?= html_escape(site_url('pedidos/rapido')) ?>">Pedido rápido</a></p><?php endif; ?>
         <p>
             <a
                 class="boton"
@@ -52,11 +53,7 @@ foreach ($filtros as $valor) {
     <?php endif; ?>
 </div>
 
-<?php if (!empty($mensaje)): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <?php if (!empty($error)): ?>
     <div class="error" role="alert">
@@ -88,7 +85,7 @@ foreach ($filtros as $valor) {
                 <th scope="col">Fecha de creación</th>
                 <th scope="col">Estado</th>
                 <th scope="col">Pago</th>
-                <th scope="col">Consumo</th>
+                <th class="tabla-numero" scope="col">Consumo</th>
                 <th scope="col">Detalle</th>
             </tr>
         </thead>
@@ -109,20 +106,14 @@ foreach ($filtros as $valor) {
                     </td>
 
                     <td>
-                        <?= html_escape(
-                            $estados[$pedido['estado']]
-                            ?? $pedido['estado']
-                        ) ?>
+                        <?= ui_estado($pedido['estado']) ?>
                     </td>
 
                     <td>
-                        <?= html_escape(
-                            $estados_pago[$pedido['estado_pago']]
-                            ?? $pedido['estado_pago']
-                        ) ?>
+                        <?= ui_estado($pedido['estado_pago'], 'pago') ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         <?= html_escape(
                             Dinero::mostrar(
                                 Dinero::centavos($pedido['total'])

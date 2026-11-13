@@ -1,24 +1,53 @@
 /* Navegación móvil accesible. Las operaciones y validaciones siguen en el servidor. */
 (function () {
     'use strict';
-    // Las tablas anchas conservan sus columnas dentro de una región desplazable con teclado.
+    const pantallaPequena = window.matchMedia('(max-width: 640px)');
+    document.querySelectorAll('.filtros-adicionales').forEach(detalle => {
+        let abiertoEnMovil = Number(detalle.dataset.filtrosActivos) > 0;
+        function ajustarFiltros() { detalle.open = !pantallaPequena.matches || abiertoEnMovil; }
+        detalle.addEventListener('toggle', () => {
+            if (pantallaPequena.matches) abiertoEnMovil = detalle.open;
+        });
+        pantallaPequena.addEventListener('change', ajustarFiltros);
+        ajustarFiltros();
+    });
+    // Las tablas largas y anchas se pueden recorrer también con teclado.
     function prepararTablas() {
         document.querySelectorAll('.tabla').forEach(tabla => {
             const desborda = tabla.scrollWidth > tabla.clientWidth + 1;
+            const vertical = tabla.scrollHeight > tabla.clientHeight + 1;
+            const desplazable = desborda || vertical;
             tabla.classList.toggle('tabla-desbordable', desborda);
-            if (desborda && !tabla.hasAttribute('tabindex')) {
+            if (desplazable && !tabla.hasAttribute('tabindex')) {
                 tabla.setAttribute('tabindex', '0');
                 tabla.dataset.focoTabla = 'true';
-            } else if (!desborda && tabla.dataset.focoTabla === 'true') {
+            } else if (!desplazable && tabla.dataset.focoTabla === 'true') {
                 tabla.removeAttribute('tabindex');
                 delete tabla.dataset.focoTabla;
             }
-            if (desborda && !tabla.hasAttribute('role')) tabla.setAttribute('role', 'region');
-            if (desborda && !tabla.hasAttribute('aria-label')) tabla.setAttribute('aria-label', 'Tabla con desplazamiento horizontal');
+            if (desplazable && !tabla.hasAttribute('role')) {
+                tabla.setAttribute('role', 'region');
+                tabla.dataset.regionTabla = 'true';
+            } else if (!desplazable && tabla.dataset.regionTabla === 'true') {
+                tabla.removeAttribute('role');
+                delete tabla.dataset.regionTabla;
+            }
+            if (desplazable && (!tabla.hasAttribute('aria-label') || tabla.dataset.etiquetaTabla === 'true')) {
+                const direccion = desborda && vertical ? 'horizontal y vertical' : desborda ? 'horizontal' : 'vertical';
+                tabla.setAttribute('aria-label', 'Tabla con desplazamiento ' + direccion);
+                tabla.dataset.etiquetaTabla = 'true';
+            } else if (!desplazable && tabla.dataset.etiquetaTabla === 'true') {
+                tabla.removeAttribute('aria-label');
+                delete tabla.dataset.etiquetaTabla;
+            }
         });
     }
     prepararTablas();
     window.addEventListener('resize', prepararTablas);
+    if ('ResizeObserver' in window) {
+        const observarTablas = new ResizeObserver(prepararTablas);
+        document.querySelectorAll('.tabla, .tabla table').forEach(tabla => observarTablas.observe(tabla));
+    }
     document.querySelectorAll('details').forEach(detalle => detalle.addEventListener('toggle', prepararTablas));
     const menu = document.getElementById('menu-principal');
     const abrir = document.getElementById('abrir-menu');

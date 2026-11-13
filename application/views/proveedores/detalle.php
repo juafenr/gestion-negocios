@@ -21,7 +21,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
 
     <div class="acciones-cabecera">
     <a class="boton boton-secundario"
-        href="<?= html_escape(site_url('proveedores')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('proveedores'))) ?>">
         Volver
     </a>
 
@@ -38,9 +38,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
     </div>
 </div>
 
-<?php if ($mensaje): ?>
-    <p role="status"><?= html_escape($mensaje) ?></p>
-<?php endif; ?>
+
 
 <section class="recuadro">
     <h2>Información del proveedor</h2>
@@ -85,7 +83,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
                 <tr>
                     <th>Insumo</th>
                     <th>Unidad</th>
-                    <th>Existencia actual</th>
+                    <th class="tabla-numero">Existencia actual</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -95,7 +93,7 @@ $puedeGestionar = $usuario->puede('proveedores.gestionar');
                     <tr>
                         <td><?= html_escape($insumo['nombre']) ?></td>
                         <td><?= html_escape($insumo['unidad_medida']) ?></td>
-                        <td><?= html_escape($insumo['cantidad_actual']) ?></td>
+                        <td class="tabla-numero"><?= html_escape($insumo['cantidad_actual']) ?></td>
 
                         <td>
                             <?php if ($puedeGestionar): ?>

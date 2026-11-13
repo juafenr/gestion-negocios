@@ -9,7 +9,7 @@ $this->load->view('plantilla/cabecera', array(
 <p>
     <a
         class="boton boton-secundario"
-        href="<?= html_escape(site_url('inventario')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('inventario'))) ?>">
         <img
             class="icono"
             src="<?= html_escape(base_url('assets/iconos/volver.svg')) ?>"
@@ -84,7 +84,7 @@ $this->load->view('plantilla/cabecera', array(
         representa 2 kg.
     </p>
 
-    <div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url('inventario')) ?>">Cancelar</a><button type="submit">
+    <div class="acciones-formulario"><a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('inventario'))) ?>">Cancelar</a><button type="submit">
         <img
             class="icono"
             src="<?= html_escape(base_url('assets/iconos/guardar.svg')) ?>"

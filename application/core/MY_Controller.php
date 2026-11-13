@@ -37,6 +37,8 @@ class Protected_Controller extends MY_Controller
         if ($this->usuario === NULL) {
             redirect('login');
         }
+        $this->load->helper('interfaz');
+
     }
 
     /** Detiene la acción si el rol actual no posee la capacidad solicitada. */

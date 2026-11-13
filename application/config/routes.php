@@ -7,21 +7,26 @@ $route['login'] = 'auth/index';
 $route['salir'] = 'auth/salir';
 $route['productos'] = 'productos/index';
 $route['productos/(:num)'] = 'productos/ver/$1';
+$route['productos/(:num)/imagen'] = 'productos/imagen/$1';
+$route['productos/(:num)/disponibilidad'] = 'productos/disponibilidad/$1';
 $route['usuarios'] = 'usuarios/index';
 $route['usuarios/crear'] = 'usuarios/crear';
 $route['usuarios/(:num)/editar'] = 'usuarios/editar/$1';
 $route['usuarios/(:num)/estado'] = 'usuarios/estado/$1';
 
 $route['inicio'] = 'inicio/index';
+$route['sesion/formulario'] = 'inicio/formulario';
 $route['inventario'] = 'inventario/index';
 $route['inventario/crear'] = 'inventario/crear';
 $route['inventario/(:num)/editar'] = 'inventario/editar/$1';
+$route['inventario/(:num)/imagen'] = 'inventario/imagen/$1';
 
 $route['cocina'] = 'cocina/index';
 $route['cocina/pedidos/(:num)/estado'] = 'cocina/actualizar_estado/$1';
 
 $route['pedidos'] = 'pedidos/index';
 $route['pedidos/crear'] = 'pedidos/crear';
+$route['pedidos/rapido'] = 'pedidos/rapido';
 $route['pedidos/(:num)/confirmar'] = 'pedidos/confirmar/$1';
 $route['pedidos/(:num)'] = 'pedidos/ver/$1';
 $route['pedidos/confirmar/(:num)'] = 'pedidos/confirmar/$1';

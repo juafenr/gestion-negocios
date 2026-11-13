@@ -70,6 +70,10 @@ class Pedido_model extends MY_Model
                 'referencia' => $referencia,
                 'estado' => 'borrador',
                 'estado_pago' => 'pendiente',
+                'propina_porcentaje' => 0,
+                'propina_tipo' => 'ninguna',
+                'propina_valor' => '0.00',
+                'propina_monto' => '0.00',
                 'total' => '0.00'
             ));
 

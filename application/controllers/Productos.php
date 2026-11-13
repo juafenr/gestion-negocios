@@ -6,6 +6,7 @@ class Productos extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Edicion_segura');
 
         $this->load->model('Producto_model', 'productos_model');
         $this->load->helper(array('url', 'form'));
@@ -127,7 +128,7 @@ class Productos extends Protected_Controller
             'Producto creado correctamente.'
         );
 
-        redirect('productos', 'location', 303);
+        redirect(ui_ruta_retorno('productos'), 'location', 303);
     }
 
     public function editar($id = NULL)
@@ -142,7 +143,8 @@ class Productos extends Protected_Controller
             $this->mostrar_formulario(
                 $producto,
                 $accion,
-                'Editar producto'
+                'Editar producto',
+                $this->session->flashdata('error_imagen') ?: ''
             );
             return;
         }
@@ -151,14 +153,15 @@ class Productos extends Protected_Controller
 
         $datos = $this->datos_formulario();
 
-        $resultado = $this->productos_model->guardar_catalogo(
-            $datos,
-            (int) $producto['id']
-        );
+        $resultado = $this->edicion_segura->guardar('productos',$producto['id'],function() use ($datos,$producto) {
+            return $this->productos_model->guardar_catalogo($datos,(int)$producto['id']);
+        });
+        if ($resultado === FALSE) { $resultado=array('error'=>$this->edicion_segura->error ?: 'No se pudo actualizar el producto.'); }
 
         if ($resultado['error'] !== NULL) {
             $valores = $this->valores_para_formulario($datos);
             $valores['id'] = $producto['id'];
+            $valores['imagen'] = $producto['imagen'];
 
             $this->mostrar_formulario(
                 $valores,
@@ -174,7 +177,60 @@ class Productos extends Protected_Controller
             'Producto actualizado. Si cambió el precio, se registró en el historial.'
         );
 
-        redirect('productos', 'location', 303);
+        redirect(ui_ruta_retorno('productos'), 'location', 303);
+    }
+
+    public function disponibilidad($id = NULL)
+    {
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('productos.gestionar');
+        $producto = $this->obtener_producto($id);
+        $disponible = $this->input->post('disponible');
+        $origen = $this->input->post('origen') ?? 'productos';
+        if (!in_array($disponible, array('0','1'), TRUE) || !in_array($origen, array('productos','inventario'), TRUE)) {
+            show_error('Revisa la disponibilidad y el origen de la operación.', 422);
+            return;
+        }
+        if ($origen === 'inventario') { $this->requerir_permiso('inventario.ver'); }
+        $resultado = $this->edicion_segura->guardar('productos',$producto['id'],function() use ($producto,$disponible) {
+            return $this->productos_model->cambiar_disponibilidad((string)$producto['id'],$disponible);
+        },FALSE);
+        if ($resultado === FALSE) { $resultado=array('error'=>$this->edicion_segura->error ?: 'No se pudo cambiar la disponibilidad.','status'=>$this->edicion_segura->status); }
+        if ($resultado['error'] !== NULL) {
+            show_error(html_escape($resultado['error']), $resultado['status']);
+            return;
+        }
+        $this->session->set_flashdata($origen === 'inventario' ? 'mensaje_inventario' : 'mensaje_producto',
+            ($disponible === '1' ? 'Venta reactivada: ' : 'Venta desactivada: ').$producto['nombre'].'.');
+        redirect(ui_ruta_retorno($origen), 'location', 303);
+    }
+
+    public function imagen($id = NULL)
+    {
+        $this->requerir_permiso('productos.ver');
+        $producto = $this->obtener_producto($id);
+        $this->load->library('Imagen_catalogo');
+        if ($this->input->method(TRUE) === 'GET') {
+            if (!$producto['imagen'] || !$this->imagen_catalogo->servir($producto['imagen'])) { show_404(); }
+            exit;
+        }
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('productos.gestionar');
+        $nuevo = NULL;
+        try {
+            if ($this->input->post('quitar') !== '1') {
+                $nuevo = $this->imagen_catalogo->guardar($_FILES['imagen'] ?? NULL);
+            }
+            if (!$this->productos_model->cambiar_imagen($producto['id'], $nuevo)) {
+                throw new RuntimeException('No se pudo asociar la imagen al producto.');
+            }
+            $this->imagen_catalogo->eliminar($producto['imagen']);
+            $this->session->set_flashdata('mensaje_imagen', $nuevo ? 'Imagen actualizada.' : 'Imagen retirada.');
+        } catch (Throwable $e) {
+            $this->imagen_catalogo->eliminar($nuevo);
+            $this->session->set_flashdata('error_imagen', $e instanceof InvalidArgumentException ? $e->getMessage() : 'No se pudo guardar la imagen.');
+        }
+        redirect('productos/editar/' . (int)$producto['id'], 'location', 303);
     }
 
     private function obtener_producto($id)
@@ -233,7 +289,7 @@ class Productos extends Protected_Controller
         $titulo,
         $error = ''
     ) {
-        if ($error !== '') { $this->output->set_status_header(422); }
+        if ($error !== '') { $this->output->set_status_header($this->edicion_segura->error !== '' ? $this->edicion_segura->status : 422); }
         $this->load->view('productos/formulario', array(
             'usuario' => $this->usuario,
             'producto' => $producto,

@@ -6,6 +6,7 @@ class Inventario extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Edicion_segura');
         $this->load->library('Validacion_negocio');
 
         $this->load->model('Insumo_model', 'insumos_model');
@@ -84,9 +85,16 @@ class Inventario extends Protected_Controller
         $filtros['limite'] = $porPagina;
         $filtros['offset'] = ($pagina - 1) * $porPagina;
 
+        $insumos = $this->insumos_model->listar($filtros);
+        $productos_venta = array();
+        if ($this->usuario->puede('productos.gestionar')) {
+            $this->load->model('Producto_model', 'productos_model');
+            $productos_venta = $this->productos_model->por_insumos(array_column($insumos, 'id'));
+        }
         $this->load->view('inventario/index', array(
             'usuario' => $this->usuario,
-            'insumos' => $this->insumos_model->listar($filtros),
+            'insumos' => $insumos,
+            'productos_venta' => $productos_venta,
             'filtros' => $filtros,
             'resumen' => $this->insumos_model->resumen(),
             'total' => $total,
@@ -136,7 +144,8 @@ class Inventario extends Protected_Controller
             show_error('No se pudo registrar el insumo.', 503);
         }
 
-        redirect('inventario');
+        $this->session->set_flashdata('mensaje_inventario', 'Insumo registrado correctamente.');
+        redirect(ui_ruta_retorno('inventario'));
     }
 
     public function editar($id = NULL)
@@ -177,17 +186,55 @@ class Inventario extends Protected_Controller
             return;
         }
 
-        $datos = $this->datos_formulario();
+        $datos = $this->datos_formulario($insumo);
 
         if ($this->insumos_model->existe_nombre($datos['nombre'], $id)) {
             show_error('Ya existe un insumo con ese nombre en tu empresa.', 409);
         }
 
-        if (!$this->insumos_model->actualizar($id, $datos)) {
-            show_error('No se pudo actualizar el insumo.', 503);
+        $guardado = $this->edicion_segura->guardar('insumos',$id,function() use ($id,$datos) {
+            return $this->insumos_model->actualizar($id,$datos);
+        });
+        if (!$guardado) {
+            $this->output->set_status_header($this->edicion_segura->error !== '' ? $this->edicion_segura->status : 503);
+            $this->load->view('inventario/formulario',array('usuario'=>$this->usuario,'insumo'=>$insumo,
+                'accion'=>'inventario/'.$id.'/editar','error_edicion'=>$this->edicion_segura->error ?: 'No se pudo actualizar el insumo.'));
+            return;
         }
 
-        redirect('inventario');
+        $this->session->set_flashdata('mensaje_inventario', 'Insumo actualizado correctamente.');
+        redirect(ui_ruta_retorno('inventario'));
+    }
+
+    public function imagen($id = NULL)
+    {
+        $this->requerir_permiso('inventario.ver');
+        if (!is_string($id) || !ctype_digit($id) || strlen($id)>10 || (int)$id<1) { show_404(); return; }
+        $insumo = $this->insumos_model->buscar_incluyendo_inactivos($id);
+        if (!$insumo) { show_404(); return; }
+        $this->load->library('Imagen_catalogo');
+        if ($this->input->method(TRUE) === 'GET') {
+            if (!$insumo['imagen'] || !$this->imagen_catalogo->servir($insumo['imagen'])) { show_404(); }
+            exit;
+        }
+        $this->solo_metodo('POST');
+        $this->requerir_permiso('inventario.gestionar');
+        if ((int)$insumo['activo'] !== 1) { show_404(); return; }
+        $nuevo = NULL;
+        try {
+            if ($this->input->post('quitar') !== '1') {
+                $nuevo = $this->imagen_catalogo->guardar($_FILES['imagen'] ?? NULL);
+            }
+            if (!$this->insumos_model->cambiar_imagen($insumo['id'], $nuevo)) {
+                throw new RuntimeException('No se pudo asociar la imagen al insumo.');
+            }
+            $this->imagen_catalogo->eliminar($insumo['imagen']);
+            $this->session->set_flashdata('mensaje_imagen', $nuevo ? 'Imagen actualizada.' : 'Imagen retirada.');
+        } catch (Throwable $e) {
+            $this->imagen_catalogo->eliminar($nuevo);
+            $this->session->set_flashdata('error_imagen', $e instanceof InvalidArgumentException ? $e->getMessage() : 'No se pudo guardar la imagen.');
+        }
+        redirect('inventario/' . (int)$insumo['id'] . '/editar', 'location', 303);
     }
 
     private function configurar_validacion($nuevo = FALSE)
@@ -223,14 +270,19 @@ class Inventario extends Protected_Controller
         }
     }
 
-    private function datos_formulario()
+    private function datos_formulario($insumo = NULL)
     {
+        $fecha = $this->input->post('fecha_vencimiento', TRUE);
+        // Omitir el campo conserva la fecha; enviarlo vacío la elimina.
+        if ($insumo !== NULL && $fecha === NULL) {
+            $fecha = $insumo['fecha_vencimiento'];
+        }
         return array(
             'nombre' => trim($this->input->post('nombre', TRUE)),
             'cantidad_actual' => $this->input->post('cantidad_actual', TRUE),
             'stock_minimo' => $this->input->post('stock_minimo', TRUE),
             'unidad_medida' => $this->input->post('unidad_medida', TRUE),
-            'fecha_vencimiento' =>   $this->input->post('fecha_vencimiento', TRUE) ?: NULL
+            'fecha_vencimiento' => $fecha ?: NULL
         );
     }
 
@@ -375,7 +427,8 @@ class Inventario extends Protected_Controller
             return;
         }
 
-        redirect('inventario');
+        $this->session->set_flashdata('mensaje_inventario', ($nuevoEstado ? 'Insumo reactivado: ' : 'Insumo desactivado: ').$insumo['nombre'].'.');
+        redirect(ui_ruta_retorno('inventario'));
     }
 
     public function exportar()
@@ -497,7 +550,7 @@ class Inventario extends Protected_Controller
             'Artículo habilitado para venta. Ya está disponible en pedidos.'
         );
 
-        redirect('inventario');
+        redirect(ui_ruta_retorno('inventario'));
     }
 
     public function sugerencias()

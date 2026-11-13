@@ -39,7 +39,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
     <?php endif; ?>
 </div>
 
-<?php if (!empty($mensaje_producto)): ?><p class="recuadro aviso" role="status"><?= html_escape($mensaje_producto) ?></p><?php endif; ?>
+
 <?php $this->load->view('plantilla/filtros', array('filtro_ruta'=>'productos', 'filtro_campos'=>array(
 'busqueda'=>array('tipo'=>'search','etiqueta'=>'Nombre, código o descripción','ejemplo'=>'Ej. Cuaderno o A-001'),
 'disponibilidad'=>array('etiqueta'=>'Disponibilidad','opciones'=>array(''=>'Todos los productos','1'=>'Disponible','0'=>'No disponible'))
@@ -55,7 +55,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
                 <th scope="col">Producto</th>
                 <th scope="col">Código</th>
                 <th scope="col">Descripción</th>
-                <th scope="col">Precio</th>
+                <th class="tabla-numero" scope="col">Precio</th>
                 <th scope="col">Disponibilidad</th>
                 <th scope="col">Acciones</th>
             </tr>
@@ -65,6 +65,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
             <?php foreach ($productos as $producto): ?>
                 <tr>
                     <td>
+                        <?php if (!empty($producto['imagen'])): ?><img class="imagen-miniatura" src="<?= html_escape(site_url('productos/'.(int)$producto['id'].'/imagen')) ?>" alt="" width="48" height="48"><?php else: ?><span class="imagen-miniatura imagen-miniatura-vacia" aria-hidden="true">—</span><?php endif; ?>
                         <?= html_escape($producto['nombre']) ?>
                     </td>
 
@@ -82,7 +83,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
                         <?php endif; ?>
                     </td>
 
-                    <td>
+                    <td class="tabla-numero">
                         Q <?= number_format(
                             (float) $producto['precio'],
                             2
@@ -133,6 +134,7 @@ $hay_filtros = $busqueda !== '' || $disponibilidad !== '';
                                     height="22">
                                 <span>Editar</span>
                             </a>
+                            <?php $this->load->view('plantilla/disponibilidad_venta', array('venta_producto'=>$producto, 'venta_origen'=>'productos', 'venta_reactivar'=>$producto['insumo_id'] === NULL || (int)$producto['insumo_activo'] === 1)); ?>
                         <?php endif; ?>
                     </td>
                 </tr>

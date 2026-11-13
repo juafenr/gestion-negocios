@@ -10,7 +10,7 @@ $s = $solicitud;
 
 <p>
     <a class="boton boton-secundario"
-        href="<?= html_escape(site_url('compras')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('compras'))) ?>">
         Volver a solicitudes
     </a>
 </p>
@@ -26,11 +26,7 @@ $mensaje = $this->session->flashdata('mensaje_compra');
 $errorEstado = $this->session->flashdata('error_compra');
 ?>
 
-<?php if ($mensaje): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <?php if ($errorEstado): ?>
     <p class="error" role="alert">
@@ -50,9 +46,7 @@ $errorEstado = $this->session->flashdata('error_compra');
         <strong><?= html_escape($s['fecha']) ?></strong>
 
         · Estado:
-        <span class="estado">
-            <?= html_escape($s['estado']) ?>
-        </span>
+        <?= ui_estado($s['estado'], 'compra') ?>
     </p>
 
 
@@ -92,9 +86,9 @@ $errorEstado = $this->session->flashdata('error_compra');
             <thead>
                 <tr>
                     <th>Insumo</th>
-                    <th>Cantidad solicitada</th>
-                    <th>Recibido</th>
-                    <th>Pendiente</th>
+                    <th class="tabla-numero">Cantidad solicitada</th>
+                    <th class="tabla-numero">Recibido</th>
+                    <th class="tabla-numero">Pendiente</th>
                     <th>Unidad</th>
                 </tr>
             </thead>
@@ -114,15 +108,15 @@ $errorEstado = $this->session->flashdata('error_compra');
                             <?= html_escape($l['insumo_nombre']) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($solicitado, 2) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($recibido, 2) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($pendiente, 2) ?>
                         </td>
 

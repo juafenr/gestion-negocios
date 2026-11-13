@@ -76,10 +76,10 @@ $error = $this->session->flashdata('error_compra');
             <thead>
                 <tr>
                     <th>Insumo</th>
-                    <th>Solicitado</th>
-                    <th>Recibido</th>
-                    <th>Pendiente</th>
-                    <th>Recibir ahora</th>
+                    <th class="tabla-numero">Solicitado</th>
+                    <th class="tabla-numero">Recibido</th>
+                    <th class="tabla-numero">Pendiente</th>
+                    <th class="tabla-numero">Recibir ahora</th>
                 </tr>
             </thead>
 
@@ -103,22 +103,22 @@ $error = $this->session->flashdata('error_compra');
                             ) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($solicitado, 2) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($recibido, 2) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?= number_format($pendiente, 2) ?>
                             <?= html_escape(
                                 $linea['unidad_medida']
                             ) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <input
                                 type="number"
                                 name="cantidades[<?= (int) $linea['id'] ?>]"

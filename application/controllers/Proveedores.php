@@ -6,6 +6,7 @@ class Proveedores extends Protected_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('Edicion_segura');
 
         $this->load->model(
             'Proveedor_model',
@@ -69,13 +70,13 @@ class Proveedores extends Protected_Controller
                 $datos = Validacion_negocio::proveedor($entrada);
                 if ($this->proveedores_model->existe_nombre($datos['nombre'], $id)) {
                     $error = 'Ya existe otro proveedor con ese nombre.';
-                } elseif ($this->proveedores_model->actualizar($id, $datos)) {
+                } elseif ($this->edicion_segura->guardar('proveedores',$id,function() use ($id,$datos) { return $this->proveedores_model->actualizar($id,$datos); })) {
                     $this->session->set_flashdata('mensaje_proveedor', 'Proveedor actualizado correctamente.');
-                    redirect('proveedores', 'location', 303);
+                    redirect(ui_ruta_retorno('proveedores'), 'location', 303);
                     return;
-                } else { $error = 'No se pudo actualizar el proveedor.'; }
+                } else { $error = $this->edicion_segura->error ?: 'No se pudo actualizar el proveedor.'; }
             } catch (InvalidArgumentException $e) { $error = $e->getMessage(); }
-            $this->output->set_status_header(422);
+            $this->output->set_status_header($this->edicion_segura->error !== '' ? $this->edicion_segura->status : 422);
         }
 
         $this->load->view('proveedores/editar', array(

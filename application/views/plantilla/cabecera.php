@@ -1,4 +1,4 @@
-<?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
+<?php defined('BASEPATH') or exit('No direct script access allowed'); $this->load->helper('interfaz'); ui_recordar_listado(); ?>
 <!doctype html>
 <html lang="es">
 
@@ -7,13 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($titulo) ?> - Gestión de negocios</title>
     <meta name="theme-color" content="#ce530c">
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-botones')) ?>">
-    <script src="<?= html_escape(base_url('assets/interfaz.js?v=20261112')) ?>" defer></script>
-    <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112')) ?>" defer></script>
-    <?php if ($seccion === 'inicio'): ?>
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/estadisticas.css?v=1')) ?>">
-    <script src="<?= html_escape(base_url('assets/estadisticas.js?v=1')) ?>" defer></script>
-    <?php endif; ?>
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-imagenes-mejoras')) ?>">
+    <script src="<?= html_escape(base_url('assets/interfaz.js?v=20261112-experiencia')) ?>" defer></script>
+    <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112-mejoras2')) ?>" defer></script>
+  <?php if ($seccion === 'inicio'): ?>
+    <link
+        rel="stylesheet"
+        href="<?= html_escape(base_url('assets/estadisticas.css?v=1')) ?>"
+    >
+    <script
+        src="<?= html_escape(base_url('assets/estadisticas.js?v=1')) ?>"
+        defer
+    ></script>
+<?php endif; ?>
 </head>
 
 <body>
@@ -82,4 +88,5 @@
             <?= form_close() ?>
         </nav>
         <button id="velo-menu" class="velo-menu" type="button" aria-label="Cerrar menú principal" tabindex="-1" hidden></button>
-        <main id="contenido" class="contenido" tabindex="-1">
+        <main id="contenido" class="contenido" tabindex="-1" data-token-url="<?= html_escape(site_url('sesion/formulario')) ?>">
+            <?php $this->load->view('plantilla/notificaciones'); ?>

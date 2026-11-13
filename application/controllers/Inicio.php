@@ -4,6 +4,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 // Heredar de Protected_Controller exige iniciar sesión antes de entrar aquí.
 class Inicio extends Protected_Controller
 {
+    /** Token vigente para formularios abiertos en varias pestañas. Mantiene la rotación CSRF. */
+    public function formulario()
+    {
+        $this->solo_metodo('GET');
+        $this->output->set_content_type('application/json','utf-8')->set_output(json_encode(array(
+            'nombre'=>$this->security->get_csrf_token_name(), 'token'=>$this->security->get_csrf_hash()
+        )));
+    }
+
     public function index()
     {
         $this->solo_metodo('GET');

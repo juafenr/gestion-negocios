@@ -3,14 +3,10 @@
 <?php $puede_editar = $pedido['estado'] === 'borrador' && $usuario->puede('pedidos.crear'); ?>
 
 <p>
-    <a class="boton boton-secundario" href="<?= html_escape(site_url('pedidos')) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/volver.svg')) ?>" alt="" width="22" height="22"><span>Volver a pedidos</span></a>
+    <a class="boton boton-secundario" href="<?= html_escape(site_url(ui_ruta_retorno('pedidos'))) ?>"><img class="icono" src="<?= html_escape(base_url('assets/iconos/volver.svg')) ?>" alt="" width="22" height="22"><span>Volver a pedidos</span></a>
 </p>
 
-<?php if (!empty($mensaje)): ?>
-    <p role="status">
-        <?= html_escape($mensaje) ?>
-    </p>
-<?php endif; ?>
+
 
 <?php if (!empty($error_pedido)): ?>
     <div class="error" role="alert">
@@ -28,12 +24,12 @@
 
     <p>
         <strong>Estado:</strong>
-        <?= html_escape($pedido['estado'] === 'en_preparacion' ? 'En preparación' : $pedido['estado']) ?>
+        <?= ui_estado($pedido['estado']) ?>
     </p>
 
     <p>
         <strong>Pago:</strong>
-        <?= html_escape($pedido['estado_pago']) ?>
+        <?= ui_estado($pedido['estado_pago'], 'pago') ?>
     </p>
 
     <?php if ($usuario->puede('ventas.ver') && $usuario->puede('pedidos.ver') && $pedido['estado'] !== 'borrador'): ?>
@@ -106,9 +102,9 @@
             <thead>
                 <tr>
                     <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio unitario</th>
-                    <th>Subtotal</th>
+                    <th class="tabla-numero">Cantidad</th>
+                    <th class="tabla-numero">Precio unitario</th>
+                    <th class="tabla-numero">Subtotal</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -122,7 +118,7 @@
                             ) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             <?php if ($puede_editar): ?>
                                 <?= form_open(
                                     'pedidos/actualizar/'
@@ -152,14 +148,14 @@
                             <?php endif; ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             Q <?= number_format(
                                 (float) $detalle['precio_unitario'],
                                 2
                             ) ?>
                         </td>
 
-                        <td>
+                        <td class="tabla-numero">
                             Q <?= number_format(
                                 (float) $detalle['precio_unitario']
                                 * (int) $detalle['cantidad'],
@@ -201,8 +197,10 @@
         Q <?= number_format((float) $pedido['total'], 2) ?>
     </p>
 
-    <p>Propina (10%): <strong><?= Dinero::mostrar(Dinero::propina(Dinero::centavos($pedido['total']))) ?></strong> ·
-    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::propina(Dinero::centavos($pedido['total']))) ?></strong></p>
+    <?php if ((int)$pedido['propina_elegida']===1): ?>
+    <p>Propina<?= $pedido['propina_tipo']==='porcentaje' ? ' ('.html_escape($pedido['propina_valor']).' %)' : '' ?>: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['propina_monto'])) ?></strong> ·
+    Total con propina: <strong><?= Dinero::mostrar(Dinero::centavos($pedido['total'])+Dinero::centavos($pedido['propina_monto'])) ?></strong></p>
+    <?php else: ?><p>La propina se pregunta al preparar el cobro.</p><?php endif; ?>
 
     <?php if ($pedido['estado'] === 'borrador'
         && $usuario->puede('pedidos.confirmar')
@@ -238,9 +236,9 @@
                     <?php foreach ($eventos as $evento): ?>
                         <tr>
                             <td>
-                                <?= html_escape($evento['estado_anterior'] === 'en_preparacion' ? 'En preparación' : ucfirst($evento['estado_anterior'])) ?>
+                                <?= ui_estado($evento['estado_anterior']) ?>
                                 →
-                                <?= html_escape($evento['estado_nuevo'] === 'en_preparacion' ? 'En preparación' : ucfirst($evento['estado_nuevo'])) ?>
+                                <?= ui_estado($evento['estado_nuevo']) ?>
                             </td>
                             <td><?= html_escape($evento['usuario_nombre']) ?></td>
                             <td><?= html_escape(ucfirst($evento['rol_codigo'])) ?></td>

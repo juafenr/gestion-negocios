@@ -9,12 +9,19 @@ $this->load->view('plantilla/cabecera', array(
 <p>
     <a
         class="boton boton-secundario"
-        href="<?= html_escape(site_url('productos')) ?>">
+        href="<?= html_escape(site_url(ui_ruta_retorno('productos'))) ?>">
         Volver a productos
     </a>
 </p>
 
-<section class="recuadro">
+<section class="recuadro detalle-producto">
+    <div class="imagen-detalle">
+        <?php if (!empty($producto['imagen'])): ?>
+            <img src="<?= html_escape(site_url('productos/'.(int)$producto['id'].'/imagen')) ?>" alt="Imagen de <?= html_escape($producto['nombre']) ?>" width="280" height="280">
+        <?php else: ?>
+            <span class="imagen-placeholder" role="img" aria-label="Producto sin imagen">Sin imagen</span>
+        <?php endif; ?>
+    </div>
 
     <h1><?= html_escape($producto['nombre']) ?></h1>
 
@@ -80,8 +87,8 @@ $this->load->view('plantilla/cabecera', array(
                     <tr>
                         <th scope="col">Fecha y hora</th>
                         <th scope="col">Responsable</th>
-                        <th scope="col">Precio anterior</th>
-                        <th scope="col">Precio nuevo</th>
+                        <th class="tabla-numero" scope="col">Precio anterior</th>
+                        <th class="tabla-numero" scope="col">Precio nuevo</th>
                     </tr>
                 </thead>
 
@@ -98,14 +105,14 @@ $this->load->view('plantilla/cabecera', array(
                                 ) ?>
                             </td>
 
-                            <td>
+                            <td class="tabla-numero">
                                 Q <?= number_format(
                                     (float) $cambio['precio_anterior'],
                                     2
                                 ) ?>
                             </td>
 
-                            <td>
+                            <td class="tabla-numero">
                                 Q <?= number_format(
                                     (float) $cambio['precio_nuevo'],
                                     2
@@ -166,4 +173,5 @@ $this->load->view('plantilla/cabecera', array(
 
 <?php endif; ?>
 
+<?php if ($usuario->puede('productos.gestionar')): $this->load->view('plantilla/historial_cambios',array('historial_entidad'=>'productos','historial_id'=>$producto['id'])); endif; ?>
 <?php $this->load->view('plantilla/pie'); ?>

@@ -10,12 +10,18 @@ Está desarrollada con **PHP 8.2**, **CodeIgniter 3.1.13** y **MySQL/MariaDB**. 
 | --- | --- |
 | Acceso | Inicio de sesión por nombre de usuario o correo; roles de administrador, cajero y cocinero; permisos por acción y separación de datos por empresa. |
 | Productos y pedidos | Alta, edición, búsqueda y disponibilidad de productos; pedidos con productos, cantidades, confirmación, historial y cancelación con motivo. |
-| Cocina y pagos | Cola de pedidos y cambios de estado; cuentas separadas, abonos, pagos mixtos, cambio en efectivo y propina automática del 10 %. |
+| Cocina y pagos | Cola de pedidos y cambios de estado; cuentas separadas, abonos, pagos mixtos, cambio en efectivo y propina opcional por porcentaje o monto exacto. |
 | Ventas | Registro único al completar el cobro, historial y resumen por fecha. |
 | Inventario | Insumos, existencias, mínimos, entradas, salidas, ajustes, alertas e historial de movimientos. |
 | Proveedores y compras | Proveedores asociados a insumos, solicitudes agrupadas, revisión, exportación TXT, estados y recepción parcial o completa con actualización de existencias. |
 
 Las rutas privadas comprueban sesión, permisos y empresa en el servidor. Los formularios usan protección CSRF y validación de datos; el historial conserva cancelaciones, movimientos de inventario y cambios de precio.
+
+Los productos e insumos pueden tener una imagen opcional. Después de crearlos, usa **Editar → Imagen** para subirla, reemplazarla o retirarla. Si no hay imagen se muestra «Sin imagen». Se aceptan JPG, PNG y WebP de hasta 3 MB y 4000 × 4000 píxeles. Los archivos se guardan en `application/uploads/catalogo/`, fuera del acceso web directo, y se sirven solo con sesión y acceso a la empresa correspondiente. Incluye ese directorio en los respaldos de datos; no se versiona en Git.
+
+Para probar las fotos en una empresa local, `php tools/cargar_demo_catalogo.php ID_EMPRESA` muestra lo que se agregaría y `php tools/cargar_demo_catalogo.php ID_EMPRESA --aplicar` carga un shuco clásico y pan con fotos, además de un producto y un insumo sin foto para comprobar el marcador. Los precios y existencias son ilustrativos. El comando es repetible y no duplica artículos.
+
+Al preparar el cobro, el cajero pregunta si el cliente desea dejar propina y elige **No**, **un porcentaje** o **un monto exacto en quetzales**. Puede cambiar la respuesta antes del primer pago; los cobros ya registrados conservan la elección. En **Pedidos → Pedido rápido**, el cajero puede crear y confirmar un pedido de un producto en una pantalla y pasar directamente a esa pregunta. Los pedidos con varios productos siguen usando el flujo normal.
 
 ## Requisitos
 

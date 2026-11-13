@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión - Gestión de negocios</title>
     <meta name="theme-color" content="#ce530c">
-    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-forms')) ?>">
+    <link rel="stylesheet" href="<?= html_escape(base_url('assets/app.css?v=20261112-mejoras')) ?>">
     <script src="<?= html_escape(base_url('assets/login.js?v=2')) ?>" defer></script>
-    <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112')) ?>" defer></script>
+    <script src="<?= html_escape(base_url('assets/formularios.js?v=20261112-mejoras2')) ?>" defer></script>
 </head>
 <body class="pagina-login">
     <header class="cabecera">
